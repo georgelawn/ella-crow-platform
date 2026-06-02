@@ -1,0 +1,93 @@
+# Ella Crow Platform
+
+This is a lightweight management dashboard for Ella Crow. It is designed to run as a static site on GitHub Pages, with Supabase storing shared dashboard data and Google Apps Script handling one-way Google Calendar sync.
+
+## Current Features
+
+- Add, edit, delete, and filter gigs
+- Track booked, TBC, and complete shows
+- Automatically treats past-dated gigs as complete unless manually overridden
+- Shows ticket totals for the current month and previous month
+- Expands each gig to show players, contact, location, and notes
+- Calendar page with clickable dates showing gigs and sessions
+- Sessions page for rehearsals, recordings, and meetings
+- Finance page for editable revenue, expenses, invoice status, and month-by-month turnover
+- To Do page with manual tasks plus auto tasks from gigs and pending invoices
+- Contacts page with sections for Musicians, Promoters, Venues, Other Artists, and Misc
+- Musician contacts and the gig/session player dropdowns share the same saved list
+- Supabase sync for laptop and iPhone use
+- Optional one-way Google Calendar sync through Google Apps Script
+
+The email Opportunities feature has been removed. Opportunities/follow-ups can now be tracked manually in To Do.
+
+## GitHub Pages Hosting
+
+GitHub Pages can host this dashboard for free because it is static HTML, CSS, and JavaScript.
+
+Recommended setup:
+
+1. Create a GitHub repository, for example `ella-crow-platform`.
+2. Upload the contents of this folder to the repository root.
+3. In GitHub, open `Settings > Pages`.
+4. Under `Build and deployment`, choose `Deploy from a branch`.
+5. Select the `main` branch and `/ (root)` folder.
+6. Save. GitHub will publish the site at a `github.io` URL.
+
+The `.nojekyll` file is included so GitHub serves the files exactly as they are.
+
+## Supabase Sync
+
+The app currently points at the existing Supabase project in `cloud-config.js`:
+
+```js
+window.ELLA_CLOUD_CONFIG = {
+  enabled: true,
+  supabaseUrl: "https://hmwnkhgsocdevehebjpq.supabase.co",
+  supabaseAnonKey: "sb_publishable_5RLD78oK3TMo-SnPf1tljA_9d7-zuHn",
+  tableName: "ella_crow_store",
+  googleCalendarSyncUrl: ""
+};
+```
+
+Keep the hosted dashboard link private. This setup is intended for personal use, not public account management.
+
+## Google Calendar Sync
+
+GitHub Pages cannot run backend functions, so Google Calendar sync is handled by a free Google Apps Script web app.
+
+To set it up:
+
+1. Go to [script.google.com](https://script.google.com/).
+2. Create a new Apps Script project.
+3. Paste in the contents of `apps-script/google-calendar-sync-webapp.gs`.
+4. Check `CALENDAR_ID` at the top of the script. It is currently set to:
+
+```js
+const CALENDAR_ID = "ellacrowmusic@gmail.com";
+```
+
+5. Click `Deploy > New deployment`.
+6. Choose `Web app`.
+7. Set `Execute as` to `Me`.
+8. Set `Who has access` to `Anyone`.
+9. Deploy and approve the calendar permissions.
+10. Copy the Web App URL.
+11. Paste that URL into `cloud-config.js`:
+
+```js
+googleCalendarSyncUrl: "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL"
+```
+
+After that, saving or editing a gig/session will queue a one-way sync into Google Calendar.
+
+Event naming:
+
+- Gigs: `Show Name @ Location`
+- Sessions: `Title`
+
+Event colours:
+
+- Gig: red
+- Rehearsal: green
+- Recording: blue
+- Meeting: mauve

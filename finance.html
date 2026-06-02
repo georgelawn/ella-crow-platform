@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Finance</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Finance</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button nav-link" href="index.html">Gigs</a>
+        <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+        <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+        <a class="ghost-button nav-link active" href="finance.html">Finance</a>
+        <a class="ghost-button nav-link" href="todos.html">To Do</a>
+        <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="summary-grid" aria-label="Finance summary">
+        <article><span id="monthRevenue">£0</span><p>This month revenue</p></article>
+        <article><span id="monthExpenses">£0</span><p>This month expenses</p></article>
+        <article><span id="monthNet">£0</span><p>This month net</p></article>
+        <article><span id="allTimeNet">£0</span><p>All-time net</p></article>
+      </section>
+
+      <section class="workspace">
+        <aside class="control-panel" aria-label="Add transaction">
+          <form id="financeForm" autocomplete="off">
+            <div class="panel-heading">
+              <p class="eyebrow">Money In / Out</p>
+              <h2>Add transaction</h2>
+            </div>
+            <label>
+              Type
+              <select id="transactionType">
+                <option value="revenue">Revenue</option>
+                <option value="expense">Expense</option>
+              </select>
+            </label>
+            <label class="conditional-field" id="invoiceStatusField">
+              Invoice status
+              <select id="invoiceStatus">
+                <option value="pending">Pending</option>
+                <option value="received">Received</option>
+              </select>
+            </label>
+            <label class="conditional-field" id="invoiceDueDateField">
+              Invoice due date
+              <input id="invoiceDueDate" type="date">
+            </label>
+            <label>
+              Date
+              <input id="transactionDate" type="date" required>
+            </label>
+            <label>
+              Amount
+              <input id="transactionAmount" type="number" min="0" step="0.01" required placeholder="0.00">
+            </label>
+            <label>
+              Category
+              <input id="transactionCategory" placeholder="Gig fee, studio, travel">
+            </label>
+            <label>
+              Description
+              <textarea id="transactionDescription" rows="4" placeholder="What was this for?"></textarea>
+            </label>
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Save transaction</button>
+              <button class="ghost-button" id="clearTransactionButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board" aria-label="Finance records">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Turnover</p>
+              <h2>Month by month</h2>
+            </div>
+          </div>
+          <div class="finance-table" id="monthlyFinance"></div>
+          <div class="finance-columns">
+            <section>
+              <div class="contact-section-heading">
+                <h3>Revenue</h3>
+                <span id="revenueCount">0</span>
+              </div>
+              <div class="transaction-list" id="revenueList"></div>
+            </section>
+            <section>
+              <div class="contact-section-heading">
+                <h3>Expenses</h3>
+                <span id="expenseCount">0</span>
+              </div>
+              <div class="transaction-list" id="expenseList"></div>
+            </section>
+          </div>
+          <p class="empty-state" id="financeEmptyState">No finance records yet.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=3"></script>
+    <script src="mobile-panels.js?v=3"></script>
+    <script src="finance.js"></script>
+  </body>
+</html>

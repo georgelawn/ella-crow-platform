@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Contacts</title>
+    <link rel="stylesheet" href="styles.css?v=6">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Contacts</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button nav-link" href="index.html">Gigs</a>
+        <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+        <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+        <a class="ghost-button nav-link" href="finance.html">Finance</a>
+        <a class="ghost-button nav-link" href="todos.html">To Do</a>
+        <a class="ghost-button nav-link active" href="contacts.html">Contacts</a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="summary-grid" aria-label="Contact summary">
+        <article>
+          <span id="totalContacts">0</span>
+          <p>Total contacts</p>
+        </article>
+        <article>
+          <span id="musicianContacts">0</span>
+          <p>Musicians</p>
+        </article>
+        <article>
+          <span id="promoterContacts">0</span>
+          <p>Promoters</p>
+        </article>
+        <article>
+          <span id="venueOwnerContacts">0</span>
+          <p>Venues</p>
+        </article>
+      </section>
+
+      <section class="workspace contacts-workspace">
+        <aside class="control-panel overlay-panel" aria-label="Add contact">
+          <form id="contactForm" autocomplete="off">
+            <input id="contactId" type="hidden">
+            <div class="panel-heading">
+              <p class="eyebrow">Database</p>
+              <h2 id="contactFormTitle">Add contact</h2>
+            </div>
+
+            <label>
+              Section
+              <select id="contactCategory" name="contactCategory">
+                <option value="Musicians">Musicians</option>
+                <option value="Promoters">Promoters</option>
+                <option value="Venues">Venues</option>
+                <option value="Other Artists">Other Artists</option>
+                <option value="Misc">Misc</option>
+              </select>
+            </label>
+
+            <label>
+              <span id="contactNameLabel">Name</span>
+              <input id="contactName" name="contactName" required placeholder="Contact name">
+            </label>
+
+            <label class="conditional-field" id="promoterContactField">
+              Contact name
+              <input id="promoterContactName" name="promoterContactName" placeholder="Person at promoter">
+            </label>
+
+            <label class="conditional-field" id="instrumentField">
+              Instrument
+              <select id="contactInstrument" name="contactInstrument"></select>
+            </label>
+
+            <label class="conditional-field" id="genreField">
+              Genre
+              <input id="contactGenre" name="contactGenre" placeholder="Artist genre">
+            </label>
+
+            <label>
+              Phone
+              <input id="contactPhone" name="contactPhone" placeholder="+44...">
+            </label>
+
+            <label>
+              Email
+              <input id="contactEmail" name="contactEmail" type="email" placeholder="name@example.com">
+            </label>
+
+            <label>
+              Description
+              <textarea id="contactDescription" name="contactDescription" rows="5" placeholder="Role, context, relationship notes"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Save contact</button>
+              <button class="ghost-button" id="clearContactButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board" aria-label="Contact database">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">All Contacts</p>
+              <h2>Database</h2>
+            </div>
+            <div class="filters" role="group" aria-label="Filter contacts">
+              <button class="filter active" data-filter="all" type="button">All</button>
+              <button class="filter" data-filter="Musicians" type="button">Musicians</button>
+              <button class="filter" data-filter="Promoters" type="button">Promoters</button>
+              <button class="filter" data-filter="Venues" type="button">Venues</button>
+              <button class="filter" data-filter="Other Artists" type="button">Other Artists</button>
+              <button class="filter" data-filter="Misc" type="button">Misc</button>
+            </div>
+          </div>
+
+          <div class="contact-sections" id="contactSections"></div>
+          <p class="empty-state" id="contactEmptyState">No contacts yet. Add the first one from the panel.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=3"></script>
+    <script src="mobile-panels.js?v=3"></script>
+    <script src="contacts.js?v=2"></script>
+  </body>
+</html>
