@@ -51,24 +51,24 @@ async function syncSessionToCalendar(session, openId = "") {
   freshSession.googleCalendarSyncedAt = result.syncedAt || new Date().toISOString();
   saveSessions();
   if (openId) renderSessions(openId);
+  return result;
 }
 
 async function syncExistingSessionsToCalendar() {
   if (!window.EllaCalendarSync?.syncSession) return;
-  const unsyncedSessions = sessions.filter((session) => session.title && session.date && !session.googleCalendarEventId);
+  const syncableSessions = sessions.filter((session) => session.title && session.date);
   let syncedCount = 0;
   let failedCount = 0;
-  window.EllaCalendarSync.report?.(`Syncing ${unsyncedSessions.length} existing sessions`, "syncing");
-  for (const session of unsyncedSessions) {
-    const before = session.googleCalendarEventId;
-    await syncSessionToCalendar(session);
-    if (session.googleCalendarEventId && session.googleCalendarEventId !== before) {
+  window.EllaCalendarSync.report?.(`Syncing ${syncableSessions.length} sessions`, "syncing");
+  for (const session of syncableSessions) {
+    const result = await syncSessionToCalendar(session);
+    if (result?.eventId) {
       syncedCount += 1;
     } else {
       failedCount += 1;
     }
   }
-  if (unsyncedSessions.length) renderSessions();
+  if (syncableSessions.length) renderSessions();
   window.EllaCalendarSync.report?.(
     failedCount ? `Google sync: ${syncedCount} synced, ${failedCount} failed` : `Google sync: ${syncedCount} synced`,
     failedCount ? "error" : "synced"

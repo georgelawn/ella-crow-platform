@@ -59,24 +59,24 @@ async function syncGigToCalendar(gig, openId = "") {
   freshGig.googleCalendarSyncedAt = result.syncedAt || new Date().toISOString();
   saveGigs();
   if (openId) renderGigs(openId);
+  return result;
 }
 
 async function syncExistingGigsToCalendar() {
   if (!window.EllaCalendarSync?.syncGig) return;
-  const unsyncedGigs = gigs.filter((gig) => gig.title && gig.date && !gig.googleCalendarEventId);
+  const syncableGigs = gigs.filter((gig) => gig.title && gig.date);
   let syncedCount = 0;
   let failedCount = 0;
-  window.EllaCalendarSync.report?.(`Syncing ${unsyncedGigs.length} existing gigs`, "syncing");
-  for (const gig of unsyncedGigs) {
-    const before = gig.googleCalendarEventId;
-    await syncGigToCalendar(gig);
-    if (gig.googleCalendarEventId && gig.googleCalendarEventId !== before) {
+  window.EllaCalendarSync.report?.(`Syncing ${syncableGigs.length} gigs`, "syncing");
+  for (const gig of syncableGigs) {
+    const result = await syncGigToCalendar(gig);
+    if (result?.eventId) {
       syncedCount += 1;
     } else {
       failedCount += 1;
     }
   }
-  if (unsyncedGigs.length) renderGigs();
+  if (syncableGigs.length) renderGigs();
   window.EllaCalendarSync.report?.(
     failedCount ? `Google sync: ${syncedCount} synced, ${failedCount} failed` : `Google sync: ${syncedCount} synced`,
     failedCount ? "error" : "synced"
