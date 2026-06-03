@@ -2,11 +2,13 @@ const gigStorageKey = "ella-crow-gigs-v2";
 const sessionStorageKey = "ella-crow-sessions-v1";
 const todoStorageKey = "ella-crow-manual-todos-v1";
 const financeStorageKey = "ella-crow-finance-v1";
+const opportunityStorageKey = "ella-crow-opportunities-v1";
 
 let gigs = loadGigs();
 let sessions = loadSessions();
 let manualTodos = loadManualTodos();
 let transactions = loadTransactions();
+let opportunities = loadOpportunities();
 let activeFilter = "open";
 
 const todoForm = document.querySelector("#todoForm");
@@ -58,8 +60,21 @@ function loadTransactions() {
   }
 }
 
+function loadOpportunities() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(opportunityStorageKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function saveTransactions() {
   localStorage.setItem(financeStorageKey, JSON.stringify(transactions));
+}
+
+function saveOpportunities() {
+  localStorage.setItem(opportunityStorageKey, JSON.stringify(opportunities));
 }
 
 function saveManualTodos() {
@@ -173,6 +188,10 @@ function isInBreach(todo) {
   return !todo.done && dateStamp(todo.dueDate) < todayStamp();
 }
 
+function isClosedOpportunity(opportunity) {
+  return ["won", "lost", "closed", "complete", "completed"].includes(String(opportunity.status || "").toLowerCase());
+}
+
 function getAutoTodos() {
   const gigTodos = gigs.flatMap((gig) => {
     const status = derivedStatus(gig);
@@ -246,7 +265,20 @@ function getAutoTodos() {
       meta: `${Number(transaction.amount || 0).toLocaleString("en-GB", { style: "currency", currency: "GBP" })} · recorded ${formatDate(transaction.date)}`
     }));
 
-  return [...gigTodos, ...sessionTodos, ...financeTodos];
+  const opportunityTodos = opportunities
+    .filter((opportunity) => !isClosedOpportunity(opportunity) && opportunity.followUpDate && !opportunity.followUpDone)
+    .map((opportunity) => ({
+      id: `opportunity-follow-up:${opportunity.id}`,
+      type: "auto-opportunity-follow-up",
+      category: "Opportunities",
+      title: `Follow up: ${opportunity.title || "Opportunity"}`,
+      dueDate: opportunity.followUpDate,
+      done: false,
+      opportunityId: opportunity.id,
+      meta: `${opportunity.contact || "No contact added"}${opportunity.source ? ` · ${opportunity.source}` : ""}`
+    }));
+
+  return [...gigTodos, ...sessionTodos, ...financeTodos, ...opportunityTodos];
 }
 
 function allTodos() {
@@ -274,7 +306,7 @@ function renderTodos() {
   renderSummary();
   const todos = filteredTodos().sort((a, b) => dateStamp(a.dueDate) - dateStamp(b.dueDate));
   emptyState.classList.toggle("visible", todos.length === 0);
-  const categories = ["Gigs", "Sessions", "Finance"];
+  const categories = ["Gigs", "Sessions", "Finance", "Opportunities"];
   todoList.innerHTML = categories.map((category) => {
     const categoryTodos = todos.filter((todo) => todo.category === category);
     if (!categoryTodos.length) return "";
@@ -294,6 +326,7 @@ function reloadTodosFromStorage() {
   gigs = loadGigs();
   sessions = loadSessions();
   transactions = loadTransactions();
+  opportunities = loadOpportunities();
   manualTodos = loadManualTodos();
   renderTodos();
 }
@@ -301,9 +334,7 @@ function reloadTodosFromStorage() {
 function renderTodo(todo) {
   const breachClass = isInBreach(todo) ? " breach" : "";
   const doneClass = todo.done ? " done" : "";
-  const sourceLabel = todo.type === "manual"
-    ? "Manual"
-    : (todo.category === "Finance" ? "Auto from finance" : "Auto from gig");
+  const sourceLabel = todo.type === "manual" ? "Manual" : `Auto from ${todo.category.toLowerCase()}`;
 
   return `
     <article class="todo-card${breachClass}${doneClass}">
@@ -324,6 +355,14 @@ function renderTodo(todo) {
 }
 
 function toggleAutoTodo(todo) {
+  if (todo.type === "auto-opportunity-follow-up") {
+    const opportunity = opportunities.find((item) => item.id === todo.opportunityId);
+    if (!opportunity) return;
+    opportunity.followUpDone = true;
+    saveOpportunities();
+    return;
+  }
+
   if (todo.type === "auto-finance-invoice") {
     const transaction = transactions.find((item) => item.id === todo.transactionId);
     if (!transaction) return;
@@ -432,7 +471,7 @@ document.querySelectorAll(".filter").forEach((button) => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
-  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, financeStorageKey];
+  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, financeStorageKey, opportunityStorageKey];
   if (keys.some((key) => todoKeys.includes(key))) reloadTodosFromStorage();
 });
 

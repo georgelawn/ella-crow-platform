@@ -5,6 +5,9 @@
     "ella-crow-contacts-v1",
     "ella-crow-sessions-v1",
     "ella-crow-finance-v1",
+    "ella-crow-opportunities-v1",
+    "ella-crow-opportunities",
+    "ella-crow-email-opportunities-v1",
     "ella-crow-manual-todos-v1",
     "ella-crow-instruments-v1",
     "ella-crow-roster-migrated-v1"

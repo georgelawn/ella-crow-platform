@@ -12,13 +12,14 @@ This is a lightweight management dashboard for Ella Crow. It is designed to run 
 - Calendar page with clickable dates showing gigs and sessions
 - Sessions page for rehearsals, recordings, and meetings
 - Finance page for editable revenue, expenses, invoice status, and month-by-month turnover
-- To Do page with manual tasks plus auto tasks from gigs and pending invoices
+- To Do page with manual tasks plus auto tasks from gigs, sessions, pending invoices, and opportunity follow-ups
+- Opportunities page for manually tracking outstanding leads and follow-up dates
 - Contacts page with sections for Musicians, Promoters, Venues, Other Artists, and Misc
 - Musician contacts and the gig/session player dropdowns share the same saved list
 - Supabase sync for laptop and iPhone use
 - Optional one-way Google Calendar sync through Google Apps Script
 
-The email Opportunities feature has been removed. Opportunities/follow-ups can now be tracked manually in To Do.
+The email connector has been removed. Opportunities/follow-ups are tracked manually.
 
 ## GitHub Pages Hosting
 
