@@ -175,14 +175,16 @@ function statusLabel(status) {
 function normalizePeople(session) {
   if (Array.isArray(session.musicians)) {
     return session.musicians.map((person) =>
-      typeof person === "string" ? { name: person } : { name: person.name || "" }
+      typeof person === "string"
+        ? { name: person, status: "confirmed" }
+        : { name: person.name || "", status: person.status === "pending" ? "pending" : "confirmed" }
     );
   }
   return String(session.people || "")
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean)
-    .map((name) => ({ name }));
+    .map((name) => ({ name, status: "confirmed" }));
 }
 
 function musicianOptions(selectedName = "") {
@@ -194,13 +196,20 @@ function musicianOptions(selectedName = "") {
 }
 
 function renderMusicianRows(sessionId, people) {
-  const rows = people.length ? people : [{ name: "" }];
+  const rows = people.length ? people : [{ name: "", status: "pending" }];
   return rows.map((person, index) => `
     <div class="player-row">
       <label>
         <span>Musician</span>
-        <select class="session-musician-field" data-id="${sessionId}" data-index="${index}">
+        <select class="session-musician-field" data-id="${sessionId}" data-index="${index}" data-field="name">
           ${musicianOptions(person.name)}
+        </select>
+      </label>
+      <label>
+        <span>Status</span>
+        <select class="session-musician-field" data-id="${sessionId}" data-index="${index}" data-field="status">
+          <option value="confirmed"${person.status === "confirmed" ? " selected" : ""}>Confirmed</option>
+          <option value="pending"${person.status === "pending" ? " selected" : ""}>Pending</option>
         </select>
       </label>
       <button class="small-button player-remove" data-action="remove-musician" data-id="${sessionId}" data-index="${index}" type="button">Remove</button>
@@ -234,6 +243,7 @@ function renderSession(session, openId = "") {
   const open = session.id === openId ? " open" : "";
   const people = normalizePeople(session);
   const peopleText = people.length ? people.map((person) => person.name).join(", ") : "No musicians added";
+  const pendingMusicians = people.filter((person) => person.name && person.status === "pending").length;
 
   return `
     <details class="gig-card ${session.status}"${open}>
@@ -243,7 +253,10 @@ function renderSession(session, openId = "") {
           <h3>${escapeHtml(session.title)}</h3>
           <p>${escapeHtml(session.type)} · ${displayValue(session.location)} · ${formatDate(session.date)}${session.time ? ` · ${escapeHtml(session.time)}` : ""}</p>
         </div>
-        <span class="status-pill ${session.status}">${statusLabel(session.status)}</span>
+        <div class="summary-pills">
+          <span class="status-pill ${session.status}">${statusLabel(session.status)}</span>
+          ${pendingMusicians ? `<span class="pending-player-pill">${pendingMusicians} pending</span>` : ""}
+        </div>
       </summary>
       <div class="gig-details" data-id="${session.id}">
         <label class="detail-field">
@@ -353,12 +366,13 @@ function saveSessionField(element) {
 function updateSessionMusician(element) {
   const id = element.dataset.id;
   const index = Number(element.dataset.index);
+  const field = element.dataset.field || "name";
   const session = sessions.find((item) => item.id === id);
   if (!session || Number.isNaN(index)) return;
   const people = normalizePeople(session);
-  while (people.length <= index) people.push({ name: "" });
+  while (people.length <= index) people.push({ name: "", status: "pending" });
 
-  if (element.value === newMusicianValue) {
+  if (field === "name" && element.value === newMusicianValue) {
     const newName = window.prompt("Add a new musician");
     if (!newName || !newName.trim()) {
       renderSessions(id);
@@ -366,8 +380,11 @@ function updateSessionMusician(element) {
     }
     addMusicianContact(newName.trim());
     people[index].name = newName.trim();
-  } else {
+    people[index].status = people[index].status || "pending";
+  } else if (field === "name") {
     people[index].name = element.value;
+  } else {
+    people[index].status = element.value === "pending" ? "pending" : "confirmed";
   }
 
   session.musicians = people.filter((person) => person.name);
@@ -381,8 +398,8 @@ function addSessionMusician(id) {
   const session = sessions.find((item) => item.id === id);
   if (!session) return;
   const people = normalizePeople(session);
-  if (!people.length) people.push({ name: "" });
-  people.push({ name: "" });
+  if (!people.length) people.push({ name: "", status: "pending" });
+  people.push({ name: "", status: "pending" });
   session.musicians = people;
   session.people = "";
   saveSessions();

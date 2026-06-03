@@ -1,8 +1,10 @@
 const gigStorageKey = "ella-crow-gigs-v2";
+const sessionStorageKey = "ella-crow-sessions-v1";
 const todoStorageKey = "ella-crow-manual-todos-v1";
 const financeStorageKey = "ella-crow-finance-v1";
 
 let gigs = loadGigs();
+let sessions = loadSessions();
 let manualTodos = loadManualTodos();
 let transactions = loadTransactions();
 let activeFilter = "open";
@@ -23,6 +25,19 @@ function loadGigs() {
 
 function saveGigs() {
   localStorage.setItem(gigStorageKey, JSON.stringify(gigs));
+}
+
+function loadSessions() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(sessionStorageKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSessions() {
+  localStorage.setItem(sessionStorageKey, JSON.stringify(sessions));
 }
 
 function loadManualTodos() {
@@ -90,6 +105,12 @@ function derivedStatus(gig) {
   return gig.status || "booked";
 }
 
+function derivedSessionStatus(session) {
+  if (session.manualStatus) return session.status || "booked";
+  if (dateStamp(session.date) < todayStamp()) return "complete";
+  return session.status || "booked";
+}
+
 function normalizePlayers(players) {
   if (!Array.isArray(players)) return [];
   return players
@@ -103,6 +124,28 @@ function normalizePlayers(players) {
       };
     })
     .filter((player) => player.name);
+}
+
+function normalizeSessionMusicians(session) {
+  if (Array.isArray(session.musicians)) {
+    return session.musicians
+      .map((person) => {
+        if (typeof person === "string") {
+          return { name: person, status: "confirmed" };
+        }
+        return {
+          name: person.name || "",
+          status: person.status === "pending" ? "pending" : "confirmed"
+        };
+      })
+      .filter((person) => person.name);
+  }
+
+  return String(session.people || "")
+    .split(",")
+    .map((name) => name.trim())
+    .filter(Boolean)
+    .map((name) => ({ name, status: "confirmed" }));
 }
 
 function escapeHtml(value) {
@@ -168,6 +211,28 @@ function getAutoTodos() {
     return [...pendingGigTodo, ...pendingPlayerTodos];
   });
 
+  const sessionTodos = sessions.flatMap((session) => {
+    const status = derivedSessionStatus(session);
+    const isUpcoming = dateStamp(session.date) >= todayStamp();
+    if (!isUpcoming || !["booked", "pending"].includes(status)) return [];
+
+    return normalizeSessionMusicians(session)
+      .map((musician, index) => ({ musician, index }))
+      .filter(({ musician }) => musician.status === "pending")
+      .map(({ musician, index }) => ({
+        id: `session-musician:${session.id}:${index}:${musician.name}`,
+        type: "auto-session-musician",
+        category: "Sessions",
+        title: `Confirm ${musician.name} for ${session.title}`,
+        dueDate: addDays(session.date, -14),
+        done: false,
+        sessionId: session.id,
+        musicianIndex: index,
+        musicianName: musician.name,
+        meta: `${session.location || "Location TBC"} · ${session.type || "Session"} on ${formatDate(session.date)}`
+      }));
+  });
+
   const financeTodos = transactions
     .filter((transaction) => transaction.type === "revenue" && transaction.invoiceStatus === "pending")
     .map((transaction) => ({
@@ -181,7 +246,7 @@ function getAutoTodos() {
       meta: `${Number(transaction.amount || 0).toLocaleString("en-GB", { style: "currency", currency: "GBP" })} · recorded ${formatDate(transaction.date)}`
     }));
 
-  return [...gigTodos, ...financeTodos];
+  return [...gigTodos, ...sessionTodos, ...financeTodos];
 }
 
 function allTodos() {
@@ -209,7 +274,7 @@ function renderTodos() {
   renderSummary();
   const todos = filteredTodos().sort((a, b) => dateStamp(a.dueDate) - dateStamp(b.dueDate));
   emptyState.classList.toggle("visible", todos.length === 0);
-  const categories = ["Gigs", "Finance"];
+  const categories = ["Gigs", "Sessions", "Finance"];
   todoList.innerHTML = categories.map((category) => {
     const categoryTodos = todos.filter((todo) => todo.category === category);
     if (!categoryTodos.length) return "";
@@ -227,6 +292,7 @@ function renderTodos() {
 
 function reloadTodosFromStorage() {
   gigs = loadGigs();
+  sessions = loadSessions();
   transactions = loadTransactions();
   manualTodos = loadManualTodos();
   renderTodos();
@@ -263,6 +329,20 @@ function toggleAutoTodo(todo) {
     if (!transaction) return;
     transaction.invoiceStatus = "received";
     saveTransactions();
+    return;
+  }
+
+  if (todo.type === "auto-session-musician") {
+    const session = sessions.find((item) => item.id === todo.sessionId);
+    if (!session) return;
+    const musicians = normalizeSessionMusicians(session);
+    const musician = musicians.find((item) => item.name === todo.musicianName);
+    if (!musician) return;
+
+    musician.status = "confirmed";
+    session.musicians = musicians;
+    session.people = "";
+    saveSessions();
     return;
   }
 
@@ -352,7 +432,7 @@ document.querySelectorAll(".filter").forEach((button) => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
-  const todoKeys = [gigStorageKey, todoStorageKey, financeStorageKey];
+  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, financeStorageKey];
   if (keys.some((key) => todoKeys.includes(key))) reloadTodosFromStorage();
 });
 

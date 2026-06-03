@@ -282,6 +282,7 @@ function renderSummary() {
 }
 
 function renderGigs(openGigId = "") {
+  refreshPastStatuses();
   renderSummary();
 
   const visibleGigs = gigs
