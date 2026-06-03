@@ -57,6 +57,13 @@ function currentMonthKey() {
   return monthKey(new Date().toISOString().slice(0, 10));
 }
 
+function lastMonthKey() {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() - 1);
+  return monthKey(date.toISOString().slice(0, 10));
+}
+
 function monthLabel(key) {
   return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(`${key}-01T00:00:00`));
 }
@@ -69,10 +76,12 @@ function totalsFor(items) {
 
 function renderSummary() {
   const currentItems = transactions.filter((item) => monthKey(item.date) === currentMonthKey());
+  const lastMonthItems = transactions.filter((item) => monthKey(item.date) === lastMonthKey());
   const monthTotals = totalsFor(currentItems);
+  const lastMonthTotals = totalsFor(lastMonthItems);
   const allTotals = totalsFor(transactions);
+  document.querySelector("#lastMonthNet").textContent = money(lastMonthTotals.net);
   document.querySelector("#monthRevenue").textContent = money(monthTotals.revenue);
-  document.querySelector("#monthExpenses").textContent = money(monthTotals.expenses);
   document.querySelector("#monthNet").textContent = money(monthTotals.net);
   document.querySelector("#allTimeNet").textContent = money(allTotals.net);
 }
