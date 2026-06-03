@@ -23,7 +23,7 @@
     return `apps-script:${itemType}:${item.id}`;
   }
 
-  async function requestSync(action, itemType, item) {
+  async function requestSync(action, itemType, item, previousItem = null) {
     if (!item?.id) return null;
     const label = item.title || item.name || "event";
 
@@ -33,7 +33,7 @@
     }
 
     report(`Syncing ${label}`, "syncing");
-    const payload = { action, itemType, item };
+    const payload = { action, itemType, item, previousItem };
 
     try {
       if (endpoint.includes("script.google.com")) {
@@ -73,20 +73,20 @@
     }
   }
 
-  async function syncGig(gig) {
+  async function syncGig(gig, previousGig = null) {
     if (!gig?.title || !gig?.date) return null;
     return requestSync("upsert", "gig", {
       ...gig,
       statusLabel: statusText(gig.status)
-    });
+    }, previousGig);
   }
 
-  async function syncSession(session) {
+  async function syncSession(session, previousSession = null) {
     if (!session?.title || !session?.date) return null;
     return requestSync("upsert", "session", {
       ...session,
       statusLabel: statusText(session.status)
-    });
+    }, previousSession);
   }
 
   async function deleteEvent(itemType, item) {

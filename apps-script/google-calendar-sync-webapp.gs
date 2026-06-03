@@ -1,6 +1,7 @@
 const CALENDAR_ID = "ellacrowmusic@gmail.com";
 const TIMEZONE = "Europe/London";
 const DEFAULT_DURATION_MINUTES = 60;
+const MARKER_LABEL = "Ella dashboard ID";
 
 const EVENT_COLORS = {
   gig: CalendarApp.EventColor.RED,
@@ -15,6 +16,7 @@ function doPost(event) {
     const action = payload.action || "upsert";
     const itemType = payload.itemType;
     const item = payload.item || {};
+    const previousItem = payload.previousItem || null;
 
     if (!itemType || !item.id) {
       return json_({ ok: false, error: "Missing itemType or item.id" });
@@ -25,7 +27,7 @@ function doPost(event) {
       return json_({ ok: true, deleted: true });
     }
 
-    const calendarEvent = upsertEvent_(itemType, item);
+    const calendarEvent = upsertEvent_(itemType, item, previousItem);
     return json_({
       ok: true,
       eventId: calendarEvent.getId(),
@@ -37,20 +39,35 @@ function doPost(event) {
   }
 }
 
-function upsertEvent_(itemType, item) {
+function upsertEvent_(itemType, item, previousItem) {
   const calendar = calendar_();
   const key = eventKey_(itemType, item.id);
   const props = PropertiesService.getScriptProperties();
   const existingId = props.getProperty(key);
   let calendarEvent = existingId ? calendar.getEventById(existingId) : null;
 
+  if (!calendarEvent && item.googleCalendarEventId && !String(item.googleCalendarEventId).startsWith("apps-script:")) {
+    calendarEvent = calendar.getEventById(item.googleCalendarEventId);
+  }
+
+  if (!calendarEvent) {
+    calendarEvent = findMarkedEvent_(calendar, key);
+  }
+
+  if (!calendarEvent) {
+    calendarEvent = findMatchingEvent_(calendar, itemType, previousItem || item);
+  }
+
   if (!calendarEvent) {
     calendarEvent = createEvent_(calendar, itemType, item);
     props.setProperty(key, calendarEvent.getId());
+    cleanupStaleEvents_(calendar, itemType, item, previousItem, calendarEvent.getId());
     return calendarEvent;
   }
 
   updateEvent_(calendarEvent, itemType, item);
+  props.setProperty(key, calendarEvent.getId());
+  cleanupStaleEvents_(calendar, itemType, item, previousItem, calendarEvent.getId());
   return calendarEvent;
 }
 
@@ -101,7 +118,9 @@ function deleteEvent_(itemType, item) {
   const key = eventKey_(itemType, item.id);
   const props = PropertiesService.getScriptProperties();
   const existingId = props.getProperty(key);
-  const calendarEvent = existingId ? calendar.getEventById(existingId) : null;
+  let calendarEvent = existingId ? calendar.getEventById(existingId) : null;
+  if (!calendarEvent) calendarEvent = findMarkedEvent_(calendar, key);
+  if (!calendarEvent) calendarEvent = findMatchingEvent_(calendar, itemType, item);
   if (calendarEvent) calendarEvent.deleteEvent();
   props.deleteProperty(key);
 }
@@ -165,6 +184,7 @@ function eventSummary_(itemType, item) {
 function eventDescription_(itemType, item) {
   if (itemType === "gig") {
     return [
+      line_(MARKER_LABEL, eventKey_(itemType, item.id)),
       line_("Type", "Gig"),
       line_("Status", item.statusLabel || item.status),
       line_("Venue", item.venue),
@@ -178,6 +198,7 @@ function eventDescription_(itemType, item) {
   }
 
   return [
+    line_(MARKER_LABEL, eventKey_(itemType, item.id)),
     line_("Type", item.type),
     line_("Status", item.statusLabel || item.status),
     line_("Location / studio", item.location),
@@ -186,6 +207,60 @@ function eventDescription_(itemType, item) {
     line_("Musicians involved", peopleList_(item)),
     line_("Notes", item.notes)
   ].filter(Boolean).join("\n");
+}
+
+function findMarkedEvent_(calendar, key) {
+  const start = new Date(2024, 0, 1);
+  const end = new Date(2035, 11, 31);
+  const events = calendar.getEvents(start, end, { search: key });
+  return events.find((event) => String(event.getDescription() || "").indexOf(`${MARKER_LABEL}: ${key}`) !== -1) || null;
+}
+
+function findMatchingEvent_(calendar, itemType, item) {
+  if (!item || !item.date) return null;
+  return matchingEvents_(calendar, itemType, item)[0] || null;
+}
+
+function matchingEvents_(calendar, itemType, item) {
+  if (!item || !item.date) return [];
+  const summary = eventSummary_(itemType, item);
+  const window = eventWindow_(item.date);
+  return calendar.getEvents(window.start, window.end)
+    .filter((event) => event.getTitle() === summary);
+}
+
+function cleanupStaleEvents_(calendar, itemType, item, previousItem, keeperId) {
+  const candidates = []
+    .concat(matchingEvents_(calendar, itemType, item))
+    .concat(nearbyMatchingEvents_(calendar, itemType, item))
+    .concat(previousItem ? matchingEvents_(calendar, itemType, previousItem) : []);
+  const seen = {};
+
+  candidates.forEach((event) => {
+    const id = event.getId();
+    if (seen[id] || id === keeperId) return;
+    seen[id] = true;
+    event.deleteEvent();
+  });
+}
+
+function eventWindow_(dateString) {
+  const start = dateOnly_(dateString);
+  start.setDate(start.getDate() - 1);
+  const end = dateOnly_(dateString);
+  end.setDate(end.getDate() + 2);
+  return { start, end };
+}
+
+function nearbyMatchingEvents_(calendar, itemType, item) {
+  if (!item || !item.date) return [];
+  const summary = eventSummary_(itemType, item);
+  const start = dateOnly_(item.date);
+  start.setDate(start.getDate() - 45);
+  const end = dateOnly_(item.date);
+  end.setDate(end.getDate() + 45);
+  return calendar.getEvents(start, end)
+    .filter((event) => event.getTitle() === summary);
 }
 
 function setEventColor_(calendarEvent, itemType, item) {

@@ -39,9 +39,9 @@ function saveSessions() {
   localStorage.setItem(sessionStorageKey, JSON.stringify(sessions));
 }
 
-async function syncSessionToCalendar(session, openId = "") {
+async function syncSessionToCalendar(session, openId = "", previousSession = null) {
   if (!window.EllaCalendarSync?.syncSession || !session?.title || !session?.date) return;
-  const result = await window.EllaCalendarSync.syncSession(session);
+  const result = await window.EllaCalendarSync.syncSession(session, previousSession);
   if (!result?.eventId) return;
 
   const freshSession = sessions.find((item) => item.id === session.id);
@@ -356,11 +356,12 @@ function saveSessionField(element) {
   const field = element.dataset.field;
   const session = sessions.find((item) => item.id === id);
   if (!session || !field) return;
+  const previousSession = { ...session };
   session[field] = element.value;
   if (field === "status") session.manualStatus = true;
   saveSessions();
   renderSessions(id);
-  syncSessionToCalendar(session, id);
+  syncSessionToCalendar(session, id, previousSession);
 }
 
 function updateSessionMusician(element) {
@@ -369,6 +370,10 @@ function updateSessionMusician(element) {
   const field = element.dataset.field || "name";
   const session = sessions.find((item) => item.id === id);
   if (!session || Number.isNaN(index)) return;
+  const previousSession = {
+    ...session,
+    musicians: Array.isArray(session.musicians) ? JSON.parse(JSON.stringify(session.musicians)) : session.musicians
+  };
   const people = normalizePeople(session);
   while (people.length <= index) people.push({ name: "", status: "pending" });
 
@@ -391,12 +396,16 @@ function updateSessionMusician(element) {
   session.people = "";
   saveSessions();
   renderSessions(id);
-  syncSessionToCalendar(session, id);
+  syncSessionToCalendar(session, id, previousSession);
 }
 
 function addSessionMusician(id) {
   const session = sessions.find((item) => item.id === id);
   if (!session) return;
+  const previousSession = {
+    ...session,
+    musicians: Array.isArray(session.musicians) ? JSON.parse(JSON.stringify(session.musicians)) : session.musicians
+  };
   const people = normalizePeople(session);
   if (!people.length) people.push({ name: "", status: "pending" });
   people.push({ name: "", status: "pending" });
@@ -404,19 +413,23 @@ function addSessionMusician(id) {
   session.people = "";
   saveSessions();
   renderSessions(id);
-  syncSessionToCalendar(session, id);
+  syncSessionToCalendar(session, id, previousSession);
 }
 
 function removeSessionMusician(id, index) {
   const session = sessions.find((item) => item.id === id);
   if (!session) return;
+  const previousSession = {
+    ...session,
+    musicians: Array.isArray(session.musicians) ? JSON.parse(JSON.stringify(session.musicians)) : session.musicians
+  };
   const people = normalizePeople(session);
   people.splice(index, 1);
   session.musicians = people;
   session.people = "";
   saveSessions();
   renderSessions(id);
-  syncSessionToCalendar(session, id);
+  syncSessionToCalendar(session, id, previousSession);
 }
 
 form.addEventListener("submit", (event) => {

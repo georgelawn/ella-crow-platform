@@ -47,9 +47,9 @@ function saveGigs() {
   localStorage.setItem(storageKey, JSON.stringify(gigs));
 }
 
-async function syncGigToCalendar(gig, openId = "") {
+async function syncGigToCalendar(gig, openId = "", previousGig = null) {
   if (!window.EllaCalendarSync?.syncGig || !gig?.title || !gig?.date) return;
-  const result = await window.EllaCalendarSync.syncGig(gig);
+  const result = await window.EllaCalendarSync.syncGig(gig, previousGig);
   if (!result?.eventId) return;
 
   const freshGig = gigs.find((item) => item.id === gig.id);
@@ -441,6 +441,7 @@ function saveInlineField(element) {
   const field = element.dataset.field;
   const gig = gigs.find((item) => item.id === id);
   if (!gig || !field) return;
+  const previousGig = { ...gig };
 
   gig[field] = element.value;
   if (field === "status") {
@@ -448,7 +449,7 @@ function saveInlineField(element) {
   }
   saveGigs();
   renderGigs(id);
-  syncGigToCalendar(gig, id);
+  syncGigToCalendar(gig, id, previousGig);
 }
 
 function updatePlayerField(element) {
@@ -457,6 +458,7 @@ function updatePlayerField(element) {
   const field = element.dataset.playerField;
   const gig = gigs.find((item) => item.id === id);
   if (!gig || Number.isNaN(index) || !field) return;
+  const previousGig = { ...gig, players: Array.isArray(gig.players) ? JSON.parse(JSON.stringify(gig.players)) : gig.players };
 
   const players = normalizePlayers(gig.players);
   while (players.length <= index) {
@@ -479,29 +481,31 @@ function updatePlayerField(element) {
   gig.players = savedPlayers(players);
   saveGigs();
   renderGigs(id);
-  syncGigToCalendar(gig, id);
+  syncGigToCalendar(gig, id, previousGig);
 }
 
 function addPlayer(id) {
   const gig = gigs.find((item) => item.id === id);
   if (!gig) return;
+  const previousGig = { ...gig, players: Array.isArray(gig.players) ? JSON.parse(JSON.stringify(gig.players)) : gig.players };
   const players = normalizePlayers(gig.players);
   players.push({ name: "", status: "pending" });
   gig.players = players;
   saveGigs();
   renderGigs(id);
-  syncGigToCalendar(gig, id);
+  syncGigToCalendar(gig, id, previousGig);
 }
 
 function removePlayer(id, index) {
   const gig = gigs.find((item) => item.id === id);
   if (!gig) return;
+  const previousGig = { ...gig, players: Array.isArray(gig.players) ? JSON.parse(JSON.stringify(gig.players)) : gig.players };
   const players = normalizePlayers(gig.players);
   players.splice(index, 1);
   gig.players = players;
   saveGigs();
   renderGigs(id);
-  syncGigToCalendar(gig, id);
+  syncGigToCalendar(gig, id, previousGig);
 }
 
 function downloadJson() {
@@ -519,8 +523,10 @@ form.addEventListener("submit", (event) => {
   const gig = readForm();
   const existingIndex = gigs.findIndex((item) => item.id === gig.id);
   let savedGig = gig;
+  let previousGig = null;
 
   if (existingIndex >= 0) {
+    previousGig = { ...gigs[existingIndex] };
     savedGig = {
       ...gigs[existingIndex],
       ...gig
@@ -532,7 +538,7 @@ form.addEventListener("submit", (event) => {
 
   saveGigs();
   renderGigs();
-  syncGigToCalendar(savedGig);
+  syncGigToCalendar(savedGig, "", previousGig);
   resetForm();
 });
 
