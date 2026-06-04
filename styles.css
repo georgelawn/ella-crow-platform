@@ -48,16 +48,15 @@ button {
 .topbar {
   align-items: center;
   border-bottom: 3px solid var(--line);
-  display: flex;
+  display: grid;
   gap: 24px;
-  justify-content: space-between;
+  grid-template-columns: 300px minmax(0, 1fr);
   margin: 0 auto;
   max-width: 1220px;
   padding: 28px 24px 22px;
 }
 
 .topbar > div:first-child {
-  flex: 0 0 auto;
   min-width: 0;
 }
 
@@ -79,11 +78,11 @@ p {
 
 h1 {
   color: var(--brown);
-  font-size: clamp(1.7rem, 3.2vw, 3.1rem);
+  font-size: clamp(1.7rem, 2.7vw, 2.45rem);
   line-height: 1;
   margin-bottom: 0;
   max-width: 100%;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
   text-transform: uppercase;
 }
 
@@ -104,8 +103,9 @@ h2 {
 }
 
 .header-actions {
-  flex: 1 1 auto;
   flex-wrap: nowrap;
+  gap: 7px;
+  justify-content: flex-start;
   max-width: 100%;
   min-width: 0;
   overflow-x: auto;
@@ -131,9 +131,9 @@ h2 {
 }
 
 .header-actions .nav-link {
-  font-size: 0.78rem;
-  min-height: 38px;
-  padding: 8px 10px;
+  font-size: 0.72rem;
+  min-height: 36px;
+  padding: 7px 8px;
 }
 
 .nav-link.active {
@@ -1755,10 +1755,11 @@ summary:focus-visible {
 
   .topbar {
     gap: 16px;
+    grid-template-columns: 220px minmax(0, 1fr);
   }
 
   h1 {
-    font-size: clamp(1.35rem, 4.4vw, 2.1rem);
+    font-size: clamp(1.35rem, 3.7vw, 1.8rem);
   }
 
   .summary-grid,
@@ -1857,6 +1858,7 @@ summary:focus-visible {
 
   .topbar {
     align-items: stretch;
+    display: flex;
     flex-direction: column;
     gap: 12px;
     padding: 18px max(14px, env(safe-area-inset-left)) 12px max(14px, env(safe-area-inset-right));
