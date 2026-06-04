@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Projects</title>
+    <link rel="stylesheet" href="styles.css?v=7">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Projects</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button nav-link" href="index.html">Gigs</a>
+        <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+        <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+        <a class="ghost-button nav-link" href="finance.html">Finance</a>
+        <a class="ghost-button nav-link active" href="projects.html">Projects</a>
+        <a class="ghost-button nav-link" href="todos.html">To Do</a>
+        <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+        <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="summary-grid project-summary" aria-label="Project portfolio summary">
+        <article>
+          <span id="activeProjectCount">0</span>
+          <p>Live projects</p>
+        </article>
+        <article>
+          <span id="portfolioProgress">0%</span>
+          <p>Portfolio progress</p>
+        </article>
+        <article>
+          <span id="projectRevenue">£0</span>
+          <p>Revenue potential</p>
+        </article>
+        <article>
+          <span id="atRiskProjectCount">0</span>
+          <p>Need attention</p>
+        </article>
+      </section>
+
+      <section class="workspace project-workspace">
+        <aside class="control-panel" aria-label="Create project">
+          <form id="projectForm" autocomplete="off">
+            <div class="panel-heading">
+              <p class="eyebrow">Build Something</p>
+              <h2>Launch a project</h2>
+            </div>
+
+            <label>
+              Project / revenue stream
+              <input id="projectTitle" required placeholder="e.g. Debut EP, merch drop, live session">
+            </label>
+
+            <div class="field-row">
+              <label>
+                Type
+                <select id="projectCategory">
+                  <option value="release">Release</option>
+                  <option value="touring">Touring</option>
+                  <option value="merchandise">Merchandise</option>
+                  <option value="content">Content</option>
+                  <option value="partnership">Partnership</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label>
+                Stage
+                <select id="projectStatus">
+                  <option value="idea">Idea</option>
+                  <option value="planning">Planning</option>
+                  <option value="in-progress">In progress</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="complete">Complete</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="field-row">
+              <label>
+                Finish line
+                <input id="projectDeadline" type="date">
+              </label>
+              <label>
+                Revenue potential
+                <input id="projectRevenueInput" type="number" min="0" step="1" placeholder="0">
+              </label>
+            </div>
+
+            <label>
+              Project lead
+              <input id="projectOwner" placeholder="Who is driving this?">
+            </label>
+
+            <label>
+              What does success look like?
+              <textarea id="projectDescription" rows="4" placeholder="The end product, audience and ambition"></textarea>
+            </label>
+
+            <label>
+              Route to the finish line
+              <textarea id="projectSteps" rows="7" placeholder="Write one milestone per line&#10;Finish demos&#10;Book studio&#10;Deliver masters&#10;Launch campaign"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Launch project</button>
+              <button class="ghost-button" id="clearProjectButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board project-board" aria-label="Project portfolio">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Command Centre</p>
+              <h2>Portfolio momentum</h2>
+            </div>
+            <div class="filters" role="group" aria-label="Filter projects">
+              <button class="filter active" data-filter="active" type="button">Active</button>
+              <button class="filter" data-filter="attention" type="button">Attention</button>
+              <button class="filter" data-filter="complete" type="button">Complete</button>
+              <button class="filter" data-filter="all" type="button">All</button>
+            </div>
+          </div>
+
+          <div class="portfolio-pulse" id="portfolioPulse">
+            <div>
+              <span class="pulse-label">Current focus</span>
+              <strong id="focusProject">Nothing live yet</strong>
+              <p id="focusNextStep">Launch a project to set the next move.</p>
+            </div>
+            <span class="pulse-score" id="focusProgress">0%</span>
+          </div>
+
+          <div class="project-list" id="projectList"></div>
+          <p class="empty-state" id="projectEmptyState">Your project slate is clear. Launch the next big thing from the panel.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=5"></script>
+    <script src="mobile-panels.js?v=3"></script>
+    <script src="projects.js?v=1"></script>
+  </body>
+</html>

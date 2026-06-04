@@ -12,6 +12,7 @@ This is a lightweight management dashboard for Ella Crow. It is designed to run 
 - Calendar page with clickable dates showing gigs and sessions
 - Sessions page for rehearsals, recordings, and meetings
 - Finance page for editable revenue, expenses, invoice status, and month-by-month turnover
+- Projects page for tracking revenue streams, milestones, progress, deadlines, and project momentum
 - To Do page with manual tasks plus auto tasks from gigs, sessions, pending invoices, and opportunity follow-ups
 - Opportunities page for manually tracking outstanding leads and follow-up dates
 - Contacts page with sections for Musicians, Promoters, Venues, Other Artists, and Misc

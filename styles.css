@@ -57,6 +57,7 @@ button {
 }
 
 .topbar > div:first-child {
+  flex: 0 0 auto;
   min-width: 0;
 }
 
@@ -103,9 +104,10 @@ h2 {
 }
 
 .header-actions {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   flex-wrap: nowrap;
   max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   padding-bottom: 2px;
 }
@@ -126,6 +128,12 @@ h2 {
   place-items: center;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.header-actions .nav-link {
+  font-size: 0.78rem;
+  min-height: 38px;
+  padding: 8px 10px;
 }
 
 .nav-link.active {
@@ -1366,6 +1374,379 @@ summary:focus-visible {
   margin: 0;
 }
 
+.project-workspace {
+  grid-template-columns: minmax(300px, 370px) 1fr;
+}
+
+.project-summary article {
+  overflow: hidden;
+  position: relative;
+}
+
+.project-summary article::after {
+  border: 2px solid var(--line);
+  content: "";
+  height: 54px;
+  position: absolute;
+  right: -22px;
+  top: -22px;
+  transform: rotate(45deg);
+  width: 54px;
+}
+
+.project-board {
+  background:
+    linear-gradient(rgba(255, 244, 205, 0.72), rgba(255, 244, 205, 0.72)),
+    repeating-linear-gradient(90deg, transparent 0 31px, rgba(82, 62, 38, 0.12) 31px 32px);
+}
+
+.portfolio-pulse {
+  align-items: center;
+  background: var(--brown);
+  border: 3px solid #b68447;
+  color: var(--cream);
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  overflow: hidden;
+  padding: 18px 20px;
+  position: relative;
+}
+
+.portfolio-pulse::after {
+  border: 2px solid rgba(217, 195, 120, 0.28);
+  border-radius: 50%;
+  content: "";
+  height: 150px;
+  position: absolute;
+  right: -54px;
+  top: -60px;
+  width: 150px;
+}
+
+.portfolio-pulse.attention {
+  background: var(--danger);
+  border-color: #d99c89;
+}
+
+.pulse-label,
+.project-story span,
+.project-stat span,
+.milestone-heading span {
+  color: var(--gold);
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.portfolio-pulse strong {
+  display: block;
+  font-size: 1.25rem;
+  letter-spacing: 0.06em;
+  margin: 5px 0;
+  text-transform: uppercase;
+}
+
+.portfolio-pulse p {
+  color: rgba(255, 244, 205, 0.76);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+}
+
+.pulse-score {
+  border: 2px solid var(--gold);
+  color: var(--gold);
+  flex: 0 0 auto;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  min-width: 86px;
+  padding: 12px;
+  position: relative;
+  text-align: center;
+  z-index: 1;
+}
+
+.project-list {
+  display: grid;
+  gap: 14px;
+}
+
+.project-card {
+  background: var(--paper-soft);
+  border: 3px solid var(--brown-2);
+  color: var(--ink);
+}
+
+.project-card.attention {
+  border-color: var(--danger);
+  box-shadow: inset 5px 0 0 var(--danger);
+}
+
+.project-card.complete {
+  border-color: var(--success);
+  opacity: 0.8;
+}
+
+.project-card summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 74px minmax(0, 1fr) auto;
+  list-style: none;
+  padding: 18px;
+}
+
+.project-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.project-card summary:hover {
+  background: rgba(255, 244, 205, 0.72);
+}
+
+.progress-orbit {
+  align-items: center;
+  background:
+    radial-gradient(circle, var(--paper-soft) 54%, transparent 56%),
+    conic-gradient(var(--brown) var(--progress), rgba(82, 62, 38, 0.18) 0);
+  border-radius: 50%;
+  display: flex;
+  height: 68px;
+  justify-content: center;
+  width: 68px;
+}
+
+.progress-orbit span {
+  color: var(--brown);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.project-card-title {
+  min-width: 0;
+}
+
+.project-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.project-kicker span {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.59rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  padding: 4px 5px;
+  text-transform: uppercase;
+}
+
+.project-card-title h3 {
+  color: var(--brown);
+  font-size: 1.2rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.project-card-title p {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+}
+
+.project-card-title p strong {
+  color: var(--brown);
+}
+
+.project-card-score {
+  border-left: 2px solid var(--line);
+  min-width: 80px;
+  padding-left: 14px;
+  text-align: right;
+}
+
+.project-card-score strong,
+.project-card-score span {
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.project-card-score strong {
+  color: var(--brown);
+  font-size: 1.35rem;
+}
+
+.project-card-score span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.project-details {
+  border-top: 3px solid var(--brown-2);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 18px;
+}
+
+.project-story,
+.project-stat {
+  border: 2px solid var(--line);
+  padding: 13px;
+}
+
+.project-story {
+  grid-column: 1 / -1;
+}
+
+.project-story p {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  line-height: 1.5;
+  margin: 8px 0 0;
+}
+
+.project-stat strong {
+  color: var(--brown);
+  display: block;
+  font-size: 1rem;
+  margin-top: 7px;
+}
+
+.milestone-section {
+  background: rgba(255, 244, 205, 0.48);
+  border: 2px solid var(--line);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding: 14px;
+}
+
+.milestone-heading {
+  align-items: end;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(160px, auto) 1fr;
+}
+
+.milestone-heading strong {
+  color: var(--brown);
+  display: block;
+  margin-top: 4px;
+}
+
+.project-progress-track {
+  background: rgba(82, 62, 38, 0.16);
+  height: 10px;
+  overflow: hidden;
+}
+
+.project-progress-track i {
+  background: var(--brown);
+  display: block;
+  height: 100%;
+  transition: width 180ms ease;
+}
+
+.milestone-list {
+  display: grid;
+  gap: 7px;
+}
+
+.milestone {
+  align-items: center;
+  background: var(--paper-soft);
+  border: 2px solid var(--line);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 22px 1fr auto;
+  letter-spacing: 0;
+  padding: 9px 10px;
+  text-transform: none;
+}
+
+.milestone input {
+  accent-color: var(--brown);
+  min-height: 20px;
+  padding: 0;
+  width: 20px;
+}
+
+.milestone span {
+  color: var(--brown);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.milestone.done span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.milestone-delete {
+  background: transparent;
+  border: 0;
+  color: var(--danger);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  min-height: 28px;
+  width: 28px;
+}
+
+.project-no-steps {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+}
+
+.add-milestone {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr auto;
+}
+
+.project-editing {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.project-card .card-actions .small-button {
+  border-color: var(--brown-2);
+  color: var(--brown);
+}
+
+.project-card .card-actions .danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.project-edit-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.project-edit-grid .full {
+  grid-column: 1 / -1;
+}
+
 @media (max-width: 900px) {
   .board-toolbar {
     align-items: stretch;
@@ -1381,7 +1762,8 @@ summary:focus-visible {
   }
 
   .summary-grid,
-  .workspace {
+  .workspace,
+  .project-workspace {
     grid-template-columns: 1fr;
   }
 }
@@ -1410,8 +1792,15 @@ summary:focus-visible {
   .contact-card,
   .finance-columns,
   .transaction-card.editing,
-  .finance-row {
+  .finance-row,
+  .project-details,
+  .project-edit-grid {
     grid-template-columns: 1fr;
+  }
+
+  .project-story,
+  .project-edit-grid .full {
+    grid-column: auto;
   }
 
   .calendar-weekdays,
@@ -1492,14 +1881,14 @@ summary:focus-visible {
   .header-actions {
     display: grid;
     gap: 7px;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-left: -4px;
     margin-right: -4px;
     overflow-x: visible;
     padding: 0 4px 8px;
   }
 
-  .nav-link {
+  .header-actions .nav-link {
     font-size: 0.78rem;
     min-width: 0;
     min-height: 44px;
@@ -1674,7 +2063,8 @@ summary:focus-visible {
   .email-list,
   .opportunity-list,
   .contact-sections,
-  .transaction-list {
+  .transaction-list,
+  .project-list {
     gap: 11px;
   }
 
@@ -1683,8 +2073,63 @@ summary:focus-visible {
   .contact-card,
   .transaction-card,
   .calendar-event,
-  .musician-search {
+  .musician-search,
+  .project-card {
     border-width: 2px;
+  }
+
+  .portfolio-pulse {
+    align-items: start;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .portfolio-pulse strong {
+    font-size: 1rem;
+  }
+
+  .pulse-score {
+    font-size: 1.25rem;
+    min-width: 68px;
+    padding: 9px;
+  }
+
+  .project-card summary {
+    align-items: start;
+    gap: 10px;
+    grid-template-columns: 54px 1fr;
+    padding: 12px;
+  }
+
+  .progress-orbit {
+    height: 52px;
+    width: 52px;
+  }
+
+  .progress-orbit span {
+    font-size: 0.75rem;
+  }
+
+  .project-card-score {
+    border-left: 0;
+    grid-column: 2;
+    padding-left: 0;
+    text-align: left;
+  }
+
+  .project-card-score strong,
+  .project-card-score span {
+    display: inline;
+  }
+
+  .project-details,
+  .project-editing {
+    padding: 12px;
+  }
+
+  .milestone-heading,
+  .add-milestone {
+    grid-template-columns: 1fr;
   }
 
   .gig-card summary {
