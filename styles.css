@@ -50,7 +50,7 @@ button {
   border-bottom: 3px solid var(--line);
   display: grid;
   gap: 24px;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 360px minmax(0, 1fr);
   margin: 0 auto;
   max-width: 1220px;
   padding: 28px 24px 22px;
@@ -78,7 +78,7 @@ p {
 
 h1 {
   color: var(--brown);
-  font-size: clamp(1.7rem, 2.7vw, 2.45rem);
+  font-size: clamp(1.7rem, 2.7vw, 2.3rem);
   line-height: 1;
   margin-bottom: 0;
   max-width: 100%;
@@ -1759,7 +1759,7 @@ summary:focus-visible {
   }
 
   h1 {
-    font-size: clamp(1.35rem, 3.7vw, 1.8rem);
+    font-size: clamp(1.25rem, 3vw, 1.5rem);
   }
 
   .summary-grid,
@@ -1842,7 +1842,7 @@ summary:focus-visible {
   }
 
   h1 {
-    font-size: clamp(1.15rem, 5.5vw, 1.6rem);
+    font-size: 1.45rem;
   }
 }
 
