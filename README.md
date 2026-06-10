@@ -15,6 +15,7 @@ This is a lightweight management dashboard for Ella Crow. It is designed to run 
 - Projects page for tracking revenue streams, milestones, progress, deadlines, and project momentum
 - To Do page with manual tasks plus auto tasks from gigs, sessions, pending invoices, and opportunity follow-ups
 - Opportunities page for manually tracking outstanding leads and follow-up dates
+- Social tracker page for YouTube channel metrics and recent-video performance
 - Contacts page with sections for Musicians, Promoters, Venues, Other Artists, and Misc
 - Musician contacts and the gig/session player dropdowns share the same saved list
 - Supabase sync for laptop and iPhone use
@@ -93,3 +94,21 @@ Event colours:
 - Rehearsal: green
 - Recording: blue
 - Meeting: mauve
+
+## YouTube Social Tracker
+
+The Social page uses the YouTube Data API to collect channel totals and recent-video performance.
+It keeps one snapshot per day in the shared Supabase store, which allows the dashboard to build
+month-on-month growth charts over time.
+
+To connect YouTube:
+
+1. Create or select a project in [Google Cloud Console](https://console.cloud.google.com/).
+2. Enable the `YouTube Data API v3`.
+3. Create an API key.
+4. Restrict the key to the YouTube Data API and the hosted dashboard's HTTP referrer.
+5. Open `social.html` and enter the channel handle, channel URL, or channel ID plus the API key.
+
+The key is stored only in that browser. Collected metrics are synced through Supabase, but the key
+is deliberately excluded from cloud sync. The page refreshes automatically when opened if the
+latest snapshot is more than 12 hours old.

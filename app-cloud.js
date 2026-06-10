@@ -10,6 +10,7 @@
     "ella-crow-opportunities",
     "ella-crow-email-opportunities-v1",
     "ella-crow-manual-todos-v1",
+    "ella-crow-social-youtube-v1",
     "ella-crow-instruments-v1",
     "ella-crow-roster-migrated-v1"
   ];

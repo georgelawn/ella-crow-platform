@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Social Tracker</title>
+    <link rel="stylesheet" href="styles.css?v=10">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Social Tracker</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-button nav-link" href="index.html">Gigs</a>
+        <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+        <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+        <a class="ghost-button nav-link" href="finance.html">Finance</a>
+        <a class="ghost-button nav-link" href="projects.html">Projects</a>
+        <a class="ghost-button nav-link" href="todos.html">To Do</a>
+        <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+        <a class="ghost-button nav-link active" href="social.html">Social</a>
+        <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+      </div>
+    </header>
+
+    <main class="shell social-shell">
+      <section class="social-platform-tabs" aria-label="Social platforms">
+        <button class="platform-tab active" type="button">
+          <span class="platform-mark youtube-mark">YT</span>
+          <span>YouTube</span>
+          <small>Connected first</small>
+        </button>
+        <button class="platform-tab" type="button" disabled>
+          <span class="platform-mark instagram-mark">IG</span>
+          <span>Instagram</span>
+          <small>Coming next</small>
+        </button>
+        <button class="platform-tab" type="button" disabled>
+          <span class="platform-mark tiktok-mark">TT</span>
+          <span>TikTok</span>
+          <small>Coming later</small>
+        </button>
+      </section>
+
+      <section class="social-hero">
+        <div>
+          <p class="eyebrow">Audience Pulse</p>
+          <h2 id="channelName">YouTube overview</h2>
+          <p class="social-subtitle" id="channelDescription">
+            Connect Ella's YouTube channel to see channel growth and recent video performance.
+          </p>
+        </div>
+        <div class="social-refresh">
+          <span id="socialLastUpdated">Not connected</span>
+          <button class="primary-button" id="refreshYouTubeButton" type="button" disabled>Refresh YouTube</button>
+        </div>
+      </section>
+
+      <section class="summary-grid social-summary" aria-label="YouTube summary">
+        <article>
+          <span id="subscriberCount">-</span>
+          <p>Subscribers</p>
+          <small id="subscriberDelta">Monthly baseline not started</small>
+        </article>
+        <article>
+          <span id="channelViewCount">-</span>
+          <p>Channel views</p>
+          <small id="viewDelta">Monthly baseline not started</small>
+        </article>
+        <article>
+          <span id="videoCount">-</span>
+          <p>Published videos</p>
+          <small id="videoDelta">Monthly baseline not started</small>
+        </article>
+        <article>
+          <span id="recentViewCount">-</span>
+          <p>Recent video views</p>
+          <small>Latest 12 uploads</small>
+        </article>
+      </section>
+
+      <section class="growth-dashboard" aria-label="Social growth insights">
+        <article class="pulse-card">
+          <div class="pulse-card-heading">
+            <div>
+              <p class="eyebrow">Overall Momentum</p>
+              <h2>Social pulse</h2>
+            </div>
+            <span class="pulse-status" id="pulseStatus">Building baseline</span>
+          </div>
+          <div class="social-pulse-score">
+            <div class="pulse-ring" id="pulseRing">
+              <span id="pulseScore">-</span>
+            </div>
+            <div>
+              <strong id="pulseHeadline">Connect YouTube to start</strong>
+              <p id="pulseExplanation">
+                This score will blend audience growth, views and engagement across every connected platform.
+              </p>
+            </div>
+          </div>
+          <div class="pulse-breakdown">
+            <span><strong id="audienceMomentum">-</strong> Audience</span>
+            <span><strong id="viewMomentum">-</strong> Reach</span>
+            <span><strong id="engagementMomentum">-</strong> Engagement</span>
+          </div>
+        </article>
+
+        <article class="growth-card trend-card">
+          <div class="growth-card-heading">
+            <div>
+              <p class="eyebrow">Month On Month</p>
+              <h2>Growth curve</h2>
+            </div>
+            <span id="growthPeriod">Waiting for data</span>
+          </div>
+          <div class="growth-chart" id="growthChart" aria-label="Monthly channel view growth chart"></div>
+          <div class="trend-legend">
+            <span><i class="legend-youtube"></i>YouTube views gained</span>
+            <span>Instagram + TikTok will layer in here</span>
+          </div>
+        </article>
+
+        <article class="growth-card signal-card">
+          <div class="growth-card-heading">
+            <div>
+              <p class="eyebrow">Content Signal</p>
+              <h2>What is landing</h2>
+            </div>
+          </div>
+          <div class="signal-feature">
+            <span>Top recent video</span>
+            <strong id="topVideoTitle">No video data yet</strong>
+            <p id="topVideoSignal">Connect YouTube to identify the strongest content signal.</p>
+          </div>
+          <div class="signal-grid">
+            <div>
+              <span>Engagement rate</span>
+              <strong id="engagementRate">-</strong>
+            </div>
+            <div>
+              <span>Views per subscriber</span>
+              <strong id="viewsPerSubscriber">-</strong>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="social-workspace">
+        <aside class="control-panel social-setup" aria-label="YouTube setup">
+          <form id="youtubeSetupForm" autocomplete="off">
+            <div class="panel-heading">
+              <p class="eyebrow">YouTube Connection</p>
+              <h2>Channel setup</h2>
+            </div>
+
+            <label>
+              Channel ID, handle or URL
+              <input id="youtubeChannel" required placeholder="@ellacrow or channel URL">
+            </label>
+
+            <label>
+              YouTube API key
+              <input id="youtubeApiKey" type="password" required placeholder="Paste restricted API key">
+            </label>
+
+            <p class="setup-note">
+              The API key stays in this browser and is not uploaded to the shared database. Restrict it to the
+              YouTube Data API and this website in Google Cloud.
+            </p>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Connect YouTube</button>
+              <button class="ghost-button" id="clearYouTubeButton" type="button">Disconnect</button>
+            </div>
+            <p class="social-message" id="socialMessage" role="status"></p>
+          </form>
+        </aside>
+
+        <section class="gig-board social-board" aria-label="YouTube content performance">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Content Performance</p>
+              <h2>Recent uploads</h2>
+            </div>
+            <div class="social-total">
+              <span>Average views</span>
+              <strong id="averageRecentViews">-</strong>
+            </div>
+          </div>
+
+          <div class="social-empty" id="socialEmptyState">
+            <strong>No YouTube data yet</strong>
+            <p>Add the channel and API key to build Ella's first social performance snapshot.</p>
+          </div>
+          <div class="video-performance-list" id="videoPerformanceList"></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=6"></script>
+    <script src="social.js?v=1"></script>
+  </body>
+</html>
