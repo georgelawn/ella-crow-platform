@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Finance</title>
-    <link rel="stylesheet" href="styles.css?v=9">
+    <link rel="stylesheet" href="styles.css?v=10">
   </head>
   <body>
     <header class="topbar">
@@ -26,20 +26,48 @@
     </header>
 
     <main class="shell">
-      <section class="summary-grid" aria-label="Finance summary">
-        <article><span id="lastMonthNet">£0</span><p>Last month net</p></article>
-        <article><span id="monthRevenue">£0</span><p>This month revenue</p></article>
-        <article><span id="monthNet">£0</span><p>This month net</p></article>
-        <article><span id="allTimeNet">£0</span><p>All-time net</p></article>
+      <section class="finance-hero" aria-label="Finance summary">
+        <article class="finance-profit-card">
+          <p class="eyebrow">This month</p>
+          <span id="monthNet">£0</span>
+          <h2>Profit</h2>
+          <p id="monthProfitNote">No activity recorded yet.</p>
+        </article>
+        <div class="finance-stat-stack">
+          <article>
+            <span id="monthRevenue">£0</span>
+            <p>Revenue</p>
+          </article>
+          <article>
+            <span id="monthExpenses">£0</span>
+            <p>Costs</p>
+          </article>
+          <article>
+            <span id="lastMonthNet">£0</span>
+            <p>Last month profit</p>
+          </article>
+          <article>
+            <span id="allTimeNet">£0</span>
+            <p>All-time profit</p>
+          </article>
+        </div>
       </section>
 
-      <section class="workspace">
+      <section class="workspace finance-workspace">
         <aside class="control-panel" aria-label="Add transaction">
           <form id="financeForm" autocomplete="off">
             <div class="panel-heading">
-              <p class="eyebrow">Money In / Out</p>
-              <h2>Add transaction</h2>
+              <p class="eyebrow">Profit ledger</p>
+              <h2>Add activity</h2>
             </div>
+            <label>
+              Profit stream
+              <select id="transactionStream" required>
+                <option value="gigs">Gigs</option>
+                <option value="merch">Merch</option>
+                <option value="streaming">Streaming</option>
+              </select>
+            </label>
             <label>
               Type
               <select id="transactionType">
@@ -68,44 +96,53 @@
             </label>
             <label>
               Category
-              <input id="transactionCategory" placeholder="Gig fee, studio, travel">
+              <input id="transactionCategory" placeholder="Venue fee, stock, royalties">
             </label>
             <label>
               Description
               <textarea id="transactionDescription" rows="4" placeholder="What was this for?"></textarea>
             </label>
             <div class="form-actions">
-              <button class="primary-button" type="submit">Save transaction</button>
+              <button class="primary-button" type="submit">Add to ledger</button>
               <button class="ghost-button" id="clearTransactionButton" type="button">Clear</button>
             </div>
           </form>
         </aside>
 
-        <section class="gig-board" aria-label="Finance records">
+        <section class="gig-board finance-dashboard" aria-label="Finance records">
           <div class="board-toolbar">
             <div>
-              <p class="eyebrow">Turnover</p>
-              <h2>Month by month</h2>
+              <p class="eyebrow">Where the money works</p>
+              <h2>Profit streams</h2>
             </div>
           </div>
-          <div class="finance-table" id="monthlyFinance"></div>
-          <div class="finance-columns">
-            <section>
-              <div class="contact-section-heading">
-                <h3>Revenue</h3>
-                <span id="revenueCount">0</span>
+
+          <div class="profit-stream-grid" id="profitStreams"></div>
+
+          <section class="stream-inspector" id="streamInspector" aria-live="polite"></section>
+
+          <section class="current-ledger">
+            <div class="finance-section-heading">
+              <div>
+                <p class="eyebrow">Working ledger</p>
+                <h2>This month</h2>
               </div>
-              <div class="transaction-list" id="revenueList"></div>
-            </section>
-            <section>
-              <div class="contact-section-heading">
-                <h3>Expenses</h3>
-                <span id="expenseCount">0</span>
+              <span id="monthActivityCount">0 entries</span>
+            </div>
+            <div class="compact-ledger" id="currentMonthLedger"></div>
+            <p class="empty-state" id="financeEmptyState">No activity this month yet.</p>
+          </section>
+
+          <section class="finance-archive">
+            <div class="finance-section-heading">
+              <div>
+                <p class="eyebrow">The long view</p>
+                <h2>Past performance</h2>
               </div>
-              <div class="transaction-list" id="expenseList"></div>
-            </section>
-          </div>
-          <p class="empty-state" id="financeEmptyState">No finance records yet.</p>
+              <span>Months, then years</span>
+            </div>
+            <div id="financeArchive"></div>
+          </section>
         </section>
       </section>
     </main>
@@ -113,6 +150,6 @@
     <script src="cloud-config.js?v=3"></script>
     <script src="app-cloud.js?v=4"></script>
     <script src="mobile-panels.js?v=3"></script>
-    <script src="finance.js?v=3"></script>
+    <script src="finance.js?v=4"></script>
   </body>
 </html>
