@@ -1755,7 +1755,7 @@ summary:focus-visible {
 .social-platform-tabs {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .platform-tab {
@@ -1819,6 +1819,10 @@ summary:focus-visible {
 
 .tiktok-mark {
   border-radius: 50%;
+}
+
+.shorts-mark {
+  border-radius: 50% 10px 50% 10px;
 }
 
 .social-hero {
@@ -2259,6 +2263,25 @@ summary:focus-visible {
   color: var(--brown);
   font-size: 1rem;
   margin-bottom: 5px;
+}
+
+.content-format-badge {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  display: inline-block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+  padding: 3px 6px;
+  text-transform: uppercase;
+}
+
+.content-format-badge.short {
+  background: var(--brown);
+  border-color: var(--brown);
+  color: var(--gold);
 }
 
 .video-performance-copy > p {

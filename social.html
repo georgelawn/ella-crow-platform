@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=10">
+    <link rel="stylesheet" href="styles.css?v=11">
   </head>
   <body>
     <header class="topbar">
@@ -27,10 +27,15 @@
 
     <main class="shell social-shell">
       <section class="social-platform-tabs" aria-label="Social platforms">
-        <button class="platform-tab active" type="button">
+        <button class="platform-tab active" data-view="youtube" type="button">
           <span class="platform-mark youtube-mark">YT</span>
           <span>YouTube</span>
-          <small>Connected first</small>
+          <small>Long-form videos</small>
+        </button>
+        <button class="platform-tab" data-view="shorts" type="button">
+          <span class="platform-mark shorts-mark">S</span>
+          <span>YouTube Shorts</span>
+          <small>Short-form videos</small>
         </button>
         <button class="platform-tab" type="button" disabled>
           <span class="platform-mark instagram-mark">IG</span>
@@ -66,18 +71,18 @@
         </article>
         <article>
           <span id="channelViewCount">-</span>
-          <p>Channel views</p>
+          <p id="viewCountLabel">Recent video views</p>
           <small id="viewDelta">Monthly baseline not started</small>
         </article>
         <article>
           <span id="videoCount">-</span>
-          <p>Published videos</p>
+          <p id="videoCountLabel">Recent uploads</p>
           <small id="videoDelta">Monthly baseline not started</small>
         </article>
         <article>
           <span id="recentViewCount">-</span>
-          <p>Recent video views</p>
-          <small>Latest 12 uploads</small>
+          <p id="averageViewLabel">Average views</p>
+          <small id="recentViewNote">Long-form performance</small>
         </article>
       </section>
 
@@ -119,7 +124,7 @@
           <div class="growth-chart" id="growthChart" aria-label="Monthly channel view growth chart"></div>
           <div class="trend-legend">
             <span><i class="legend-youtube"></i>YouTube views gained</span>
-            <span>Instagram + TikTok will layer in here</span>
+            <span id="trendFutureLabel">Shorts tracked separately</span>
           </div>
         </article>
 
@@ -156,7 +161,7 @@
               <h2>Recent uploads</h2>
             </div>
             <div class="social-total">
-              <span>Average views</span>
+              <span id="boardAverageLabel">Long-form average</span>
               <strong id="averageRecentViews">-</strong>
             </div>
           </div>
@@ -173,6 +178,6 @@
 
     <script src="cloud-config.js?v=5"></script>
     <script src="app-cloud.js?v=6"></script>
-    <script src="social.js?v=4"></script>
+    <script src="social.js?v=5"></script>
   </body>
 </html>

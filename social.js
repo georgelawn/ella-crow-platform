@@ -6,8 +6,10 @@
   const message = document.querySelector("#socialMessage");
   const emptyState = document.querySelector("#socialEmptyState");
   const videoList = document.querySelector("#videoPerformanceList");
+  const platformTabs = [...document.querySelectorAll(".platform-tab[data-view]")];
 
   let savedData = readJson(DATA_KEY);
+  let activeView = "youtube";
 
   function readJson(key) {
     try {
@@ -127,6 +129,46 @@
     return totals.views ? (totals.actions / totals.views) * 100 : 0;
   }
 
+  function fallbackIsShort(video) {
+    if (typeof video.isShort === "boolean") return video.isShort;
+    const title = video.title || "";
+    const isProducedPerformance =
+      /\b(acoustic session|live @|debut|cover|official video|music video)\b/i.test(title);
+    if (isProducedPerformance) return false;
+    if (video.durationSeconds) return video.durationSeconds <= 180;
+    return title.length >= 70;
+  }
+
+  function videosForView(snapshot, view = activeView) {
+    return (snapshot?.videos || []).filter((video) =>
+      view === "shorts" ? fallbackIsShort(video) : !fallbackIsShort(video)
+    );
+  }
+
+  function viewSnapshot(snapshot, view = activeView) {
+    if (!snapshot) return null;
+    const videos = videosForView(snapshot, view);
+    return {
+      ...snapshot,
+      channel: {
+        ...snapshot.channel,
+        views: videos.reduce((sum, video) => sum + video.views, 0),
+        videos: videos.length
+      },
+      videos
+    };
+  }
+
+  function dataForView(data, view = activeView) {
+    if (!data?.current) return null;
+    return {
+      ...data,
+      current: viewSnapshot(data.current, view),
+      previous: viewSnapshot(data.previous, view),
+      history: (data.history || []).map((snapshot) => viewSnapshot(snapshot, view))
+    };
+  }
+
   function renderGrowthChart(months) {
     const chart = document.querySelector("#growthChart");
     chart.replaceChildren();
@@ -139,9 +181,11 @@
       return;
     }
 
-    const gains = months.map((month) =>
-      Math.max(month.last.channel.views - month.first.channel.views, 0)
-    );
+    const gains = months.map((month) => Math.max(
+      month.last.videos.reduce((sum, video) => sum + video.views, 0) -
+      month.first.videos.reduce((sum, video) => sum + video.views, 0),
+      0
+    ));
     const maximum = Math.max(...gains, 1);
 
     months.forEach((month, index) => {
@@ -209,8 +253,9 @@
     document.querySelector("#pulseStatus").textContent = hasMonthlyMovement ? "Tracking live" : "Baseline month";
     document.querySelector("#pulseHeadline").textContent =
       score >= 75 ? "Strong momentum" : score >= 55 ? "Healthy signal" : "Baseline building";
+    const platformLabel = activeView === "shorts" ? "Shorts" : "Long-form YouTube";
     document.querySelector("#pulseExplanation").textContent = hasMonthlyMovement
-      ? `YouTube has added ${fullNumber(viewGain)} views and ${fullNumber(subscriberGain)} subscribers this month.`
+      ? `${platformLabel} has added ${fullNumber(viewGain)} views this month. The ${fullNumber(subscriberGain)} subscriber change is channel-wide.`
       : "Keep refreshing over time to reveal true month-on-month momentum.";
     document.querySelector("#audienceMomentum").textContent =
       baseline ? `${subscriberGain >= 0 ? "+" : ""}${fullNumber(subscriberGain)}` : "Baseline";
@@ -238,6 +283,13 @@
     strong.textContent = compactNumber(value);
     item.append(strong, ` ${label}`);
     return item;
+  }
+
+  function formatDuration(seconds) {
+    if (!seconds) return "";
+    const minutes = Math.floor(seconds / 60);
+    const remainder = seconds % 60;
+    return `${minutes}:${String(remainder).padStart(2, "0")}`;
   }
 
   function renderVideos(videos) {
@@ -269,10 +321,16 @@
       const heading = document.createElement("h3");
       heading.textContent = video.title;
 
+      const badge = document.createElement("span");
+      badge.className = `content-format-badge${fallbackIsShort(video) ? " short" : ""}`;
+      badge.textContent = fallbackIsShort(video) ? "Short" : "Video";
+
       const date = document.createElement("p");
-      date.textContent = video.publishedAt
+      const dateText = video.publishedAt
         ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(video.publishedAt))
         : "Publish date unavailable";
+      const durationText = formatDuration(video.durationSeconds);
+      date.textContent = durationText ? `${dateText} · ${durationText}` : dateText;
 
       const metrics = document.createElement("div");
       metrics.className = "video-metrics";
@@ -288,7 +346,7 @@
       fill.style.width = `${Math.max((video.views / maximumViews) * 100, 2)}%`;
       track.append(fill);
 
-      copy.append(heading, date, metrics, track);
+      copy.append(badge, heading, date, metrics, track);
       card.append(rank, image, copy);
       videoList.append(card);
     });
@@ -310,20 +368,26 @@
       return;
     }
 
-    const current = data.current;
-    const baseline = currentMonthBaseline(data);
+    const selectedData = dataForView(data);
+    const current = selectedData.current;
+    const baseline = currentMonthBaseline(selectedData);
     const recentViews = current.videos.reduce((sum, video) => sum + video.views, 0);
     const averageViews = current.videos.length ? Math.round(recentViews / current.videos.length) : 0;
 
-    document.querySelector("#channelName").textContent = current.channel.title;
+    const isShorts = activeView === "shorts";
+    document.querySelector("#channelName").textContent = isShorts
+      ? `${current.channel.title} Shorts`
+      : `${current.channel.title} YouTube`;
     document.querySelector("#channelDescription").textContent =
-      current.channel.description || "Latest channel and content performance from YouTube.";
+      isShorts
+        ? "Short-form reach, engagement and recent Shorts performance."
+        : "Long-form video reach, engagement and recent performance.";
     document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
     document.querySelector("#subscriberCount").textContent =
       current.channel.subscribersHidden ? "Hidden" : compactNumber(current.channel.subscribers);
     document.querySelector("#channelViewCount").textContent = compactNumber(current.channel.views);
     document.querySelector("#videoCount").textContent = fullNumber(current.channel.videos);
-    document.querySelector("#recentViewCount").textContent = compactNumber(recentViews);
+    document.querySelector("#recentViewCount").textContent = compactNumber(averageViews);
     document.querySelector("#averageRecentViews").textContent = compactNumber(averageViews);
     document.querySelector("#subscriberDelta").textContent = current.channel.subscribersHidden
       ? "Subscriber count is private"
@@ -331,9 +395,18 @@
     document.querySelector("#viewDelta").textContent =
       deltaText(current.channel.views, baseline?.channel?.views, "view");
     document.querySelector("#videoDelta").textContent =
-      deltaText(current.channel.videos, baseline?.channel?.videos, "video");
+      deltaText(current.channel.videos, baseline?.channel?.videos, isShorts ? "Short" : "video");
+    document.querySelector("#viewCountLabel").textContent = isShorts ? "Recent Shorts views" : "Recent video views";
+    document.querySelector("#videoCountLabel").textContent = isShorts ? "Recent Shorts" : "Recent uploads";
+    document.querySelector("#averageViewLabel").textContent = isShorts ? "Average Short views" : "Average video views";
+    document.querySelector("#recentViewNote").textContent = isShorts ? "Short-form performance" : "Long-form performance";
+    document.querySelector("#boardAverageLabel").textContent = isShorts ? "Shorts average" : "Long-form average";
+    document.querySelector("#trendFutureLabel").textContent = isShorts ? "Long-form tracked separately" : "Shorts tracked separately";
+    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
+      isShorts ? "YouTube Shorts views gained" : "YouTube video views gained";
+    document.querySelector(".social-board h2").textContent = isShorts ? "Recent Shorts" : "Recent videos";
     renderVideos(current.videos);
-    renderIntelligence(data);
+    renderIntelligence(selectedData);
   }
 
   async function refreshYouTube() {
@@ -357,6 +430,16 @@
   }
 
   refreshButton.addEventListener("click", refreshYouTube);
+
+  platformTabs.forEach((button) => {
+    button.addEventListener("click", () => {
+      activeView = button.dataset.view || "youtube";
+      platformTabs.forEach((tabButton) => {
+        tabButton.classList.toggle("active", tabButton === button);
+      });
+      render(savedData);
+    });
+  });
 
   window.addEventListener("ella-cloud-data-updated", (event) => {
     if (!event.detail?.keys?.includes(DATA_KEY)) return;

@@ -39,6 +39,28 @@ function thumbnailUrl(thumbnails: Record<string, { url?: string }> | undefined) 
   return thumbnails?.medium?.url || thumbnails?.default?.url || "";
 }
 
+function durationSeconds(duration: string | undefined) {
+  const match = String(duration || "").match(
+    /^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/,
+  );
+  if (!match) return 0;
+  return numberValue(match[1]) * 86400 +
+    numberValue(match[2]) * 3600 +
+    numberValue(match[3]) * 60 +
+    numberValue(match[4]);
+}
+
+function isLikelyShort(title: string, duration: number, tags: string[]) {
+  if (tags.some((tag) => String(tag).toLowerCase().replace("#", "") === "shorts")) {
+    return true;
+  }
+  if (!duration || duration > 180) return false;
+
+  // YouTube's public API does not expose video orientation. These title markers
+  // keep clearly produced long-form performances out of the Shorts view.
+  return !/\b(acoustic session|live @|debut|cover|official video|music video)\b/i.test(title);
+}
+
 async function youtubeRequest(path: string, params: Record<string, string>, apiKey: string) {
   const url = new URL(`${YOUTUBE_API_ROOT}/${path}`);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
@@ -95,7 +117,7 @@ Deno.serve(async (request) => {
 
       if (videoIds.length) {
         const videoPayload = await youtubeRequest("videos", {
-          part: "snippet,statistics",
+          part: "snippet,statistics,contentDetails",
           id: videoIds.join(","),
         }, apiKey);
         const order = new Map(videoIds.map((id: string, index: number) => [id, index]));
@@ -133,15 +155,25 @@ Deno.serve(async (request) => {
             likeCount?: string;
             commentCount?: string;
           };
-        }) => ({
-          id: video.id,
-          title: video.snippet?.title || "Untitled video",
-          publishedAt: video.snippet?.publishedAt || "",
-          thumbnail: thumbnailUrl(video.snippet?.thumbnails),
-          views: numberValue(video.statistics?.viewCount),
-          likes: numberValue(video.statistics?.likeCount),
-          comments: numberValue(video.statistics?.commentCount),
-        })),
+          contentDetails?: {
+            duration?: string;
+          };
+        }) => {
+          const title = video.snippet?.title || "Untitled video";
+          const duration = durationSeconds(video.contentDetails?.duration);
+          const tags = (video.snippet as { tags?: string[] } | undefined)?.tags || [];
+          return {
+            id: video.id,
+            title,
+            publishedAt: video.snippet?.publishedAt || "",
+            thumbnail: thumbnailUrl(video.snippet?.thumbnails),
+            views: numberValue(video.statistics?.viewCount),
+            likes: numberValue(video.statistics?.likeCount),
+            comments: numberValue(video.statistics?.commentCount),
+            durationSeconds: duration,
+            isShort: isLikelyShort(title, duration, tags),
+          };
+        }),
       },
     }, 200, origin);
   } catch (error) {
