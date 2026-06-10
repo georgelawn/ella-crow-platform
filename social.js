@@ -1,12 +1,7 @@
 (function () {
-  const SETTINGS_KEY = "ella-crow-youtube-settings-local-v1";
   const DATA_KEY = "ella-crow-social-youtube-v1";
-  const API_ROOT = "https://www.googleapis.com/youtube/v3";
-
-  const setupForm = document.querySelector("#youtubeSetupForm");
-  const channelInput = document.querySelector("#youtubeChannel");
-  const apiKeyInput = document.querySelector("#youtubeApiKey");
-  const clearButton = document.querySelector("#clearYouTubeButton");
+  const config = window.ELLA_CLOUD_CONFIG || {};
+  const endpoint = config.googleCalendarSyncUrl || "";
   const refreshButton = document.querySelector("#refreshYouTubeButton");
   const message = document.querySelector("#socialMessage");
   const emptyState = document.querySelector("#socialEmptyState");
@@ -46,102 +41,44 @@
     }).format(new Date(value))}`;
   }
 
-  function parseChannelReference(value) {
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-
-    if (trimmed.startsWith("UC")) {
-      return { type: "id", value: trimmed };
+  function fetchYouTubeSnapshot() {
+    if (!endpoint) {
+      return Promise.reject(new Error("The secure YouTube endpoint is not configured."));
     }
 
-    const handleMatch = trimmed.match(/(?:youtube\.com\/)?@([^/?#]+)/i);
-    if (handleMatch) {
-      return { type: "handle", value: handleMatch[1] };
-    }
+    return new Promise((resolve, reject) => {
+      const callback = `ellaYouTube_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const script = document.createElement("script");
+      const timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error("The YouTube connection timed out."));
+      }, 20000);
 
-    const channelMatch = trimmed.match(/youtube\.com\/channel\/([^/?#]+)/i);
-    if (channelMatch) {
-      return { type: "id", value: channelMatch[1] };
-    }
+      function cleanup() {
+        window.clearTimeout(timeout);
+        delete window[callback];
+        script.remove();
+      }
 
-    return { type: "handle", value: trimmed.replace(/^@/, "") };
-  }
+      window[callback] = (payload) => {
+        cleanup();
+        if (!payload?.ok || !payload.snapshot) {
+          reject(new Error(payload?.error || "YouTube data is unavailable."));
+          return;
+        }
+        resolve(payload.snapshot);
+      };
 
-  async function youtubeRequest(path, params, apiKey) {
-    const url = new URL(`${API_ROOT}/${path}`);
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-    url.searchParams.set("key", apiKey);
-
-    const response = await fetch(url);
-    const payload = await response.json();
-    if (!response.ok) {
-      const apiMessage = payload?.error?.message || "YouTube could not return this data.";
-      throw new Error(apiMessage);
-    }
-    return payload;
-  }
-
-  async function fetchChannel(reference, apiKey) {
-    const params = {
-      part: "snippet,statistics,contentDetails"
-    };
-    params[reference.type === "id" ? "id" : "forHandle"] = reference.value;
-
-    const payload = await youtubeRequest("channels", params, apiKey);
-    if (!payload.items?.length) {
-      throw new Error("No YouTube channel matched that ID, handle or URL.");
-    }
-    return payload.items[0];
-  }
-
-  async function fetchRecentVideos(channel, apiKey) {
-    const uploadsPlaylist = channel.contentDetails?.relatedPlaylists?.uploads;
-    if (!uploadsPlaylist) return [];
-
-    const playlist = await youtubeRequest("playlistItems", {
-      part: "contentDetails",
-      playlistId: uploadsPlaylist,
-      maxResults: "12"
-    }, apiKey);
-
-    const ids = (playlist.items || [])
-      .map((item) => item.contentDetails?.videoId)
-      .filter(Boolean);
-    if (!ids.length) return [];
-
-    const videos = await youtubeRequest("videos", {
-      part: "snippet,statistics",
-      id: ids.join(",")
-    }, apiKey);
-
-    const order = new Map(ids.map((id, index) => [id, index]));
-    return (videos.items || []).sort((a, b) => order.get(a.id) - order.get(b.id));
-  }
-
-  function buildSnapshot(channel, videos) {
-    const channelStats = channel.statistics || {};
-    return {
-      checkedAt: new Date().toISOString(),
-      channel: {
-        id: channel.id,
-        title: channel.snippet?.title || "YouTube channel",
-        description: channel.snippet?.description || "",
-        thumbnail: channel.snippet?.thumbnails?.medium?.url || channel.snippet?.thumbnails?.default?.url || "",
-        subscribers: numberValue(channelStats.subscriberCount),
-        views: numberValue(channelStats.viewCount),
-        videos: numberValue(channelStats.videoCount),
-        subscribersHidden: Boolean(channelStats.hiddenSubscriberCount)
-      },
-      videos: videos.map((video) => ({
-        id: video.id,
-        title: video.snippet?.title || "Untitled video",
-        publishedAt: video.snippet?.publishedAt || "",
-        thumbnail: video.snippet?.thumbnails?.medium?.url || video.snippet?.thumbnails?.default?.url || "",
-        views: numberValue(video.statistics?.viewCount),
-        likes: numberValue(video.statistics?.likeCount),
-        comments: numberValue(video.statistics?.commentCount)
-      }))
-    };
+      script.onerror = () => {
+        cleanup();
+        reject(new Error("The secure YouTube connection could not be reached."));
+      };
+      const url = new URL(endpoint);
+      url.searchParams.set("action", "youtube");
+      url.searchParams.set("callback", callback);
+      script.src = url.toString();
+      document.head.appendChild(script);
+    });
   }
 
   function setMessage(text, state = "") {
@@ -150,8 +87,7 @@
   }
 
   function setLoading(loading) {
-    refreshButton.disabled = loading || !readJson(SETTINGS_KEY);
-    setupForm.querySelector("button[type='submit']").disabled = loading;
+    refreshButton.disabled = loading;
     if (loading) setMessage("Fetching the latest YouTube numbers...", "loading");
   }
 
@@ -254,7 +190,7 @@
   function renderIntelligence(data) {
     if (!data?.current) {
       document.querySelector("#pulseScore").textContent = "-";
-      document.querySelector("#pulseHeadline").textContent = "Connect YouTube to start";
+      document.querySelector("#pulseHeadline").textContent = "Waiting for first snapshot";
       document.querySelector("#pulseExplanation").textContent =
         "This score will blend audience growth, views and engagement across every connected platform.";
       document.querySelector("#pulseStatus").textContent = "Building baseline";
@@ -264,7 +200,7 @@
       document.querySelector("#engagementMomentum").textContent = "-";
       document.querySelector("#topVideoTitle").textContent = "No video data yet";
       document.querySelector("#topVideoSignal").textContent =
-        "Connect YouTube to identify the strongest content signal.";
+        "The first snapshot will identify the strongest content signal.";
       document.querySelector("#engagementRate").textContent = "-";
       document.querySelector("#viewsPerSubscriber").textContent = "-";
       document.querySelector("#pulseRing").style.setProperty("--pulse-score", "0deg");
@@ -389,7 +325,7 @@
     if (!data?.current) {
       document.querySelector("#channelName").textContent = "YouTube overview";
       document.querySelector("#channelDescription").textContent =
-        "Connect Ella's YouTube channel to see channel growth and recent video performance.";
+        "Ella's YouTube growth, audience momentum and recent video performance.";
       document.querySelector("#socialLastUpdated").textContent = "Not connected";
       ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
         .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
@@ -428,32 +364,17 @@
   }
 
   async function refreshYouTube() {
-    const settings = readJson(SETTINGS_KEY);
-    if (!settings?.channel || !settings?.apiKey) {
-      setMessage("Add the channel and API key first.", "error");
-      return;
-    }
-
-    const reference = parseChannelReference(settings.channel);
-    if (!reference) {
-      setMessage("Enter a valid YouTube channel ID, handle or URL.", "error");
-      return;
-    }
-
     setLoading(true);
     try {
-      const channel = await fetchChannel(reference, settings.apiKey);
-      const videos = await fetchRecentVideos(channel, settings.apiKey);
-      const current = buildSnapshot(channel, videos);
+      const current = await fetchYouTubeSnapshot();
       savedData = {
         current,
         previous: savedData?.current || null,
         history: appendHistory(savedData?.history, current)
       };
       localStorage.setItem(DATA_KEY, JSON.stringify(savedData));
-      channelInput.value = settings.channel;
       render(savedData);
-      setMessage(`YouTube updated with ${videos.length} recent videos.`, "success");
+      setMessage(`YouTube updated with ${current.videos.length} recent videos.`, "success");
     } catch (error) {
       console.error("YouTube refresh failed", error);
       setMessage(error.message || "YouTube could not be refreshed.", "error");
@@ -461,25 +382,6 @@
       setLoading(false);
     }
   }
-
-  setupForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const settings = {
-      channel: channelInput.value.trim(),
-      apiKey: apiKeyInput.value.trim()
-    };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    refreshButton.disabled = false;
-    refreshYouTube();
-  });
-
-  clearButton.addEventListener("click", () => {
-    localStorage.removeItem(SETTINGS_KEY);
-    channelInput.value = "";
-    apiKeyInput.value = "";
-    refreshButton.disabled = true;
-    setMessage("YouTube connection removed from this browser.");
-  });
 
   refreshButton.addEventListener("click", refreshYouTube);
 
@@ -489,19 +391,14 @@
     render(savedData);
   });
 
-  const settings = readJson(SETTINGS_KEY);
-  if (settings) {
-    channelInput.value = settings.channel || "";
-    apiKeyInput.value = settings.apiKey || "";
-    refreshButton.disabled = false;
-  }
+  refreshButton.disabled = false;
   render(savedData);
 
   const lastCheckTime = savedData?.current?.checkedAt
     ? new Date(savedData.current.checkedAt).getTime()
     : 0;
   const refreshAge = Date.now() - lastCheckTime;
-  if (settings?.channel && settings?.apiKey && refreshAge > 12 * 60 * 60 * 1000) {
+  if (refreshAge > 12 * 60 * 60 * 1000) {
     refreshYouTube();
   }
 })();

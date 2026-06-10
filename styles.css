@@ -2131,6 +2131,10 @@ summary:focus-visible {
   grid-template-columns: minmax(280px, 350px) 1fr;
 }
 
+.social-workspace-wide {
+  grid-template-columns: 1fr;
+}
+
 .social-setup {
   position: sticky;
   top: 18px;
@@ -2150,6 +2154,10 @@ summary:focus-visible {
   min-height: 18px;
 }
 
+.social-board-message {
+  margin-bottom: 14px;
+  min-height: 0;
+}
 .social-message[data-state="error"] {
   color: var(--danger);
 }

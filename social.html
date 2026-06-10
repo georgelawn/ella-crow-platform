@@ -49,7 +49,7 @@
           <p class="eyebrow">Audience Pulse</p>
           <h2 id="channelName">YouTube overview</h2>
           <p class="social-subtitle" id="channelDescription">
-            Connect Ella's YouTube channel to see channel growth and recent video performance.
+            Ella's YouTube growth, audience momentum and recent video performance.
           </p>
         </div>
         <div class="social-refresh">
@@ -95,7 +95,7 @@
               <span id="pulseScore">-</span>
             </div>
             <div>
-              <strong id="pulseHeadline">Connect YouTube to start</strong>
+              <strong id="pulseHeadline">Waiting for first snapshot</strong>
               <p id="pulseExplanation">
                 This score will blend audience growth, views and engagement across every connected platform.
               </p>
@@ -133,7 +133,7 @@
           <div class="signal-feature">
             <span>Top recent video</span>
             <strong id="topVideoTitle">No video data yet</strong>
-            <p id="topVideoSignal">Connect YouTube to identify the strongest content signal.</p>
+            <p id="topVideoSignal">The first snapshot will identify the strongest content signal.</p>
           </div>
           <div class="signal-grid">
             <div>
@@ -148,37 +148,7 @@
         </article>
       </section>
 
-      <section class="social-workspace">
-        <aside class="control-panel social-setup" aria-label="YouTube setup">
-          <form id="youtubeSetupForm" autocomplete="off">
-            <div class="panel-heading">
-              <p class="eyebrow">YouTube Connection</p>
-              <h2>Channel setup</h2>
-            </div>
-
-            <label>
-              Channel ID, handle or URL
-              <input id="youtubeChannel" required placeholder="@ellacrow or channel URL">
-            </label>
-
-            <label>
-              YouTube API key
-              <input id="youtubeApiKey" type="password" required placeholder="Paste restricted API key">
-            </label>
-
-            <p class="setup-note">
-              The API key stays in this browser and is not uploaded to the shared database. Restrict it to the
-              YouTube Data API and this website in Google Cloud.
-            </p>
-
-            <div class="form-actions">
-              <button class="primary-button" type="submit">Connect YouTube</button>
-              <button class="ghost-button" id="clearYouTubeButton" type="button">Disconnect</button>
-            </div>
-            <p class="social-message" id="socialMessage" role="status"></p>
-          </form>
-        </aside>
-
+      <section class="social-workspace social-workspace-wide">
         <section class="gig-board social-board" aria-label="YouTube content performance">
           <div class="board-toolbar">
             <div>
@@ -191,9 +161,10 @@
             </div>
           </div>
 
+          <p class="social-message social-board-message" id="socialMessage" role="status"></p>
           <div class="social-empty" id="socialEmptyState">
             <strong>No YouTube data yet</strong>
-            <p>Add the channel and API key to build Ella's first social performance snapshot.</p>
+            <p>The first performance snapshot will appear when the secure YouTube connection is ready.</p>
           </div>
           <div class="video-performance-list" id="videoPerformanceList"></div>
         </section>
@@ -202,6 +173,6 @@
 
     <script src="cloud-config.js?v=3"></script>
     <script src="app-cloud.js?v=6"></script>
-    <script src="social.js?v=1"></script>
+    <script src="social.js?v=2"></script>
   </body>
 </html>

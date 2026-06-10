@@ -107,8 +107,12 @@ To connect YouTube:
 2. Enable the `YouTube Data API v3`.
 3. Create an API key.
 4. Restrict the key to the YouTube Data API and the hosted dashboard's HTTP referrer.
-5. Open `social.html` and enter the channel handle, channel URL, or channel ID plus the API key.
+5. In the Apps Script project, open `Project Settings > Script Properties`.
+6. Add a property named `YOUTUBE_API_KEY` and paste the API key as its value.
+7. Replace the Apps Script code with the latest
+   `apps-script/google-calendar-sync-webapp.gs`, then create a new web-app deployment.
+8. Update `googleCalendarSyncUrl` in `cloud-config.js` if the deployment URL changed.
 
-The key is stored only in that browser. Collected metrics are synced through Supabase, but the key
-is deliberately excluded from cloud sync. The page refreshes automatically when opened if the
+The channel ID is fixed in the Apps Script code. The API key never reaches GitHub or the browser.
+Collected metrics are synced through Supabase. The page refreshes automatically when opened if the
 latest snapshot is more than 12 hours old.

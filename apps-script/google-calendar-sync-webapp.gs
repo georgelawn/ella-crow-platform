@@ -2,6 +2,8 @@ const CALENDAR_ID = "ellacrowmusic@gmail.com";
 const TIMEZONE = "Europe/London";
 const DEFAULT_DURATION_MINUTES = 60;
 const MARKER_LABEL = "Ella dashboard ID";
+const YOUTUBE_CHANNEL_ID = "UCbZAHmVbINt96YrYrotvB1Q";
+const YOUTUBE_API_ROOT = "https://www.googleapis.com/youtube/v3";
 
 const EVENT_COLORS = {
   gig: CalendarApp.EventColor.RED,
@@ -9,6 +11,25 @@ const EVENT_COLORS = {
   recording: CalendarApp.EventColor.BLUE,
   meeting: CalendarApp.EventColor.MAUVE
 };
+
+function doGet(event) {
+  try {
+    const action = String(event && event.parameter && event.parameter.action || "");
+    if (action !== "youtube") {
+      return jsonp_({ ok: false, error: "Unknown action" }, event);
+    }
+
+    return jsonp_({
+      ok: true,
+      snapshot: youtubeSnapshot_()
+    }, event);
+  } catch (error) {
+    return jsonp_({
+      ok: false,
+      error: String(error && error.message ? error.message : error)
+    }, event);
+  }
+}
 
 function doPost(event) {
   try {
@@ -37,6 +58,104 @@ function doPost(event) {
   } catch (error) {
     return json_({ ok: false, error: String(error && error.message ? error.message : error) });
   }
+}
+
+function youtubeSnapshot_() {
+  const apiKey = PropertiesService.getScriptProperties().getProperty("YOUTUBE_API_KEY");
+  if (!apiKey) {
+    throw new Error("YOUTUBE_API_KEY is not configured in Apps Script Properties.");
+  }
+
+  const channelPayload = youtubeRequest_("channels", {
+    part: "snippet,statistics,contentDetails",
+    id: YOUTUBE_CHANNEL_ID
+  }, apiKey);
+  const channel = channelPayload.items && channelPayload.items[0];
+  if (!channel) throw new Error("Ella Crow's YouTube channel could not be found.");
+
+  const uploadsPlaylist = channel.contentDetails &&
+    channel.contentDetails.relatedPlaylists &&
+    channel.contentDetails.relatedPlaylists.uploads;
+  let videos = [];
+
+  if (uploadsPlaylist) {
+    const playlistPayload = youtubeRequest_("playlistItems", {
+      part: "contentDetails",
+      playlistId: uploadsPlaylist,
+      maxResults: "12"
+    }, apiKey);
+    const videoIds = (playlistPayload.items || [])
+      .map(function (item) { return item.contentDetails && item.contentDetails.videoId; })
+      .filter(Boolean);
+
+    if (videoIds.length) {
+      const videoPayload = youtubeRequest_("videos", {
+        part: "snippet,statistics",
+        id: videoIds.join(",")
+      }, apiKey);
+      const order = {};
+      videoIds.forEach(function (id, index) { order[id] = index; });
+      videos = (videoPayload.items || []).sort(function (a, b) {
+        return order[a.id] - order[b.id];
+      });
+    }
+  }
+
+  const channelStats = channel.statistics || {};
+  return {
+    checkedAt: new Date().toISOString(),
+    channel: {
+      id: channel.id,
+      title: channel.snippet && channel.snippet.title || "Ella Crow",
+      description: channel.snippet && channel.snippet.description || "",
+      thumbnail: thumbnailUrl_(channel.snippet && channel.snippet.thumbnails),
+      subscribers: number_(channelStats.subscriberCount),
+      views: number_(channelStats.viewCount),
+      videos: number_(channelStats.videoCount),
+      subscribersHidden: Boolean(channelStats.hiddenSubscriberCount)
+    },
+    videos: videos.map(function (video) {
+      const stats = video.statistics || {};
+      return {
+        id: video.id,
+        title: video.snippet && video.snippet.title || "Untitled video",
+        publishedAt: video.snippet && video.snippet.publishedAt || "",
+        thumbnail: thumbnailUrl_(video.snippet && video.snippet.thumbnails),
+        views: number_(stats.viewCount),
+        likes: number_(stats.likeCount),
+        comments: number_(stats.commentCount)
+      };
+    })
+  };
+}
+
+function youtubeRequest_(path, params, apiKey) {
+  const query = Object.keys(params)
+    .map(function (key) {
+      return encodeURIComponent(key) + "=" + encodeURIComponent(params[key]);
+    })
+    .concat("key=" + encodeURIComponent(apiKey))
+    .join("&");
+  const response = UrlFetchApp.fetch(YOUTUBE_API_ROOT + "/" + path + "?" + query, {
+    muteHttpExceptions: true
+  });
+  const payload = JSON.parse(response.getContentText() || "{}");
+  if (response.getResponseCode() < 200 || response.getResponseCode() >= 300) {
+    throw new Error(payload.error && payload.error.message || "YouTube API request failed.");
+  }
+  return payload;
+}
+
+function thumbnailUrl_(thumbnails) {
+  if (!thumbnails) return "";
+  return thumbnails.medium && thumbnails.medium.url ||
+    thumbnails.default && thumbnails.default.url ||
+    "";
+}
+
+function number_(value) {
+  const parsed = Number(value);
+  return isFinite(parsed) ? parsed : 0;
 }
 
 function upsertEvent_(itemType, item, previousItem) {
@@ -274,4 +393,14 @@ function json_(payload) {
   return ContentService
     .createTextOutput(JSON.stringify(payload))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function jsonp_(payload, event) {
+  const callback = String(event && event.parameter && event.parameter.callback || "");
+  if (!/^[A-Za-z_$][0-9A-Za-z_$]*$/.test(callback)) {
+    return json_(payload);
+  }
+  return ContentService
+    .createTextOutput(callback + "(" + JSON.stringify(payload) + ");")
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
