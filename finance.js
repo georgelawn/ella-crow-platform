@@ -49,7 +49,9 @@ function escapeHtml(value) {
 }
 
 function monthKey(dateString) {
+  if (!dateString) return "";
   const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
@@ -65,6 +67,7 @@ function lastMonthKey() {
 }
 
 function monthLabel(key) {
+  if (!key) return "Date needed";
   return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(`${key}-01T00:00:00`));
 }
 
@@ -93,7 +96,11 @@ function renderMonthlyTable() {
     grouped.set(key, [...(grouped.get(key) || []), item]);
   });
   const rows = [...grouped.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
+    .sort(([a], [b]) => {
+      if (!a) return 1;
+      if (!b) return -1;
+      return b.localeCompare(a);
+    })
     .map(([key, items]) => {
       const totals = totalsFor(items);
       return `
@@ -269,6 +276,13 @@ document.querySelector(".finance-columns").addEventListener("click", (event) => 
     saveTransactions();
     renderTransactions();
   }
+});
+
+window.addEventListener("ella-cloud-data-updated", (event) => {
+  if (!event.detail?.keys?.includes(financeStorageKey)) return;
+  transactions = loadTransactions();
+  editingTransactionId = "";
+  renderTransactions();
 });
 
 syncInvoiceFields();
