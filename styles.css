@@ -422,9 +422,12 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.ledger-description strong,
-.ledger-stream {
+.ledger-description strong {
   overflow-wrap: anywhere;
+}
+
+.ledger-stream {
+  white-space: nowrap;
 }
 
 .ledger-description small {
@@ -675,7 +678,7 @@
 
   .ledger-row {
     gap: 10px;
-    grid-template-columns: 58px 74px minmax(0, 1fr) 92px 38px;
+    grid-template-columns: 58px 92px minmax(0, 1fr) 92px 38px;
   }
 
   .ledger-type {
