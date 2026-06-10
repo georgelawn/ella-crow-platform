@@ -422,6 +422,11 @@
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.ledger-description strong,
+.ledger-stream {
+  overflow-wrap: anywhere;
+}
+
 .ledger-description small {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -666,6 +671,15 @@
     border-top: 1px solid var(--line);
     grid-column: 1 / -1;
     padding-top: 11px;
+  }
+
+  .ledger-row {
+    gap: 10px;
+    grid-template-columns: 58px 74px minmax(0, 1fr) 92px 38px;
+  }
+
+  .ledger-type {
+    display: none;
   }
 }
 
