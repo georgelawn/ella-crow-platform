@@ -1978,7 +1978,7 @@ summary:focus-visible {
   border-top: 1px solid rgba(217, 195, 120, 0.35);
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   padding-top: 16px;
 }
 

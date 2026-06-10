@@ -120,13 +120,17 @@
     return `${numberValue(value).toFixed(1)}%`;
   }
 
-  function calculateEngagement(videos) {
+  function calculateRates(videos) {
     const totals = videos.reduce((result, video) => {
       result.views += video.views;
-      result.actions += video.likes + video.comments;
+      result.likes += video.likes;
+      result.comments += video.comments;
       return result;
-    }, { views: 0, actions: 0 });
-    return totals.views ? (totals.actions / totals.views) * 100 : 0;
+    }, { views: 0, likes: 0, comments: 0 });
+    return {
+      likes: totals.views ? (totals.likes / totals.views) * 100 : 0,
+      comments: totals.views ? (totals.comments / totals.views) * 100 : 0
+    };
   }
 
   function fallbackIsShort(video) {
@@ -140,9 +144,17 @@
   }
 
   function videosForView(snapshot, view = activeView) {
-    return (snapshot?.videos || []).filter((video) =>
+    const videos = (snapshot?.videos || []).filter((video) =>
       view === "shorts" ? fallbackIsShort(video) : !fallbackIsShort(video)
     );
+    if (view !== "shorts") return videos;
+
+    const now = new Date(snapshot?.checkedAt || Date.now());
+    return videos.filter((video) => {
+      const published = new Date(video.publishedAt);
+      return published.getFullYear() === now.getFullYear() &&
+        published.getMonth() === now.getMonth();
+    });
   }
 
   function viewSnapshot(snapshot, view = activeView) {
@@ -214,12 +226,13 @@
       document.querySelector("#growthPeriod").textContent = "Waiting for data";
       document.querySelector("#audienceMomentum").textContent = "-";
       document.querySelector("#viewMomentum").textContent = "-";
-      document.querySelector("#engagementMomentum").textContent = "-";
+      document.querySelector("#likeMomentum").textContent = "-";
+      document.querySelector("#commentMomentum").textContent = "-";
       document.querySelector("#topVideoTitle").textContent = "No video data yet";
       document.querySelector("#topVideoSignal").textContent =
         "The first snapshot will identify the strongest content signal.";
-      document.querySelector("#engagementRate").textContent = "-";
-      document.querySelector("#viewsPerSubscriber").textContent = "-";
+      document.querySelector("#likeRate").textContent = "-";
+      document.querySelector("#commentRate").textContent = "-";
       document.querySelector("#pulseRing").style.setProperty("--pulse-score", "0deg");
       renderGrowthChart([]);
       return;
@@ -235,14 +248,15 @@
     const viewGrowth = baseline?.channel?.views
       ? (viewGain / baseline.channel.views) * 100
       : 0;
-    const engagement = calculateEngagement(current.videos);
+    const rates = calculateRates(current.videos);
     const recentViews = current.videos.reduce((sum, video) => sum + video.views, 0);
     const viewsPerSubscriber = current.channel.subscribers
       ? recentViews / current.channel.subscribers
       : 0;
     const score = Math.round(Math.min(
       100,
-      35 + Math.min(subscriberGrowth * 12, 25) + Math.min(viewGrowth * 18, 20) + Math.min(engagement * 5, 20)
+      35 + Math.min(subscriberGrowth * 12, 25) + Math.min(viewGrowth * 18, 20) +
+      Math.min((rates.likes + rates.comments) * 5, 20)
     ));
     const hasMonthlyMovement = Boolean(subscriberGain || viewGain);
     const topVideo = [...current.videos].sort((a, b) => b.views - a.views)[0];
@@ -261,7 +275,8 @@
       baseline ? `${subscriberGain >= 0 ? "+" : ""}${fullNumber(subscriberGain)}` : "Baseline";
     document.querySelector("#viewMomentum").textContent =
       baseline ? `${viewGain >= 0 ? "+" : ""}${compactNumber(viewGain)}` : "Baseline";
-    document.querySelector("#engagementMomentum").textContent = percentage(engagement);
+    document.querySelector("#likeMomentum").textContent = percentage(rates.likes);
+    document.querySelector("#commentMomentum").textContent = percentage(rates.comments);
     document.querySelector("#growthPeriod").textContent = months.length > 1
       ? `Last ${months.length} months`
       : "First month";
@@ -269,9 +284,8 @@
     document.querySelector("#topVideoSignal").textContent = topVideo
       ? `${compactNumber(topVideo.views)} views, ${compactNumber(topVideo.likes)} likes and ${compactNumber(topVideo.comments)} comments.`
       : "Publish or connect recent videos to reveal the strongest content.";
-    document.querySelector("#engagementRate").textContent = percentage(engagement);
-    document.querySelector("#viewsPerSubscriber").textContent =
-      current.channel.subscribers ? viewsPerSubscriber.toFixed(1) : "-";
+    document.querySelector("#likeRate").textContent = percentage(rates.likes);
+    document.querySelector("#commentRate").textContent = percentage(rates.comments);
     renderGrowthChart(months);
   }
 
@@ -396,15 +410,15 @@
       deltaText(current.channel.views, baseline?.channel?.views, "view");
     document.querySelector("#videoDelta").textContent =
       deltaText(current.channel.videos, baseline?.channel?.videos, isShorts ? "Short" : "video");
-    document.querySelector("#viewCountLabel").textContent = isShorts ? "Recent Shorts views" : "Recent video views";
-    document.querySelector("#videoCountLabel").textContent = isShorts ? "Recent Shorts" : "Recent uploads";
-    document.querySelector("#averageViewLabel").textContent = isShorts ? "Average Short views" : "Average video views";
-    document.querySelector("#recentViewNote").textContent = isShorts ? "Short-form performance" : "Long-form performance";
-    document.querySelector("#boardAverageLabel").textContent = isShorts ? "Shorts average" : "Long-form average";
+    document.querySelector("#viewCountLabel").textContent = isShorts ? "Shorts views this month" : "Recent video views";
+    document.querySelector("#videoCountLabel").textContent = isShorts ? "Shorts this month" : "Recent uploads";
+    document.querySelector("#averageViewLabel").textContent = isShorts ? "Average views this month" : "Average video views";
+    document.querySelector("#recentViewNote").textContent = isShorts ? "Current calendar month" : "Long-form performance";
+    document.querySelector("#boardAverageLabel").textContent = isShorts ? "This month's average" : "Long-form average";
     document.querySelector("#trendFutureLabel").textContent = isShorts ? "Long-form tracked separately" : "Shorts tracked separately";
     document.querySelector(".trend-legend span:first-child").lastChild.textContent =
       isShorts ? "YouTube Shorts views gained" : "YouTube video views gained";
-    document.querySelector(".social-board h2").textContent = isShorts ? "Recent Shorts" : "Recent videos";
+    document.querySelector(".social-board h2").textContent = isShorts ? "Shorts this month" : "Recent videos";
     renderVideos(current.videos);
     renderIntelligence(selectedData);
   }
