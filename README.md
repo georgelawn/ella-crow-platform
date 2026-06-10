@@ -113,6 +113,8 @@ To connect YouTube:
    `apps-script/google-calendar-sync-webapp.gs`, then create a new web-app deployment.
 8. Update `googleCalendarSyncUrl` in `cloud-config.js` if the deployment URL changed.
 
-The channel ID is fixed in the Apps Script code. The API key never reaches GitHub or the browser.
-Collected metrics are synced through Supabase. The page refreshes automatically when opened if the
-latest snapshot is more than 12 hours old.
+The channel ID is fixed in the Supabase Edge Function at
+`supabase/functions/youtube-stats/index.ts`. The YouTube API key is stored as the private Supabase
+secret `YOUTUBE_API_KEY` and never reaches GitHub or the browser. Collected metrics are synced
+through Supabase. The page refreshes automatically when opened if the latest snapshot is more than
+12 hours old.

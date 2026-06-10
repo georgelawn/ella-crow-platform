@@ -1,7 +1,7 @@
 (function () {
   const DATA_KEY = "ella-crow-social-youtube-v1";
   const config = window.ELLA_CLOUD_CONFIG || {};
-  const endpoint = config.googleCalendarSyncUrl || "";
+  const youtubeStatsUrl = config.youtubeStatsUrl || "";
   const refreshButton = document.querySelector("#refreshYouTubeButton");
   const message = document.querySelector("#socialMessage");
   const emptyState = document.querySelector("#socialEmptyState");
@@ -41,44 +41,17 @@
     }).format(new Date(value))}`;
   }
 
-  function fetchYouTubeSnapshot() {
-    if (!endpoint) {
-      return Promise.reject(new Error("The secure YouTube endpoint is not configured."));
+  async function fetchYouTubeSnapshot() {
+    if (!youtubeStatsUrl) {
+      throw new Error("The YouTube connection is not configured.");
     }
 
-    return new Promise((resolve, reject) => {
-      const callback = `ellaYouTube_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const script = document.createElement("script");
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        reject(new Error("The YouTube connection timed out."));
-      }, 20000);
-
-      function cleanup() {
-        window.clearTimeout(timeout);
-        delete window[callback];
-        script.remove();
-      }
-
-      window[callback] = (payload) => {
-        cleanup();
-        if (!payload?.ok || !payload.snapshot) {
-          reject(new Error(payload?.error || "YouTube data is unavailable."));
-          return;
-        }
-        resolve(payload.snapshot);
-      };
-
-      script.onerror = () => {
-        cleanup();
-        reject(new Error("The secure YouTube connection could not be reached."));
-      };
-      const url = new URL(endpoint);
-      url.searchParams.set("action", "youtube");
-      url.searchParams.set("callback", callback);
-      script.src = url.toString();
-      document.head.appendChild(script);
-    });
+    const response = await fetch(youtubeStatsUrl);
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok || !payload.snapshot) {
+      throw new Error(payload?.error || "YouTube could not return this data.");
+    }
+    return payload.snapshot;
   }
 
   function setMessage(text, state = "") {
