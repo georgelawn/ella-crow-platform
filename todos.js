@@ -196,7 +196,20 @@ function getAutoTodos() {
   const gigTodos = gigs.flatMap((gig) => {
     const status = derivedStatus(gig);
     const isUpcoming = dateStamp(gig.date) >= todayStamp();
-    if (!isUpcoming || !["booked", "pending"].includes(status)) return [];
+    const prsTodo = status === "complete" && !gig.prsSetlistLogged
+      ? [{
+          id: `gig-prs-setlist:${gig.id}`,
+          type: "auto-gig-prs-setlist",
+          category: "Gigs",
+          title: `Log setlist with PRS: ${gig.title}`,
+          dueDate: gig.date,
+          done: false,
+          gigId: gig.id,
+          meta: `${gig.venue || "Venue not added"} · gig on ${formatDate(gig.date)}`
+        }]
+      : [];
+
+    if (!isUpcoming || !["booked", "pending"].includes(status)) return prsTodo;
 
     const pendingGigTodo = status === "pending"
       ? [{
@@ -227,7 +240,7 @@ function getAutoTodos() {
         meta: `${gig.venue || "Venue TBC"} · gig on ${formatDate(gig.date)}`
       }));
 
-    return [...pendingGigTodo, ...pendingPlayerTodos];
+    return [...pendingGigTodo, ...pendingPlayerTodos, ...prsTodo];
   });
 
   const sessionTodos = sessions.flatMap((session) => {
@@ -391,6 +404,13 @@ function toggleAutoTodo(todo) {
   if (todo.type === "auto-gig-confirm") {
     gig.status = "booked";
     gig.manualStatus = true;
+    saveGigs();
+    return;
+  }
+
+  if (todo.type === "auto-gig-prs-setlist") {
+    gig.prsSetlistLogged = true;
+    gig.prsSetlistLoggedAt = new Date().toISOString();
     saveGigs();
     return;
   }
