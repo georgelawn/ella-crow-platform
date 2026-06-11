@@ -346,6 +346,7 @@ function deleteSession(id) {
   if (!session) return;
   if (!window.confirm(`Delete "${session.title}"?`)) return;
   window.EllaCalendarSync?.deleteEvent?.("session", session);
+  window.EllaFinanceSync?.removeSource("session", session.id);
   sessions = sessions.filter((item) => item.id !== id);
   saveSessions();
   renderSessions();
@@ -360,6 +361,7 @@ function saveSessionField(element) {
   session[field] = element.value;
   if (field === "status") session.manualStatus = true;
   saveSessions();
+  window.EllaFinanceSync?.syncSource("session", session);
   renderSessions(id);
   syncSessionToCalendar(session, id, previousSession);
 }
@@ -438,6 +440,7 @@ form.addEventListener("submit", (event) => {
   if (!session.title || !session.date) return;
   sessions.push(session);
   saveSessions();
+  window.EllaFinanceSync?.syncSource("session", session);
   renderSessions(session.id);
   syncSessionToCalendar(session, session.id);
   resetForm();
@@ -475,4 +478,14 @@ document.querySelectorAll(".filter").forEach((button) => {
 renderSessions();
 window.addEventListener("load", () => {
   window.setTimeout(syncExistingSessionsToCalendar, 1500);
+  window.setTimeout(() => window.EllaFinanceSync?.backfill("session"), 2200);
+});
+
+window.addEventListener("ella-cloud-data-updated", (event) => {
+  if (!event.detail?.keys?.includes(sessionStorageKey)) return;
+  window.setTimeout(() => {
+    sessions = loadSessions();
+    renderSessions();
+    window.EllaFinanceSync?.backfill("session");
+  }, 0);
 });

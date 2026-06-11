@@ -27,6 +27,7 @@ const fields = {
   location: document.querySelector("#location"),
   status: document.querySelector("#status"),
   tickets: document.querySelector("#tickets"),
+  cost: document.querySelector("#cost"),
   contact: document.querySelector("#contact"),
   notes: document.querySelector("#notes")
 };
@@ -350,6 +351,10 @@ function renderGigCard(gig, openGigId = "") {
           <span>Ticket sales</span>
           <input class="inline-field" data-field="tickets" type="number" min="0" step="1" value="${escapeHtml(gig.tickets || "")}">
         </label>
+        <label class="detail-field">
+          <span>Gig cost</span>
+          <input class="inline-field" data-field="cost" type="number" min="0" step="0.01" value="${escapeHtml(gig.cost || "")}">
+        </label>
         <label class="detail-field full">
           <span>Contact / promoter</span>
           <input class="inline-field" data-field="contact" value="${escapeHtml(gig.contact || "")}">
@@ -415,6 +420,7 @@ function readForm() {
     location: fields.location.value.trim(),
     status: fields.status.value,
     tickets: fields.tickets.value,
+    cost: fields.cost.value,
     players: [],
     contact: fields.contact.value.trim(),
     notes: fields.notes.value.trim(),
@@ -429,6 +435,7 @@ function deleteGig(id) {
   if (!confirmed) return;
 
   window.EllaCalendarSync?.deleteEvent?.("gig", gig);
+  window.EllaFinanceSync?.removeSource("gig", gig.id);
   gigs = gigs.filter((item) => item.id !== id);
   saveGigs();
   renderGigs();
@@ -448,6 +455,7 @@ function saveInlineField(element) {
     gig.manualStatus = true;
   }
   saveGigs();
+  window.EllaFinanceSync?.syncSource("gig", gig);
   renderGigs(id);
   syncGigToCalendar(gig, id, previousGig);
 }
@@ -537,6 +545,7 @@ form.addEventListener("submit", (event) => {
   }
 
   saveGigs();
+  window.EllaFinanceSync?.syncSource("gig", savedGig);
   renderGigs();
   syncGigToCalendar(savedGig, "", previousGig);
   resetForm();
@@ -577,4 +586,14 @@ syncExistingGigsButton?.addEventListener("click", syncExistingGigsToCalendar);
 renderGigs();
 window.addEventListener("load", () => {
   window.setTimeout(syncExistingGigsToCalendar, 1500);
+  window.setTimeout(() => window.EllaFinanceSync?.backfill("gig"), 2200);
+});
+
+window.addEventListener("ella-cloud-data-updated", (event) => {
+  if (!event.detail?.keys?.includes(storageKey)) return;
+  window.setTimeout(() => {
+    gigs = loadGigs();
+    renderGigs();
+    window.EllaFinanceSync?.backfill("gig");
+  }, 0);
 });

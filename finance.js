@@ -1,4 +1,6 @@
 const financeStorageKey = "ella-crow-finance-v1";
+const gigStorageKey = "ella-crow-gigs-v2";
+const sessionStorageKey = "ella-crow-sessions-v1";
 const streamDefinitions = {
   gigs: { label: "Gigs", mark: "G", description: "Shows, rehearsals, travel and live fees" },
   merch: { label: "Merch", mark: "M", description: "Stock, production and merchandise sales" },
@@ -289,7 +291,11 @@ function renderEditableLedgerRow(item) {
 function monthlyArchiveRows(items) {
   const currentYear = new Date().getFullYear();
   const currentKey = currentMonthKey();
-  const keys = [...new Set(items.map((item) => monthKey(item.date)).filter((key) => key && key !== currentKey && Number(key.slice(0, 4)) === currentYear))]
+  const keys = [...new Set(items.map((item) => monthKey(item.date)).filter((key) =>
+    key &&
+    key < currentKey &&
+    Number(key.slice(0, 4)) === currentYear
+  ))]
     .sort()
     .reverse();
   return keys.map((key, index) => {
@@ -488,12 +494,26 @@ currentMonthLedger.addEventListener("click", (event) => {
 });
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
-  if (!event.detail?.keys?.includes(financeStorageKey)) return;
+  const keys = event.detail?.keys || [];
+  if (keys.includes(financeStorageKey)) {
+    transactions = loadTransactions();
+    editingTransactionId = "";
+    renderFinance();
+  }
+  if (keys.some((key) => [gigStorageKey, sessionStorageKey].includes(key))) {
+    window.setTimeout(backfillSourceExpenses, 0);
+  }
+});
+
+function backfillSourceExpenses() {
+  window.EllaFinanceSync?.backfill("gig");
+  window.EllaFinanceSync?.backfill("session");
   transactions = loadTransactions();
   editingTransactionId = "";
   renderFinance();
-});
+}
 
 fields.date.value = localDateKey();
 syncInvoiceFields();
 renderFinance();
+window.addEventListener("load", () => window.setTimeout(backfillSourceExpenses, 2200));
