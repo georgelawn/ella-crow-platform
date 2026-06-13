@@ -1,5 +1,12 @@
 const CHANNEL_ID = "UCbZAHmVbINt96YrYrotvB1Q";
 const YOUTUBE_API_ROOT = "https://www.googleapis.com/youtube/v3";
+const VERIFIED_SHORT_IDS = new Set([
+  "KuCyjNmbXlI",
+  "FQAQAZrLXBk",
+  "bYlb7Rca6eM",
+  "Hl6CmRAuw1E",
+  "wlVvBqYXLM8",
+]);
 const ALLOWED_ORIGINS = new Set([
   "https://georgelawn.github.io",
   "http://localhost:8765",
@@ -50,15 +57,17 @@ function durationSeconds(duration: string | undefined) {
     numberValue(match[4]);
 }
 
-function isLikelyShort(title: string, duration: number, tags: string[]) {
+function isLikelyShort(id: string, title: string, duration: number, tags: string[]) {
+  if (VERIFIED_SHORT_IDS.has(id)) return true;
+  if (/\b(acoustic session|debut|official video|music video)\b|live\s*@/i.test(title)) {
+    return false;
+  }
   if (tags.some((tag) => String(tag).toLowerCase().replace("#", "") === "shorts")) {
     return true;
   }
   if (!duration || duration > 180) return false;
 
-  // YouTube's public API does not expose video orientation. These title markers
-  // keep clearly produced long-form performances out of the Shorts view.
-  return !/\b(acoustic session|live @|debut|cover|official video|music video)\b/i.test(title);
+  return true;
 }
 
 async function youtubeRequest(path: string, params: Record<string, string>, apiKey: string) {
@@ -74,7 +83,8 @@ async function youtubeRequest(path: string, params: Record<string, string>, apiK
   return payload;
 }
 
-Deno.serve(async (request) => {
+export default {
+  async fetch(request: Request) {
   const origin = request.headers.get("origin");
 
   if (request.method === "OPTIONS") {
@@ -109,7 +119,7 @@ Deno.serve(async (request) => {
       const playlistPayload = await youtubeRequest("playlistItems", {
         part: "contentDetails",
         playlistId: uploadsPlaylist,
-        maxResults: "12",
+        maxResults: "50",
       }, apiKey);
       const videoIds = (playlistPayload.items || [])
         .map((item: { contentDetails?: { videoId?: string } }) => item.contentDetails?.videoId)
@@ -171,7 +181,7 @@ Deno.serve(async (request) => {
             likes: numberValue(video.statistics?.likeCount),
             comments: numberValue(video.statistics?.commentCount),
             durationSeconds: duration,
-            isShort: isLikelyShort(title, duration, tags),
+            isShort: isLikelyShort(video.id, title, duration, tags),
           };
         }),
       },
@@ -183,4 +193,5 @@ Deno.serve(async (request) => {
       error: error instanceof Error ? error.message : "YouTube data is unavailable.",
     }, 502, origin);
   }
-});
+  },
+};
