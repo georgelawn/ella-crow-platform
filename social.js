@@ -84,7 +84,11 @@
   function setLoading(loading) {
     refreshButton.disabled = loading;
     if (loading) {
-      const platform = activeView === "instagram" ? "Instagram" : "YouTube";
+      const platform = activeView === "facebook"
+        ? "Facebook"
+        : activeView === "instagram"
+          ? "Instagram"
+          : "YouTube";
       setMessage(`Fetching the latest ${platform} numbers...`, "loading");
     }
   }
@@ -605,9 +609,232 @@
     renderInstagramMedia(current.media);
   }
 
+  function facebookRates(posts) {
+    const totals = (posts || []).reduce((result, post) => {
+      result.views += post.views || post.reach;
+      result.likes += post.likes;
+      result.comments += post.comments;
+      return result;
+    }, { views: 0, likes: 0, comments: 0 });
+    return {
+      likes: totals.views ? (totals.likes / totals.views) * 100 : 0,
+      comments: totals.views ? (totals.comments / totals.views) * 100 : 0
+    };
+  }
+
+  function renderFacebookGrowth(data) {
+    const chart = document.querySelector("#growthChart");
+    chart.replaceChildren();
+    const months = new Map();
+    (data?.history || []).forEach((snapshot) => {
+      if (!snapshot.facebook) return;
+      months.set(monthKey(snapshot.checkedAt), snapshot.facebook);
+    });
+    const entries = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
+
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "chart-empty";
+      empty.textContent = "Monthly tracking begins with the first Facebook refresh.";
+      chart.append(empty);
+      return;
+    }
+
+    const values = entries.map(([, facebook]) => facebook.page?.followers || 0);
+    const maximum = Math.max(...values, 1);
+    entries.forEach(([key], index) => {
+      const column = document.createElement("div");
+      column.className = "chart-column";
+      const value = document.createElement("strong");
+      value.textContent = compactNumber(values[index]);
+      const bar = document.createElement("span");
+      bar.className = "chart-bar facebook-chart-bar";
+      bar.style.height = `${Math.max((values[index] / maximum) * 100, 5)}%`;
+      const label = document.createElement("small");
+      label.textContent = new Intl.DateTimeFormat("en-GB", { month: "short" })
+        .format(new Date(`${key}-01T12:00:00`));
+      column.append(value, bar, label);
+      chart.append(column);
+    });
+  }
+
+  function renderFacebookPosts(posts) {
+    videoList.replaceChildren();
+    emptyState.hidden = posts.length > 0;
+    emptyState.querySelector("strong").textContent = "Facebook post insights are pending";
+    emptyState.querySelector("p").textContent =
+      "The Page is connected. Meta has not yet released its post-level engagement data to this app.";
+    if (!posts.length) return;
+
+    const maximumEngagement = Math.max(
+      ...posts.map((post) => post.likes + post.comments + post.shares),
+      1
+    );
+    posts.forEach((post, index) => {
+      const card = document.createElement("a");
+      card.className = "video-performance-card facebook-performance-card";
+      card.href = post.permalink || "#";
+      card.target = "_blank";
+      card.rel = "noreferrer";
+
+      const rank = document.createElement("span");
+      rank.className = "video-rank";
+      rank.textContent = String(index + 1).padStart(2, "0");
+
+      const image = document.createElement("img");
+      image.src = post.thumbnail;
+      image.alt = "";
+      image.loading = "lazy";
+
+      const copy = document.createElement("div");
+      copy.className = "video-performance-copy";
+      const badge = document.createElement("span");
+      badge.className = "content-format-badge facebook";
+      badge.textContent = "Facebook post";
+      const heading = document.createElement("h3");
+      heading.textContent = post.caption.split("\n")[0].slice(0, 120) || "Facebook post";
+      const date = document.createElement("p");
+      date.textContent = post.publishedAt
+        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(post.publishedAt))
+        : "Publish date unavailable";
+      const metrics = document.createElement("div");
+      metrics.className = "video-metrics";
+      metrics.append(
+        createMetric("reactions", post.likes),
+        createMetric("comments", post.comments),
+        createMetric("shares", post.shares)
+      );
+      const engagement = post.likes + post.comments + post.shares;
+      const track = document.createElement("span");
+      track.className = "performance-track";
+      const fill = document.createElement("span");
+      fill.style.width = `${Math.max((engagement / maximumEngagement) * 100, 2)}%`;
+      track.append(fill);
+      copy.append(badge, heading, date, metrics, track);
+      card.append(rank, image, copy);
+      videoList.append(card);
+    });
+  }
+
+  function renderFacebook(data) {
+    const current = data?.current;
+    const facebook = current?.facebook;
+    const posts = facebook?.posts || [];
+    const insightsAvailable = posts.length > 0 ||
+      Boolean(facebook?.month?.views || facebook?.month?.engagements);
+    const baselineSnapshot = (data?.history || []).find((snapshot) =>
+      monthKey(snapshot.checkedAt) === monthKey(current?.checkedAt || Date.now())
+    );
+    const baselineFollowers = baselineSnapshot?.facebook?.page?.followers;
+    const followerGain = baselineFollowers == null
+      ? null
+      : facebook.page.followers - baselineFollowers;
+    const rates = facebookRates(posts);
+    const topPost = [...posts].sort(
+      (a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)
+    )[0];
+
+    refreshButton.textContent = "Refresh Facebook";
+    document.querySelector("#channelName").textContent = facebook
+      ? `${facebook.page.name} Facebook`
+      : "Facebook overview";
+    document.querySelector("#channelDescription").textContent =
+      "Page audience, publishing activity and the posts building Ella's Facebook presence.";
+    document.querySelector(".social-summary article:first-child p").textContent = "Page followers";
+    document.querySelector("#viewCountLabel").textContent = "Page views this month";
+    document.querySelector("#videoCountLabel").textContent = "Posts this month";
+    document.querySelector("#averageViewLabel").textContent = "Engagements this month";
+    document.querySelector("#recentViewNote").textContent =
+      insightsAvailable ? "Current calendar month" : "Awaiting Meta access";
+    document.querySelector("#boardAverageLabel").textContent = "Page followers";
+    document.querySelector("#trendFutureLabel").textContent = "Facebook tracked separately";
+    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
+      "Facebook followers";
+    document.querySelector(".social-board h2").textContent = "Facebook this month";
+    document.querySelector(".signal-feature > span").textContent = "Top Facebook post";
+
+    if (!facebook) {
+      document.querySelector("#socialLastUpdated").textContent = "Not connected";
+      ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
+        .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
+      document.querySelector("#subscriberDelta").textContent = "Monthly baseline not started";
+      document.querySelector("#viewDelta").textContent = "Monthly baseline not started";
+      document.querySelector("#videoDelta").textContent = "Monthly baseline not started";
+      renderFacebookPosts([]);
+      renderFacebookGrowth(null);
+      return;
+    }
+
+    document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
+    document.querySelector("#subscriberCount").textContent = compactNumber(facebook.page.followers);
+    document.querySelector("#channelViewCount").textContent = insightsAvailable
+      ? compactNumber(facebook.month.views)
+      : "-";
+    document.querySelector("#videoCount").textContent = insightsAvailable
+      ? fullNumber(facebook.month.posts)
+      : "-";
+    document.querySelector("#recentViewCount").textContent = insightsAvailable
+      ? compactNumber(facebook.month.engagements)
+      : "-";
+    document.querySelector("#averageRecentViews").textContent =
+      compactNumber(facebook.page.followers);
+    document.querySelector("#subscriberDelta").textContent = followerGain == null
+      ? "Building this month's baseline"
+      : `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)} this month`;
+    document.querySelector("#viewDelta").textContent = insightsAvailable
+      ? "Current calendar month"
+      : "Meta permission pending";
+    document.querySelector("#videoDelta").textContent = insightsAvailable
+      ? "Current calendar month"
+      : "Meta permission pending";
+    document.querySelector("#pulseScore").textContent = insightsAvailable ? "50" : "-";
+    document.querySelector("#pulseRing").style.setProperty(
+      "--pulse-score",
+      insightsAvailable ? "180deg" : "0deg"
+    );
+    document.querySelector("#pulseStatus").textContent =
+      insightsAvailable ? "Tracking live" : "Page connected";
+    document.querySelector("#pulseHeadline").textContent =
+      insightsAvailable ? "Facebook baseline" : "Audience connected";
+    document.querySelector("#pulseExplanation").textContent = insightsAvailable
+      ? `${compactNumber(facebook.month.engagements)} engagements across ${facebook.month.posts} posts this month.`
+      : "Follower tracking is live. Post and engagement insights will appear once Meta releases access.";
+    document.querySelector("#audienceMomentum").textContent = followerGain == null
+      ? "Baseline"
+      : `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)}`;
+    document.querySelector("#viewMomentum").textContent = insightsAvailable
+      ? compactNumber(facebook.month.views)
+      : "Pending";
+    document.querySelector("#likeMomentum").textContent = insightsAvailable
+      ? percentage(rates.likes)
+      : "-";
+    document.querySelector("#commentMomentum").textContent = insightsAvailable
+      ? percentage(rates.comments)
+      : "-";
+    document.querySelector("#growthPeriod").textContent =
+      data.history?.length > 1 ? "Month on month" : "First month";
+    document.querySelector("#topVideoTitle").textContent =
+      topPost?.caption.split("\n")[0].slice(0, 100) || "Post insights pending";
+    document.querySelector("#topVideoSignal").textContent = topPost
+      ? `${compactNumber(topPost.likes)} reactions, ${compactNumber(topPost.comments)} comments and ${compactNumber(topPost.shares)} shares.`
+      : "The Page connection is healthy; Meta is not yet returning post-level performance.";
+    document.querySelector("#likeRate").textContent = insightsAvailable
+      ? percentage(rates.likes)
+      : "-";
+    document.querySelector("#commentRate").textContent = insightsAvailable
+      ? percentage(rates.comments)
+      : "-";
+    renderFacebookGrowth(data);
+    renderFacebookPosts(posts);
+  }
+
   function render(data) {
     if (activeView === "instagram") {
       renderInstagram(savedInstagramData);
+      return;
+    }
+    if (activeView === "facebook") {
+      renderFacebook(savedInstagramData);
       return;
     }
     refreshButton.textContent = "Refresh YouTube";
@@ -699,8 +926,12 @@
         history: appendHistory(savedInstagramData?.history, current)
       };
       localStorage.setItem(INSTAGRAM_DATA_KEY, JSON.stringify(savedInstagramData));
-      renderInstagram(savedInstagramData);
-      setMessage(`Instagram updated with ${current.media.length} posts and Reels this month.`, "success");
+      render(savedData);
+      const platform = activeView === "facebook" ? "Facebook" : "Instagram";
+      const detail = activeView === "facebook"
+        ? `${current.facebook.page.followers} Page followers`
+        : `${current.media.length} posts and Reels this month`;
+      setMessage(`${platform} updated with ${detail}.`, "success");
     } catch (error) {
       console.error("Instagram refresh failed", error);
       setMessage(error.message || "Instagram could not be refreshed.", "error");
@@ -710,7 +941,7 @@
   }
 
   refreshButton.addEventListener("click", () => {
-    if (activeView === "instagram") {
+    if (activeView === "instagram" || activeView === "facebook") {
       refreshInstagram();
       return;
     }
@@ -724,7 +955,7 @@
         tabButton.classList.toggle("active", tabButton === button);
       });
       render(savedData);
-      if (activeView === "instagram") {
+      if (activeView === "instagram" || activeView === "facebook") {
         const lastCheck = savedInstagramData?.current?.checkedAt
           ? new Date(savedInstagramData.current.checkedAt).getTime()
           : 0;

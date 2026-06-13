@@ -2556,7 +2556,7 @@ summary:focus-visible {
 .social-platform-tabs {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .platform-tab {
@@ -2616,6 +2616,10 @@ summary:focus-visible {
 
 .instagram-mark {
   border-radius: 10px;
+}
+
+.facebook-mark {
+  border-radius: 50%;
 }
 
 .tiktok-mark {
@@ -2842,6 +2846,11 @@ summary:focus-visible {
 .instagram-chart-bar {
   background:
     linear-gradient(180deg, #b45177, #7d3d66 52%, var(--brown-2));
+}
+
+.facebook-chart-bar {
+  background:
+    linear-gradient(180deg, #5478a8, #345881 52%, var(--brown-2));
 }
 
 .chart-column small {
@@ -3096,8 +3105,18 @@ summary:focus-visible {
   color: #fff4cd;
 }
 
+.content-format-badge.facebook {
+  background: #345881;
+  border-color: #345881;
+  color: #f7edc8;
+}
+
 .instagram-performance-card img {
   aspect-ratio: 1;
+}
+
+.facebook-performance-card img {
+  aspect-ratio: 16 / 9;
 }
 
 .video-performance-copy > p {
