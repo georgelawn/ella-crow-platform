@@ -1,7 +1,9 @@
 (function () {
   const DATA_KEY = "ella-crow-social-youtube-v1";
+  const INSTAGRAM_DATA_KEY = "ella-crow-social-instagram-v1";
   const config = window.ELLA_CLOUD_CONFIG || {};
   const youtubeStatsUrl = config.youtubeStatsUrl || "";
+  const instagramStatsUrl = config.instagramStatsUrl || "";
   const refreshButton = document.querySelector("#refreshYouTubeButton");
   const message = document.querySelector("#socialMessage");
   const emptyState = document.querySelector("#socialEmptyState");
@@ -9,6 +11,7 @@
   const platformTabs = [...document.querySelectorAll(".platform-tab[data-view]")];
 
   let savedData = readJson(DATA_KEY);
+  let savedInstagramData = readJson(INSTAGRAM_DATA_KEY);
   let activeView = "youtube";
 
   function readJson(key) {
@@ -48,10 +51,27 @@
       throw new Error("The YouTube connection is not configured.");
     }
 
-    const response = await fetch(youtubeStatsUrl);
+    const url = new URL(youtubeStatsUrl);
+    url.searchParams.set("refresh", String(Date.now()));
+    const response = await fetch(url, { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || !payload?.ok || !payload.snapshot) {
       throw new Error(payload?.error || "YouTube could not return this data.");
+    }
+    return payload.snapshot;
+  }
+
+  async function fetchInstagramSnapshot() {
+    if (!instagramStatsUrl) {
+      throw new Error("The Instagram connection is not configured.");
+    }
+
+    const url = new URL(instagramStatsUrl);
+    url.searchParams.set("refresh", String(Date.now()));
+    const response = await fetch(url, { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok || !payload.snapshot) {
+      throw new Error(payload?.error || "Instagram could not return this data.");
     }
     return payload.snapshot;
   }
@@ -63,7 +83,10 @@
 
   function setLoading(loading) {
     refreshButton.disabled = loading;
-    if (loading) setMessage("Fetching the latest YouTube numbers...", "loading");
+    if (loading) {
+      const platform = activeView === "instagram" ? "Instagram" : "YouTube";
+      setMessage(`Fetching the latest ${platform} numbers...`, "loading");
+    }
   }
 
   function deltaText(current, previous, label) {
@@ -366,7 +389,230 @@
     });
   }
 
+  function instagramRates(media) {
+    const totals = (media || []).reduce((result, item) => {
+      result.reach += item.reach || item.views;
+      result.likes += item.likes;
+      result.comments += item.comments;
+      return result;
+    }, { reach: 0, likes: 0, comments: 0 });
+    return {
+      likes: totals.reach ? (totals.likes / totals.reach) * 100 : 0,
+      comments: totals.reach ? (totals.comments / totals.reach) * 100 : 0
+    };
+  }
+
+  function renderInstagramGrowth(data) {
+    const chart = document.querySelector("#growthChart");
+    chart.replaceChildren();
+    const snapshots = data?.history || [];
+    const months = new Map();
+    snapshots.forEach((snapshot) => {
+      const key = monthKey(snapshot.checkedAt);
+      months.set(key, snapshot);
+    });
+    const entries = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
+
+    if (!entries.length) {
+      const empty = document.createElement("p");
+      empty.className = "chart-empty";
+      empty.textContent = "Monthly tracking begins with the first Instagram refresh.";
+      chart.append(empty);
+      return;
+    }
+
+    const values = entries.map(([, snapshot]) =>
+      snapshot.month?.reach || snapshot.month?.views || 0
+    );
+    const maximum = Math.max(...values, 1);
+    entries.forEach(([key], index) => {
+      const column = document.createElement("div");
+      column.className = "chart-column";
+      const value = document.createElement("strong");
+      value.textContent = compactNumber(values[index]);
+      const bar = document.createElement("span");
+      bar.className = "chart-bar instagram-chart-bar";
+      bar.style.height = `${Math.max((values[index] / maximum) * 100, 5)}%`;
+      const label = document.createElement("small");
+      label.textContent = new Intl.DateTimeFormat("en-GB", { month: "short" })
+        .format(new Date(`${key}-01T12:00:00`));
+      column.append(value, bar, label);
+      chart.append(column);
+    });
+  }
+
+  function renderInstagramMedia(media) {
+    videoList.replaceChildren();
+    emptyState.hidden = media.length > 0;
+    emptyState.querySelector("strong").textContent = "No Instagram posts this month";
+    emptyState.querySelector("p").textContent =
+      "New posts and Reels will appear here after the next Instagram refresh.";
+    if (!media.length) return;
+
+    const maximumReach = Math.max(...media.map((item) => item.reach || item.views), 1);
+    media.forEach((item, index) => {
+      const card = document.createElement("a");
+      card.className = "video-performance-card instagram-performance-card";
+      card.href = item.permalink || `https://www.instagram.com/${encodeURIComponent(item.id)}`;
+      card.target = "_blank";
+      card.rel = "noreferrer";
+
+      const rank = document.createElement("span");
+      rank.className = "video-rank";
+      rank.textContent = String(index + 1).padStart(2, "0");
+
+      const image = document.createElement("img");
+      image.src = item.thumbnail;
+      image.alt = "";
+      image.loading = "lazy";
+
+      const copy = document.createElement("div");
+      copy.className = "video-performance-copy";
+      const badge = document.createElement("span");
+      badge.className = "content-format-badge instagram";
+      badge.textContent = item.productType === "REELS" ? "Reel" : "Post";
+      const heading = document.createElement("h3");
+      heading.textContent = item.caption.split("\n")[0].slice(0, 120) || "Instagram post";
+      const date = document.createElement("p");
+      date.textContent = item.publishedAt
+        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(item.publishedAt))
+        : "Publish date unavailable";
+      const metrics = document.createElement("div");
+      metrics.className = "video-metrics";
+      metrics.append(
+        createMetric(item.views ? "views" : "reached", item.views || item.reach),
+        createMetric("likes", item.likes),
+        createMetric("comments", item.comments)
+      );
+      const track = document.createElement("span");
+      track.className = "performance-track";
+      const fill = document.createElement("span");
+      fill.style.width =
+        `${Math.max(((item.reach || item.views) / maximumReach) * 100, 2)}%`;
+      track.append(fill);
+      copy.append(badge, heading, date, metrics, track);
+      card.append(rank, image, copy);
+      videoList.append(card);
+    });
+  }
+
+  function renderInstagram(data) {
+    refreshButton.textContent = "Refresh Instagram";
+    document.querySelector("#channelName").textContent = data?.current
+      ? `@${data.current.account.username} Instagram`
+      : "Instagram overview";
+    document.querySelector("#channelDescription").textContent =
+      "Follower growth, monthly reach and the posts and Reels driving engagement.";
+    document.querySelector(".social-summary article:first-child p").textContent = "Followers";
+    document.querySelector("#viewCountLabel").textContent = "Accounts reached this month";
+    document.querySelector("#videoCountLabel").textContent = "Posts and Reels this month";
+    document.querySelector("#averageViewLabel").textContent = "Profile views this month";
+    document.querySelector("#recentViewNote").textContent = "Current calendar month";
+    document.querySelector("#boardAverageLabel").textContent = "Average reach";
+    document.querySelector("#trendFutureLabel").textContent = "Instagram tracked separately";
+    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
+      "Instagram accounts reached";
+    document.querySelector(".social-board h2").textContent = "Instagram this month";
+    document.querySelector(".signal-feature > span").textContent = "Top Instagram post";
+
+    if (!data?.current) {
+      document.querySelector("#socialLastUpdated").textContent = "Not connected";
+      ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
+        .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
+      document.querySelector("#subscriberDelta").textContent = "Monthly baseline not started";
+      document.querySelector("#viewDelta").textContent = "Monthly baseline not started";
+      document.querySelector("#videoDelta").textContent = "Monthly baseline not started";
+      renderInstagramMedia([]);
+      document.querySelector("#pulseScore").textContent = "-";
+      document.querySelector("#pulseHeadline").textContent = "Waiting for first snapshot";
+      document.querySelector("#pulseExplanation").textContent =
+        "Instagram growth and engagement will appear after the secure connection is complete.";
+      document.querySelector("#pulseStatus").textContent = "Building baseline";
+      document.querySelector("#growthPeriod").textContent = "Waiting for data";
+      document.querySelector("#audienceMomentum").textContent = "-";
+      document.querySelector("#viewMomentum").textContent = "-";
+      document.querySelector("#likeMomentum").textContent = "-";
+      document.querySelector("#commentMomentum").textContent = "-";
+      document.querySelector("#topVideoTitle").textContent = "No Instagram data yet";
+      document.querySelector("#topVideoSignal").textContent =
+        "The first snapshot will identify the strongest post or Reel.";
+      document.querySelector("#likeRate").textContent = "-";
+      document.querySelector("#commentRate").textContent = "-";
+      document.querySelector("#pulseRing").style.setProperty("--pulse-score", "0deg");
+      renderInstagramGrowth(null);
+      return;
+    }
+
+    const current = data.current;
+    const baseline = currentMonthBaseline(data);
+    const rates = instagramRates(current.media);
+    const followerGain = baseline
+      ? current.account.followers - baseline.account.followers
+      : 0;
+    const reach = current.month.reach ||
+      current.media.reduce((sum, item) => sum + (item.reach || item.views), 0);
+    const measuredMediaReach = current.media.reduce(
+      (sum, item) => sum + (item.reach || item.views),
+      0
+    );
+    const averageReach = current.media.length
+      ? Math.round(measuredMediaReach / current.media.length)
+      : 0;
+    const topPost = [...current.media].sort(
+      (a, b) => (b.reach || b.views) - (a.reach || a.views)
+    )[0];
+    const score = Math.round(Math.min(
+      100,
+      35 + Math.min(Math.max(followerGain, 0) * 2, 20) +
+      Math.min(rates.likes * 5, 25) + Math.min(rates.comments * 20, 20)
+    ));
+
+    document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
+    document.querySelector("#subscriberCount").textContent = compactNumber(current.account.followers);
+    document.querySelector(".social-summary article:first-child p").textContent = "Followers";
+    document.querySelector("#channelViewCount").textContent = compactNumber(reach);
+    document.querySelector("#videoCount").textContent = fullNumber(current.month.posts);
+    document.querySelector("#recentViewCount").textContent = compactNumber(current.month.profileViews);
+    document.querySelector("#averageRecentViews").textContent = compactNumber(averageReach);
+    document.querySelector("#subscriberDelta").textContent = baseline
+      ? `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)} this month`
+      : "Building this month's baseline";
+    document.querySelector("#viewDelta").textContent = "Current calendar month";
+    document.querySelector("#videoDelta").textContent = "Current calendar month";
+    document.querySelector("#pulseScore").textContent = score;
+    document.querySelector("#pulseRing").style.setProperty("--pulse-score", `${score * 3.6}deg`);
+    document.querySelector("#pulseStatus").textContent = baseline ? "Tracking live" : "Baseline month";
+    document.querySelector("#pulseHeadline").textContent =
+      score >= 75 ? "Strong momentum" : score >= 55 ? "Healthy signal" : "Baseline building";
+    document.querySelector("#pulseExplanation").textContent =
+      `${compactNumber(reach)} accounts reached across ${current.month.posts} posts and Reels this month.`;
+    document.querySelector("#audienceMomentum").textContent = baseline
+      ? `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)}`
+      : "Baseline";
+    document.querySelector("#viewMomentum").textContent = compactNumber(reach);
+    document.querySelector("#likeMomentum").textContent = percentage(rates.likes);
+    document.querySelector("#commentMomentum").textContent = percentage(rates.comments);
+    document.querySelector("#growthPeriod").textContent =
+      data.history?.length > 1 ? "Month on month" : "First month";
+    document.querySelector("#topVideoTitle").textContent =
+      topPost?.caption.split("\n")[0].slice(0, 100) || "No posts this month";
+    document.querySelector("#topVideoSignal").textContent = topPost
+      ? `${compactNumber(topPost.reach || topPost.views)} reached, ${compactNumber(topPost.likes)} likes and ${compactNumber(topPost.comments)} comments.`
+      : "The strongest post will appear after Instagram returns this month's media.";
+    document.querySelector("#likeRate").textContent = percentage(rates.likes);
+    document.querySelector("#commentRate").textContent = percentage(rates.comments);
+    renderInstagramGrowth(data);
+    renderInstagramMedia(current.media);
+  }
+
   function render(data) {
+    if (activeView === "instagram") {
+      renderInstagram(savedInstagramData);
+      return;
+    }
+    refreshButton.textContent = "Refresh YouTube";
+    document.querySelector(".social-summary article:first-child p").textContent = "Subscribers";
+    document.querySelector(".signal-feature > span").textContent = "Top recent video";
     if (!data?.current) {
       document.querySelector("#channelName").textContent = "YouTube overview";
       document.querySelector("#channelDescription").textContent =
@@ -443,7 +689,33 @@
     }
   }
 
-  refreshButton.addEventListener("click", refreshYouTube);
+  async function refreshInstagram() {
+    setLoading(true);
+    try {
+      const current = await fetchInstagramSnapshot();
+      savedInstagramData = {
+        current,
+        previous: savedInstagramData?.current || null,
+        history: appendHistory(savedInstagramData?.history, current)
+      };
+      localStorage.setItem(INSTAGRAM_DATA_KEY, JSON.stringify(savedInstagramData));
+      renderInstagram(savedInstagramData);
+      setMessage(`Instagram updated with ${current.media.length} posts and Reels this month.`, "success");
+    } catch (error) {
+      console.error("Instagram refresh failed", error);
+      setMessage(error.message || "Instagram could not be refreshed.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  refreshButton.addEventListener("click", () => {
+    if (activeView === "instagram") {
+      refreshInstagram();
+      return;
+    }
+    refreshYouTube();
+  });
 
   platformTabs.forEach((button) => {
     button.addEventListener("click", () => {
@@ -452,12 +724,22 @@
         tabButton.classList.toggle("active", tabButton === button);
       });
       render(savedData);
+      if (activeView === "instagram") {
+        const lastCheck = savedInstagramData?.current?.checkedAt
+          ? new Date(savedInstagramData.current.checkedAt).getTime()
+          : 0;
+        if (Date.now() - lastCheck > 12 * 60 * 60 * 1000) refreshInstagram();
+      }
     });
   });
 
   window.addEventListener("ella-cloud-data-updated", (event) => {
-    if (!event.detail?.keys?.includes(DATA_KEY)) return;
-    savedData = readJson(DATA_KEY);
+    const keys = event.detail?.keys || [];
+    if (keys.includes(DATA_KEY)) savedData = readJson(DATA_KEY);
+    if (keys.includes(INSTAGRAM_DATA_KEY)) {
+      savedInstagramData = readJson(INSTAGRAM_DATA_KEY);
+    }
+    if (!keys.includes(DATA_KEY) && !keys.includes(INSTAGRAM_DATA_KEY)) return;
     render(savedData);
   });
 

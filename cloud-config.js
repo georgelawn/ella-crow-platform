@@ -5,5 +5,6 @@ window.ELLA_CLOUD_CONFIG = {
   tableName: "ella_crow_store",
   googleCalendarSyncUrl: "https://script.google.com/macros/s/AKfycbwhJpMVQ1AQ0p5evufgLTmL2_Mnjk4P91WTPwHWYiD1nly69IyMc2V3WwowJRC-LJ8/exec",
   youtubeChannelId: "UCbZAHmVbINt96YrYrotvB1Q",
-  youtubeStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/youtube-stats"
+  youtubeStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/youtube-stats",
+  instagramStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/instagram-stats"
 };

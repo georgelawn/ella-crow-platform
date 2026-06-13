@@ -2839,6 +2839,11 @@ summary:focus-visible {
   width: 72%;
 }
 
+.instagram-chart-bar {
+  background:
+    linear-gradient(180deg, #b45177, #7d3d66 52%, var(--brown-2));
+}
+
 .chart-column small {
   color: var(--muted);
   font-family: Arial, Helvetica, sans-serif;
@@ -3083,6 +3088,16 @@ summary:focus-visible {
   background: var(--brown);
   border-color: var(--brown);
   color: var(--gold);
+}
+
+.content-format-badge.instagram {
+  background: #7d3d66;
+  border-color: #7d3d66;
+  color: #fff4cd;
+}
+
+.instagram-performance-card img {
+  aspect-ratio: 1;
 }
 
 .video-performance-copy > p {
