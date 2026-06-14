@@ -56,11 +56,21 @@ function monthStartIso() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
-function insightValue(payload: { data?: Array<{ values?: Array<{ value?: unknown }> }> }) {
-  return (payload.data?.[0]?.values || []).reduce(
-    (total, entry) => total + numberValue(entry.value),
-    0,
-  );
+function insightValue(payload: {
+  data?: Array<{
+    values?: Array<{ value?: unknown }>;
+    total_value?: { value?: unknown };
+  }>;
+}) {
+  return (payload.data || []).reduce((total, metric) => {
+    if (metric.total_value?.value != null) {
+      return total + numberValue(metric.total_value.value);
+    }
+    return total + (metric.values || []).reduce(
+      (metricTotal, entry) => metricTotal + numberValue(entry.value),
+      0,
+    );
+  }, 0);
 }
 
 async function accountInsight(
@@ -126,6 +136,57 @@ async function pageInsight(
     console.warn(`Facebook ${metric} insight unavailable`, error);
     return { available: false, value: 0 };
   }
+}
+
+async function postInsight(
+  postId: string,
+  metrics: string[],
+  accessToken: string,
+) {
+  for (const metric of metrics) {
+    try {
+      const payload = await graphRequest(`${postId}/insights`, {
+        metric,
+        period: "lifetime",
+      }, accessToken);
+      return {
+        available: true,
+        value: insightValue(payload),
+      };
+    } catch (error) {
+      console.warn(`Facebook ${metric} unavailable for ${postId}`, error);
+    }
+  }
+  return { available: false, value: 0 };
+}
+
+async function facebookVideoViews(
+  videoId: string | undefined,
+  accessToken: string,
+) {
+  if (!videoId) return 0;
+
+  try {
+    const video = await graphRequest(videoId, { fields: "views" }, accessToken);
+    const views = numberValue(video.views);
+    if (views) return views;
+  } catch (error) {
+    console.warn(`Facebook video views field unavailable for ${videoId}`, error);
+  }
+
+  for (const metric of ["total_video_views", "total_video_impressions"]) {
+    try {
+      const payload = await graphRequest(`${videoId}/video_insights`, {
+        metric,
+      }, accessToken);
+      const views = insightValue(payload);
+      if (views) return views;
+    } catch (error) {
+      console.warn(`Facebook ${metric} unavailable for ${videoId}`, error);
+    }
+  }
+
+  return 0;
 }
 
 export default {
@@ -233,12 +294,19 @@ export default {
         shares?: { count?: number };
         comments?: { summary?: { total_count?: number } };
         reactions?: { summary?: { total_count?: number } };
+        attachments?: {
+          data?: Array<{
+            target?: { id?: string };
+            media_type?: string;
+            type?: string;
+          }>;
+        };
       }>;
     } = { data: [] };
     let pagePostsAvailable = false;
     try {
       pagePostsPayload = await graphRequest(`${page.id}/posts`, {
-        fields: "id,message,created_time,permalink_url,full_picture,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)",
+        fields: "id,message,created_time,permalink_url,full_picture,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true),attachments{target{id},media_type,type}",
         limit: "24",
       }, accessToken);
       pagePostsAvailable = true;
@@ -264,6 +332,44 @@ export default {
       (post: { created_time?: string }) => post.created_time &&
         new Date(post.created_time) >= new Date(monthStartIso()),
     );
+    const pagePostInsights = await Promise.all(
+      recentPagePosts.map(async (post: {
+        id: string;
+        attachments?: { data?: Array<{ target?: { id?: string } }> };
+      }) => {
+        const videoId = post.attachments?.data?.find(
+          (attachment) => attachment.target?.id,
+        )?.target?.id;
+        const [views, postReach, videoViews] = await Promise.all([
+          postInsight(post.id, ["post_media_view", "post_video_views"], accessToken),
+          postInsight(post.id, ["post_impressions_unique"], accessToken),
+          facebookVideoViews(videoId, accessToken),
+        ]);
+        return {
+          views: {
+            available: views.available || videoViews > 0,
+            value: views.value || videoViews,
+          },
+          reach: postReach,
+        };
+      }),
+    );
+    const measuredPostViews = pagePostInsights.reduce(
+      (total, item) => total + item.views.value,
+      0,
+    );
+    const measuredPostEngagements = recentPagePosts.reduce(
+      (total, post: {
+        shares?: { count?: number };
+        comments?: { summary?: { total_count?: number } };
+        reactions?: { summary?: { total_count?: number } };
+      }) =>
+        total +
+        numberValue(post.reactions?.summary?.total_count) +
+        numberValue(post.comments?.summary?.total_count) +
+        numberValue(post.shares?.count),
+      0,
+    );
 
     return json({
       ok: true,
@@ -280,8 +386,8 @@ export default {
             ),
           },
           month: {
-            views: pageImpressions.value,
-            engagements: pageEngagedUsers.value,
+            views: pageImpressions.value || measuredPostViews,
+            engagements: pageEngagedUsers.value || measuredPostEngagements,
             posts: recentPagePosts.length,
           },
           access: {
@@ -297,7 +403,10 @@ export default {
             shares?: { count?: number };
             comments?: { summary?: { total_count?: number } };
             reactions?: { summary?: { total_count?: number } };
-          }) => ({
+            attachments?: {
+              data?: Array<{ target?: { id?: string } }>;
+            };
+          }, index: number) => ({
             id: post.id,
             caption: post.message || "Facebook post",
             thumbnail: post.full_picture || "",
@@ -306,8 +415,8 @@ export default {
             likes: numberValue(post.reactions?.summary?.total_count),
             comments: numberValue(post.comments?.summary?.total_count),
             shares: numberValue(post.shares?.count),
-            views: 0,
-            reach: 0,
+            views: pagePostInsights[index]?.views.value || 0,
+            reach: pagePostInsights[index]?.reach.value || 0,
           })),
         },
         account: {

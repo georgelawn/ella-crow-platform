@@ -663,8 +663,10 @@
     emptyState.hidden = posts.length > 0;
     if (!posts.length) return;
 
-    const maximumEngagement = Math.max(
-      ...posts.map((post) => post.likes + post.comments + post.shares),
+    const maximumPerformance = Math.max(
+      ...posts.map((post) =>
+        post.views || post.reach || post.likes + post.comments + post.shares
+      ),
       1
     );
     posts.forEach((post, index) => {
@@ -697,15 +699,17 @@
       const metrics = document.createElement("div");
       metrics.className = "video-metrics";
       metrics.append(
+        createMetric(post.views ? "views" : "reached", post.views || post.reach),
         createMetric("reactions", post.likes),
         createMetric("comments", post.comments),
         createMetric("shares", post.shares)
       );
       const engagement = post.likes + post.comments + post.shares;
+      const performance = post.views || post.reach || engagement;
       const track = document.createElement("span");
       track.className = "performance-track";
       const fill = document.createElement("span");
-      fill.style.width = `${Math.max((engagement / maximumEngagement) * 100, 2)}%`;
+      fill.style.width = `${Math.max((performance / maximumPerformance) * 100, 2)}%`;
       track.append(fill);
       copy.append(badge, heading, date, metrics, track);
       card.append(rank, image, copy);
@@ -728,7 +732,9 @@
       : facebook.page.followers - baselineFollowers;
     const rates = facebookRates(posts);
     const topPost = [...posts].sort(
-      (a, b) => (b.likes + b.comments + b.shares) - (a.likes + a.comments + a.shares)
+      (a, b) =>
+        (b.views || b.reach || b.likes + b.comments + b.shares) -
+        (a.views || a.reach || a.likes + a.comments + a.shares)
     )[0];
 
     refreshButton.textContent = "Refresh Facebook";
@@ -823,7 +829,7 @@
       topPost?.caption.split("\n")[0].slice(0, 100) ||
       (postsAvailable ? "No posts this month" : "Post insights pending");
     document.querySelector("#topVideoSignal").textContent = topPost
-      ? `${compactNumber(topPost.likes)} reactions, ${compactNumber(topPost.comments)} comments and ${compactNumber(topPost.shares)} shares.`
+      ? `${compactNumber(topPost.views || topPost.reach)} ${topPost.views ? "views" : "reached"}, ${compactNumber(topPost.likes)} reactions, ${compactNumber(topPost.comments)} comments and ${compactNumber(topPost.shares)} shares.`
       : postsAvailable
         ? "The Page connection is healthy. New posts will be measured here automatically."
         : "The Page connection is healthy; Meta is not yet returning post-level performance.";
