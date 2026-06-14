@@ -144,44 +144,65 @@ export default {
     return json({ ok: false, error: "Origin not allowed." }, 403, origin);
   }
 
-  const userAccessToken = Deno.env.get("INSTAGRAM_ACCESS_TOKEN");
-  if (!userAccessToken) {
+  const configuredAccessToken = Deno.env.get("INSTAGRAM_ACCESS_TOKEN");
+  if (!configuredAccessToken) {
     return json({ ok: false, error: "Instagram is not configured." }, 500, origin);
   }
 
   try {
-    const pagesPayload = await graphRequest("me/accounts", {
-      fields: "id,name,access_token",
-      limit: "100",
-    }, userAccessToken);
+    let page: {
+      id: string;
+      name?: string;
+      access_token?: string;
+      instagram_business_account?: { id?: string };
+    } | undefined;
 
-    const connectedPages = await Promise.all(
-      (pagesPayload.data || []).map(async (
-        candidate: { id: string; name?: string; access_token?: string },
-      ) => {
-        const pageAccessToken = candidate.access_token || userAccessToken;
-        try {
-          const connection = await graphRequest(candidate.id, {
-            fields: "instagram_business_account",
-          }, pageAccessToken);
-          return { ...candidate, ...connection };
-        } catch (error) {
-          console.warn(`Could not inspect Facebook Page ${candidate.id}`, error);
-          return candidate;
-        }
-      }),
-    );
-    const page = connectedPages.find(
-      (candidate: { instagram_business_account?: { id?: string } }) =>
-        candidate.instagram_business_account?.id,
-    );
+    try {
+      const tokenOwner = await graphRequest("me", {
+        fields: "id,name,instagram_business_account",
+      }, configuredAccessToken);
+      if (tokenOwner.instagram_business_account?.id) {
+        page = tokenOwner;
+      }
+    } catch (error) {
+      console.warn("Configured token is not a direct Page token", error);
+    }
+
+    if (!page) {
+      const pagesPayload = await graphRequest("me/accounts", {
+        fields: "id,name,access_token",
+        limit: "100",
+      }, configuredAccessToken);
+
+      const connectedPages = await Promise.all(
+        (pagesPayload.data || []).map(async (
+          candidate: { id: string; name?: string; access_token?: string },
+        ) => {
+          const pageAccessToken = candidate.access_token || configuredAccessToken;
+          try {
+            const connection = await graphRequest(candidate.id, {
+              fields: "instagram_business_account",
+            }, pageAccessToken);
+            return { ...candidate, ...connection };
+          } catch (error) {
+            console.warn(`Could not inspect Facebook Page ${candidate.id}`, error);
+            return candidate;
+          }
+        }),
+      );
+      page = connectedPages.find(
+        (candidate: { instagram_business_account?: { id?: string } }) =>
+          candidate.instagram_business_account?.id,
+      );
+    }
+
     if (!page?.instagram_business_account?.id) {
       throw new Error(
         "No Instagram professional account is connected to a Facebook Page managed by this login.",
       );
     }
 
-    const accessToken = page.access_token || userAccessToken;
+    const accessToken = page.access_token || configuredAccessToken;
     const account = await graphRequest(page.instagram_business_account.id, {
       fields: "id,username,name,profile_picture_url,followers_count,media_count",
     }, accessToken);
