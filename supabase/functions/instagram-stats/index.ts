@@ -121,10 +121,10 @@ async function pageInsight(
       since: String(startOfMonthSeconds()),
       until: String(Math.floor(Date.now() / 1000)),
     }, accessToken);
-    return insightValue(payload);
+    return { available: true, value: insightValue(payload) };
   } catch (error) {
     console.warn(`Facebook ${metric} insight unavailable`, error);
-    return 0;
+    return { available: false, value: 0 };
   }
 }
 
@@ -235,11 +235,13 @@ export default {
         reactions?: { summary?: { total_count?: number } };
       }>;
     } = { data: [] };
+    let pagePostsAvailable = false;
     try {
       pagePostsPayload = await graphRequest(`${page.id}/posts`, {
         fields: "id,message,created_time,permalink_url,full_picture,shares,comments.limit(0).summary(true),reactions.limit(0).summary(true)",
         limit: "24",
       }, accessToken);
+      pagePostsAvailable = true;
     } catch (error) {
       console.warn("Facebook Page posts unavailable", error);
     }
@@ -278,9 +280,13 @@ export default {
             ),
           },
           month: {
-            views: pageImpressions,
-            engagements: pageEngagedUsers,
+            views: pageImpressions.value,
+            engagements: pageEngagedUsers.value,
             posts: recentPagePosts.length,
+          },
+          access: {
+            posts: pagePostsAvailable,
+            insights: pageImpressions.available || pageEngagedUsers.available,
           },
           posts: recentPagePosts.map((post: {
             id: string;

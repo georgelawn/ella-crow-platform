@@ -661,9 +661,6 @@
   function renderFacebookPosts(posts) {
     videoList.replaceChildren();
     emptyState.hidden = posts.length > 0;
-    emptyState.querySelector("strong").textContent = "Facebook post insights are pending";
-    emptyState.querySelector("p").textContent =
-      "The Page is connected. Meta has not yet released its post-level engagement data to this app.";
     if (!posts.length) return;
 
     const maximumEngagement = Math.max(
@@ -720,8 +717,8 @@
     const current = data?.current;
     const facebook = current?.facebook;
     const posts = facebook?.posts || [];
-    const insightsAvailable = posts.length > 0 ||
-      Boolean(facebook?.month?.views || facebook?.month?.engagements);
+    const postsAvailable = facebook?.access?.posts === true;
+    const insightsAvailable = facebook?.access?.insights === true;
     const baselineSnapshot = (data?.history || []).find((snapshot) =>
       monthKey(snapshot.checkedAt) === monthKey(current?.checkedAt || Date.now())
     );
@@ -765,12 +762,19 @@
       return;
     }
 
+    emptyState.querySelector("strong").textContent = postsAvailable
+      ? "No Facebook posts this month"
+      : "Facebook post insights are pending";
+    emptyState.querySelector("p").textContent = postsAvailable
+      ? "New Page posts will appear here after the next Facebook refresh."
+      : "The Page is connected. Meta has not yet released its post-level engagement data to this app.";
+
     document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
     document.querySelector("#subscriberCount").textContent = compactNumber(facebook.page.followers);
     document.querySelector("#channelViewCount").textContent = insightsAvailable
       ? compactNumber(facebook.month.views)
       : "-";
-    document.querySelector("#videoCount").textContent = insightsAvailable
+    document.querySelector("#videoCount").textContent = postsAvailable
       ? fullNumber(facebook.month.posts)
       : "-";
     document.querySelector("#recentViewCount").textContent = insightsAvailable
@@ -784,7 +788,7 @@
     document.querySelector("#viewDelta").textContent = insightsAvailable
       ? "Current calendar month"
       : "Meta permission pending";
-    document.querySelector("#videoDelta").textContent = insightsAvailable
+    document.querySelector("#videoDelta").textContent = postsAvailable
       ? "Current calendar month"
       : "Meta permission pending";
     document.querySelector("#pulseScore").textContent = insightsAvailable ? "50" : "-";
@@ -798,7 +802,9 @@
       insightsAvailable ? "Facebook baseline" : "Audience connected";
     document.querySelector("#pulseExplanation").textContent = insightsAvailable
       ? `${compactNumber(facebook.month.engagements)} engagements across ${facebook.month.posts} posts this month.`
-      : "Follower tracking is live. Post and engagement insights will appear once Meta releases access.";
+      : postsAvailable
+        ? "Follower and post tracking are live. Page-level engagement insights are still awaiting Meta access."
+        : "Follower tracking is live. Post and engagement insights will appear once Meta releases access.";
     document.querySelector("#audienceMomentum").textContent = followerGain == null
       ? "Baseline"
       : `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)}`;
@@ -814,10 +820,13 @@
     document.querySelector("#growthPeriod").textContent =
       data.history?.length > 1 ? "Month on month" : "First month";
     document.querySelector("#topVideoTitle").textContent =
-      topPost?.caption.split("\n")[0].slice(0, 100) || "Post insights pending";
+      topPost?.caption.split("\n")[0].slice(0, 100) ||
+      (postsAvailable ? "No posts this month" : "Post insights pending");
     document.querySelector("#topVideoSignal").textContent = topPost
       ? `${compactNumber(topPost.likes)} reactions, ${compactNumber(topPost.comments)} comments and ${compactNumber(topPost.shares)} shares.`
-      : "The Page connection is healthy; Meta is not yet returning post-level performance.";
+      : postsAvailable
+        ? "The Page connection is healthy. New posts will be measured here automatically."
+        : "The Page connection is healthy; Meta is not yet returning post-level performance.";
     document.querySelector("#likeRate").textContent = insightsAvailable
       ? percentage(rates.likes)
       : "-";
