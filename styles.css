@@ -1027,6 +1027,12 @@
     font-size: 0.52rem;
     padding: 3px 5px;
   }
+  .platform-card-top i,
+  .bio-platform-name i {
+    font-size: 0.46rem;
+    height: 32px;
+    width: 32px;
+  }
   .platform-overview-card > strong {
     align-self: end;
     font-size: 0.88rem;
@@ -1061,6 +1067,56 @@
   .bio-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
   .bio-summary-strip > div { border-right: 0; }
+  .bio-destination-table {
+    border-bottom: 0;
+    overflow-x: visible;
+  }
+  .bio-destination-head {
+    display: none;
+  }
+  .bio-destination-row {
+    align-items: stretch;
+    gap: 9px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+    padding: 13px 0;
+  }
+  .bio-destination-row > strong {
+    border-bottom: 1px solid var(--line);
+    font-size: 0.95rem;
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+  }
+  .bio-destination-row > b {
+    align-items: baseline;
+    display: flex;
+    gap: 8px;
+    grid-column: 1 / -1;
+  }
+  .bio-destination-row > b::before,
+  .bio-destination-row > span::before {
+    color: var(--muted);
+    content: "Total clicks";
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.56rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .bio-destination-row > span {
+    align-items: start;
+    border: 1px solid var(--line);
+    display: grid;
+    gap: 4px;
+    padding: 8px;
+  }
+  .bio-destination-row > span:nth-of-type(1)::before { content: "Instagram"; }
+  .bio-destination-row > span:nth-of-type(2)::before { content: "TikTok"; }
+  .bio-destination-row > span:nth-of-type(3)::before { content: "Facebook"; }
+  .bio-destination-row > span:nth-of-type(4)::before { content: "YouTube"; }
+  .bio-destination-row > span strong {
+    font-size: 0.9rem;
+  }
   .drilldown-content-row {
     align-items: start;
     grid-template-columns: 28px 82px 1fr;
@@ -5005,5 +5061,41 @@ summary:focus-visible {
     position: static;
     text-align: center;
     width: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .header-actions .nav-link {
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .platform-overview-card {
+    gap: 8px;
+    grid-template-columns: 1fr auto;
+  }
+
+  .platform-card-top {
+    align-items: start;
+    flex-direction: row;
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  .platform-overview-card > strong,
+  .platform-overview-card > small {
+    grid-column: 1;
+  }
+
+  .platform-card-number {
+    grid-column: 2;
+    grid-row: 2 / span 2;
+  }
+
+  .bio-destination-row,
+  .bio-platform-row {
+    grid-template-columns: 1fr;
   }
 }
