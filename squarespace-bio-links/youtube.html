@@ -30,6 +30,6 @@
   root.innerHTML=`<main class="ella-links-card"><img class="ella-links-avatar" src="https://images.squarespace-cdn.com/content/v1/691c7aea460cb8492f028449/27d985fe-0c41-4c52-98ed-e1488718fec3/Ella-Gig-2026-8_websize.jpeg?format=750w" alt="Ella Crow"><h1>Ella Crow</h1><div class="ella-links-list"></div></main>`;
   const list=root.querySelector(".ella-links-list");
   destinations.forEach(destination=>{const link=document.createElement("a");link.className="ella-link";link.href=trackedUrl(destination.url);const icon=destination.logo?`<img src="${destination.logo}" alt="">`:destination.icon;link.innerHTML=`<span class="ella-link-icon">${icon}</span><span>${destination.name}</span><span class="ella-link-arrow">&rarr;</span>`;link.addEventListener("click",async event=>{event.preventDefault();const target=link.href;await Promise.race([record("click",destination.name),new Promise(resolve=>setTimeout(resolve,650))]);window.location.assign(target)});list.append(link)});
-  record("view");
+  void Promise.resolve(record("view")).catch(()=>{});
 })();
 </script>

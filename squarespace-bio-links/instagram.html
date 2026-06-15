@@ -145,6 +145,6 @@
     list.append(link);
   });
 
-  record("view");
+  void Promise.resolve(record("view")).catch(() => {});
 })();
 </script>
