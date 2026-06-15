@@ -2,9 +2,11 @@
   const config = window.ELLA_CLOUD_CONFIG || {};
   const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
-  const PLATFORM_ORDER = ["youtube", "instagram", "facebook", "tiktok"];
+  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
+  const COMPARISON_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
   const PLATFORM_LABELS = {
     youtube: "YouTube",
+    shorts: "YouTube Shorts",
     instagram: "Instagram",
     facebook: "Facebook",
     tiktok: "TikTok"
@@ -133,13 +135,15 @@
   function youtubeContent(platform = "youtube") {
     const videos = state.youtube?.current?.videos || [];
     if (platform === "shorts") return videos.filter((video) => isShort(video));
-    return videos;
+    return videos.filter((video) => !isShort(video));
   }
 
   function contentForMonth(platform, offset = 0) {
     const comparison = shiftedMonth(offset);
     let content = [];
-    if (platform === "youtube") content = youtubeContent();
+    if (platform === "youtube" || platform === "shorts") {
+      content = youtubeContent(platform);
+    }
     if (platform === "instagram") content = state.meta?.current?.media || [];
     if (platform === "facebook") content = state.meta?.current?.facebook?.posts || [];
     return content.filter((item) =>
@@ -170,12 +174,12 @@
   }
 
   function platformData(platform) {
-    if (platform === "youtube") {
+    if (platform === "youtube" || platform === "shorts") {
       const current = state.youtube?.current;
-      const content = contentForMonth("youtube");
+      const content = contentForMonth(platform);
       const total = totals(content);
       const rates = engagementRates(content);
-      const lastMonthContent = contentForMonth("youtube", -1);
+      const lastMonthContent = contentForMonth(platform, -1);
       const lastMonthViews = totals(lastMonthContent).views;
       return {
         connected: Boolean(current),
@@ -184,7 +188,7 @@
         lastMonthViews,
         hasLastMonth: lastMonthContent.length > 0,
         output: content.length,
-        outputLabel: "videos this month",
+        outputLabel: platform === "shorts" ? "Shorts this month" : "videos this month",
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
@@ -278,6 +282,7 @@
   function platformMark(platform) {
     return {
       youtube: "YT",
+      shorts: "SHORTS",
       instagram: "IG",
       facebook: "FB",
       tiktok: "TT"
@@ -323,13 +328,14 @@
 
   const PLATFORM_COLOURS = {
     youtube: "#8f3527",
+    shorts: "#c45b45",
     instagram: "#a55f78",
     facebook: "#506f91",
     tiktok: "#23170f"
   };
 
   function renderViewShare() {
-    const entries = PLATFORM_ORDER.map((platform) => ({
+    const entries = COMPARISON_PLATFORMS.map((platform) => ({
       platform,
       views: platformData(platform).connected
         ? platformData(platform).reach
@@ -384,12 +390,12 @@
     ];
     const dayData = new Map(weekdayOrder.map((day) => [
       day,
-      { youtube: 0, instagram: 0, facebook: 0, tiktok: 0 }
+      { shorts: 0, instagram: 0, facebook: 0, tiktok: 0 }
     ]));
 
-    ["youtube", "instagram", "facebook"].forEach((platform) => {
-      const content = platform === "youtube"
-        ? youtubeContent()
+    ["shorts", "instagram", "facebook"].forEach((platform) => {
+      const content = platform === "shorts"
+        ? youtubeContent("shorts")
         : platformData(platform).content;
       content.forEach((item) => {
         if (!item.publishedAt) return;
@@ -412,7 +418,7 @@
       const leader = Object.entries(row.values).sort((a, b) => b[1] - a[1])[0];
       const item = document.createElement("div");
       item.className = "weekday-row";
-      const segments = ["youtube", "instagram", "facebook", "tiktok"]
+      const segments = COMPARISON_PLATFORMS
         .filter((platform) => row.values[platform] > 0)
         .map((platform) =>
           `<i style="width:${row.values[platform] / maximum * 100}%;background:${PLATFORM_COLOURS[platform]}"></i>`
@@ -532,13 +538,14 @@
   }
 
   function contentType(platform, item) {
-    if (platform === "youtube") return isShort(item) ? "Short" : "Video";
+    if (platform === "shorts") return "Short";
+    if (platform === "youtube") return "Video";
     if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
     return "Facebook post";
   }
 
   function contentUrl(platform, item) {
-    if (platform === "youtube") {
+    if (platform === "youtube" || platform === "shorts") {
       return `https://www.youtube.com/watch?v=${encodeURIComponent(item.id)}`;
     }
     return item.permalink || "#";
@@ -671,6 +678,7 @@
     elements.title.textContent = PLATFORM_LABELS[platform];
     elements.description.textContent = {
       youtube: "Long-form video performance, audience growth and the subjects worth developing.",
+      shorts: "Short-form video performance, engagement and the creative ideas worth repeating.",
       instagram: "Reels, posts and the signals converting reach into a returning audience.",
       facebook: "Page growth, post response and Ella's community activity on Facebook.",
       tiktok: "A retention-led short-form view, ready for the TikTok API connection."
@@ -714,7 +722,9 @@
           ? "Facebook this month"
           : platform === "tiktok"
             ? "TikTok content"
-            : "Recent long-form videos";
+            : platform === "shorts"
+              ? "YouTube Shorts this month"
+              : "Recent long-form videos";
     elements.contentSummary.textContent = data.connected
       ? `${data.content.length} items measured`
       : data.comingSoon ? "Coming soon" : "Awaiting data";
