@@ -1,10 +1,10 @@
 <div id="ella-bio-links-tiktok"></div>
 <style>
-  #ella-bio-links-tiktok { --ink:#21150e; --paper:#f3e6b7; --gold:#e4cf87; --soft:#f8efcf; background:radial-gradient(circle at 50% -12%,rgba(255,255,255,.7),transparent 34%),linear-gradient(180deg,var(--gold),var(--paper)); box-sizing:border-box; color:var(--ink); font-family:Arial,Helvetica,sans-serif; min-height:100svh; padding:42px 18px 56px; }
+  #ella-bio-links-tiktok { --ink:#21150e; --paper:#f3e6b7; --gold:#e4cf87; --soft:#f8efcf; background:radial-gradient(circle at 50% -12%,rgba(255,255,255,.7),transparent 34%),linear-gradient(180deg,var(--gold),var(--paper)); border-radius:28px; box-shadow:0 18px 48px rgba(33,21,14,.24),0 3px 12px rgba(33,21,14,.18); box-sizing:border-box; color:var(--ink); font-family:Arial,Helvetica,sans-serif; margin:18px auto; max-width:980px; min-height:100svh; overflow:hidden; padding:42px 18px 56px; }
   #ella-bio-links-tiktok * { box-sizing:border-box; }
   #ella-bio-links-tiktok .ella-links-card { margin:0 auto; max-width:590px; text-align:center; }
   #ella-bio-links-tiktok .ella-links-avatar { border:3px solid var(--ink); border-radius:50%; display:block; height:108px; margin:0 auto 18px; object-fit:cover; object-position:50% 32%; width:108px; }
-  #ella-bio-links-tiktok h1 { font-family:Georgia,"Times New Roman",serif; font-size:clamp(2.2rem,9vw,3.7rem); letter-spacing:-.04em; line-height:.95; margin:0 0 28px; }
+  #ella-bio-links-tiktok .ella-links-logo { display:block; height:auto; margin:0 auto 28px; max-width:390px; width:78%; }
   #ella-bio-links-tiktok .ella-links-list { display:grid; gap:13px; }
   #ella-bio-links-tiktok .ella-link { align-items:center; background:var(--soft); border:2px solid var(--ink); box-shadow:5px 5px 0 var(--ink); color:var(--ink); display:grid; font-size:.94rem; font-weight:800; grid-template-columns:44px 1fr 44px; letter-spacing:.045em; min-height:66px; padding:9px 10px; text-decoration:none; text-transform:uppercase; transition:transform 140ms ease,box-shadow 140ms ease,background 140ms ease; }
   #ella-bio-links-tiktok .ella-link:hover,#ella-bio-links-tiktok .ella-link:focus-visible { background:#fff7dc; box-shadow:2px 2px 0 var(--ink); transform:translate(3px,3px); }
@@ -27,7 +27,7 @@
   ];
   const trackedUrl=raw=>{const url=new URL(raw);url.searchParams.set("utm_source",platform);url.searchParams.set("utm_medium","bio");return url.toString()};
   const record=(eventType,buttonName=null)=>supabaseClient?supabaseClient.from("bio_link_clicks").insert({platform,event_type:eventType,button_name:buttonName}):Promise.resolve();
-  root.innerHTML=`<main class="ella-links-card"><img class="ella-links-avatar" src="https://images.squarespace-cdn.com/content/v1/691c7aea460cb8492f028449/27d985fe-0c41-4c52-98ed-e1488718fec3/Ella-Gig-2026-8_websize.jpeg?format=750w" alt="Ella Crow"><h1>Ella Crow</h1><div class="ella-links-list"></div></main>`;
+  root.innerHTML=`<main class="ella-links-card"><img class="ella-links-avatar" src="https://images.squarespace-cdn.com/content/v1/691c7aea460cb8492f028449/27d985fe-0c41-4c52-98ed-e1488718fec3/Ella-Gig-2026-8_websize.jpeg?format=750w" alt="Ella Crow"><img class="ella-links-logo" src="https://georgelawn.github.io/ella-crow-platform/assets/ella-crow-logo.svg" alt="Ella Crow"><div class="ella-links-list"></div></main>`;
   const list=root.querySelector(".ella-links-list");
   destinations.forEach(destination=>{const link=document.createElement("a");link.className="ella-link";link.href=trackedUrl(destination.url);const icon=destination.logo?`<img src="${destination.logo}" alt="">`:destination.icon;link.innerHTML=`<span class="ella-link-icon">${icon}</span><span>${destination.name}</span><span class="ella-link-arrow">&rarr;</span>`;link.addEventListener("click",async event=>{event.preventDefault();const target=link.href;await Promise.race([record("click",destination.name),new Promise(resolve=>setTimeout(resolve,650))]);window.location.assign(target)});list.append(link)});
   void Promise.resolve(record("view")).catch(()=>{});
