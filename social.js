@@ -1,18 +1,56 @@
 (function () {
-  const DATA_KEY = "ella-crow-social-youtube-v1";
-  const INSTAGRAM_DATA_KEY = "ella-crow-social-instagram-v1";
   const config = window.ELLA_CLOUD_CONFIG || {};
-  const youtubeStatsUrl = config.youtubeStatsUrl || "";
-  const instagramStatsUrl = config.instagramStatsUrl || "";
-  const refreshButton = document.querySelector("#refreshYouTubeButton");
-  const message = document.querySelector("#socialMessage");
-  const emptyState = document.querySelector("#socialEmptyState");
-  const videoList = document.querySelector("#videoPerformanceList");
-  const platformTabs = [...document.querySelectorAll(".platform-tab[data-view]")];
+  const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
+  const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
+  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
+  const PLATFORM_LABELS = {
+    youtube: "YouTube",
+    shorts: "YouTube Shorts",
+    instagram: "Instagram",
+    facebook: "Facebook",
+    tiktok: "TikTok"
+  };
+  const state = {
+    youtube: readJson(LOCAL_YOUTUBE_KEY),
+    meta: readJson(LOCAL_META_KEY),
+    bio: null,
+    bioPeriod: "month",
+    activePlatform: null,
+    supabase: null,
+    refreshing: false
+  };
 
-  let savedData = readJson(DATA_KEY);
-  let savedInstagramData = readJson(INSTAGRAM_DATA_KEY);
-  let activeView = "youtube";
+  const elements = {
+    overview: document.querySelector("#socialOverview"),
+    drilldown: document.querySelector("#socialDrilldown"),
+    title: document.querySelector("#socialTitle"),
+    eyebrow: document.querySelector("#socialEyebrow"),
+    description: document.querySelector("#socialDescription"),
+    updated: document.querySelector("#socialLastUpdated"),
+    message: document.querySelector("#socialMessage"),
+    refresh: document.querySelector("#refreshSocialButton"),
+    cards: document.querySelector("#platformOverviewCards"),
+    momentumStatus: document.querySelector("#momentumStatus"),
+    momentumHeadline: document.querySelector("#momentumHeadline"),
+    momentumCopy: document.querySelector("#momentumCopy"),
+    momentumBars: document.querySelector("#momentumBars"),
+    actions: document.querySelector("#growthActions"),
+    bioViews: document.querySelector("#bioTotalViews"),
+    bioClicks: document.querySelector("#bioTotalClicks"),
+    bioRate: document.querySelector("#bioClickRate"),
+    bioTop: document.querySelector("#bioTopButton"),
+    bioList: document.querySelector("#bioPlatformList"),
+    bioEmpty: document.querySelector("#bioEmptyState"),
+    back: document.querySelector("#socialBackButton"),
+    drillHero: document.querySelector("#drilldownHero"),
+    drillMetrics: document.querySelector("#drilldownMetrics"),
+    drillInsights: document.querySelector("#drilldownInsights"),
+    contentEyebrow: document.querySelector("#contentEyebrow"),
+    contentTitle: document.querySelector("#contentTitle"),
+    contentSummary: document.querySelector("#contentSummary"),
+    content: document.querySelector("#drilldownContent"),
+    drillEmpty: document.querySelector("#drilldownEmpty")
+  };
 
   function readJson(key) {
     try {
@@ -27,976 +65,801 @@
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  function compactNumber(value) {
+  function compact(value) {
     return new Intl.NumberFormat("en-GB", {
       notation: "compact",
       maximumFractionDigits: 1
     }).format(numberValue(value));
   }
 
-  function fullNumber(value) {
+  function full(value) {
     return new Intl.NumberFormat("en-GB").format(numberValue(value));
   }
 
+  function percent(value, digits = 1) {
+    return `${numberValue(value).toFixed(digits)}%`;
+  }
+
   function formatDate(value) {
-    if (!value) return "Not connected";
-    return `Updated ${new Intl.DateTimeFormat("en-GB", {
+    if (!value) return "Awaiting first refresh";
+    return new Intl.DateTimeFormat("en-GB", {
       dateStyle: "medium",
       timeStyle: "short"
-    }).format(new Date(value))}`;
-  }
-
-  async function fetchYouTubeSnapshot() {
-    if (!youtubeStatsUrl) {
-      throw new Error("The YouTube connection is not configured.");
-    }
-
-    const url = new URL(youtubeStatsUrl);
-    url.searchParams.set("refresh", String(Date.now()));
-    const response = await fetch(url, { cache: "no-store" });
-    const payload = await response.json();
-    if (!response.ok || !payload?.ok || !payload.snapshot) {
-      throw new Error(payload?.error || "YouTube could not return this data.");
-    }
-    return payload.snapshot;
-  }
-
-  async function fetchInstagramSnapshot() {
-    if (!instagramStatsUrl) {
-      throw new Error("The Instagram connection is not configured.");
-    }
-
-    const url = new URL(instagramStatsUrl);
-    url.searchParams.set("refresh", String(Date.now()));
-    const response = await fetch(url, { cache: "no-store" });
-    const payload = await response.json();
-    if (!response.ok || !payload?.ok || !payload.snapshot) {
-      throw new Error(payload?.error || "Instagram could not return this data.");
-    }
-    return payload.snapshot;
-  }
-
-  function setMessage(text, state = "") {
-    message.textContent = text;
-    message.dataset.state = state;
-  }
-
-  function setLoading(loading) {
-    refreshButton.disabled = loading;
-    if (loading) {
-      const platform = activeView === "facebook"
-        ? "Facebook"
-        : activeView === "instagram"
-          ? "Instagram"
-          : "YouTube";
-      setMessage(`Fetching the latest ${platform} numbers...`, "loading");
-    }
-  }
-
-  function deltaText(current, previous, label) {
-    if (!previous) return "Building this month's baseline";
-    const difference = numberValue(current) - numberValue(previous);
-    if (!difference) return `No ${label} change this month`;
-    return `${difference > 0 ? "+" : ""}${fullNumber(difference)} this month`;
-  }
-
-  function dayKey(value) {
-    return new Date(value).toISOString().slice(0, 10);
+    }).format(new Date(value));
   }
 
   function monthKey(value) {
     return new Date(value).toISOString().slice(0, 7);
   }
 
+  function sameMonth(value, comparison = new Date()) {
+    return monthKey(value) === monthKey(comparison);
+  }
+
   function appendHistory(history, snapshot) {
-    const snapshots = Array.isArray(history) ? [...history] : [];
-    const today = dayKey(snapshot.checkedAt);
-    const existingIndex = snapshots.findIndex((item) => dayKey(item.checkedAt) === today);
-    if (existingIndex >= 0) {
-      snapshots[existingIndex] = snapshot;
-    } else {
-      snapshots.push(snapshot);
-    }
-    return snapshots
+    const next = Array.isArray(history) ? [...history] : [];
+    const day = new Date(snapshot.checkedAt).toISOString().slice(0, 10);
+    const index = next.findIndex((item) =>
+      new Date(item.checkedAt).toISOString().slice(0, 10) === day
+    );
+    if (index >= 0) next[index] = snapshot;
+    else next.push(snapshot);
+    return next
       .sort((a, b) => new Date(a.checkedAt) - new Date(b.checkedAt))
       .slice(-400);
   }
 
-  function monthlyData(history) {
-    const months = new Map();
-    (history || []).forEach((snapshot) => {
-      const key = monthKey(snapshot.checkedAt);
-      const existing = months.get(key);
-      if (!existing) {
-        months.set(key, { key, first: snapshot, last: snapshot });
-        return;
-      }
-      if (new Date(snapshot.checkedAt) < new Date(existing.first.checkedAt)) existing.first = snapshot;
-      if (new Date(snapshot.checkedAt) > new Date(existing.last.checkedAt)) existing.last = snapshot;
-    });
-    return [...months.values()].sort((a, b) => a.key.localeCompare(b.key)).slice(-6);
-  }
-
-  function currentMonthBaseline(data) {
-    const history = data?.history || [];
-    const currentKey = monthKey(data.current.checkedAt);
-    return history.find((snapshot) => monthKey(snapshot.checkedAt) === currentKey) || null;
-  }
-
-  function percentage(value) {
-    return `${numberValue(value).toFixed(1)}%`;
-  }
-
-  function calculateRates(videos) {
-    const totals = videos.reduce((result, video) => {
-      result.views += video.views;
-      result.likes += video.likes;
-      result.comments += video.comments;
-      return result;
-    }, { views: 0, likes: 0, comments: 0 });
-    return {
-      likes: totals.views ? (totals.likes / totals.views) * 100 : 0,
-      comments: totals.views ? (totals.comments / totals.views) * 100 : 0
-    };
-  }
-
-  function fallbackIsShort(video) {
-    if (typeof video.isShort === "boolean") return video.isShort;
-    const title = video.title || "";
-    const isProducedPerformance =
-      /\b(acoustic session|live @|debut|cover|official video|music video)\b/i.test(title);
-    if (isProducedPerformance) return false;
-    if (video.durationSeconds) return video.durationSeconds <= 180;
-    return title.length >= 70;
-  }
-
-  function videosForView(snapshot, view = activeView) {
-    const videos = (snapshot?.videos || []).filter((video) =>
-      view === "shorts" ? fallbackIsShort(video) : !fallbackIsShort(video)
-    );
-    if (view !== "shorts") return videos;
-
-    const now = new Date(snapshot?.checkedAt || Date.now());
-    return videos.filter((video) => {
-      const published = new Date(video.publishedAt);
-      return published.getFullYear() === now.getFullYear() &&
-        published.getMonth() === now.getMonth();
-    });
-  }
-
-  function viewSnapshot(snapshot, view = activeView) {
-    if (!snapshot) return null;
-    const videos = videosForView(snapshot, view);
-    return {
-      ...snapshot,
-      channel: {
-        ...snapshot.channel,
-        views: videos.reduce((sum, video) => sum + video.views, 0),
-        videos: videos.length
-      },
-      videos
-    };
-  }
-
-  function dataForView(data, view = activeView) {
+  function baseline(data, platform) {
     if (!data?.current) return null;
-    return {
-      ...data,
-      current: viewSnapshot(data.current, view),
-      previous: viewSnapshot(data.previous, view),
-      history: (data.history || []).map((snapshot) => viewSnapshot(snapshot, view))
-    };
+    const key = monthKey(data.current.checkedAt);
+    const history = data.history || [];
+    return history.find((snapshot) => {
+      if (monthKey(snapshot.checkedAt) !== key) return false;
+      if (platform === "facebook") return Boolean(snapshot.facebook);
+      return true;
+    }) || null;
   }
 
-  function renderGrowthChart(months) {
-    const chart = document.querySelector("#growthChart");
-    chart.replaceChildren();
-
-    if (!months.length) {
-      const empty = document.createElement("p");
-      empty.className = "chart-empty";
-      empty.textContent = "Monthly tracking begins with the first YouTube refresh.";
-      chart.append(empty);
-      return;
-    }
-
-    const gains = months.map((month) => Math.max(
-      month.last.videos.reduce((sum, video) => sum + video.views, 0) -
-      month.first.videos.reduce((sum, video) => sum + video.views, 0),
-      0
-    ));
-    const maximum = Math.max(...gains, 1);
-
-    months.forEach((month, index) => {
-      const column = document.createElement("div");
-      column.className = "chart-column";
-      const value = document.createElement("strong");
-      value.textContent = gains[index] ? `+${compactNumber(gains[index])}` : "0";
-      const bar = document.createElement("span");
-      bar.className = "chart-bar";
-      bar.style.height = `${Math.max((gains[index] / maximum) * 100, 5)}%`;
-      const label = document.createElement("small");
-      label.textContent = new Intl.DateTimeFormat("en-GB", { month: "short" })
-        .format(new Date(`${month.key}-01T12:00:00`));
-      column.append(value, bar, label);
-      chart.append(column);
-    });
+  function isShort(video) {
+    if (typeof video?.isShort === "boolean") return video.isShort;
+    return numberValue(video?.durationSeconds) > 0 &&
+      numberValue(video?.durationSeconds) <= 180;
   }
 
-  function renderIntelligence(data) {
-    if (!data?.current) {
-      document.querySelector("#pulseScore").textContent = "-";
-      document.querySelector("#pulseHeadline").textContent = "Waiting for first snapshot";
-      document.querySelector("#pulseExplanation").textContent =
-        "This score will blend audience growth, views and engagement across every connected platform.";
-      document.querySelector("#pulseStatus").textContent = "Building baseline";
-      document.querySelector("#growthPeriod").textContent = "Waiting for data";
-      document.querySelector("#audienceMomentum").textContent = "-";
-      document.querySelector("#viewMomentum").textContent = "-";
-      document.querySelector("#likeMomentum").textContent = "-";
-      document.querySelector("#commentMomentum").textContent = "-";
-      document.querySelector("#topVideoTitle").textContent = "No video data yet";
-      document.querySelector("#topVideoSignal").textContent =
-        "The first snapshot will identify the strongest content signal.";
-      document.querySelector("#likeRate").textContent = "-";
-      document.querySelector("#commentRate").textContent = "-";
-      document.querySelector("#pulseRing").style.setProperty("--pulse-score", "0deg");
-      renderGrowthChart([]);
-      return;
-    }
-
-    const current = data.current;
-    const baseline = currentMonthBaseline(data);
-    const subscriberGain = baseline ? current.channel.subscribers - baseline.channel.subscribers : 0;
-    const viewGain = baseline ? current.channel.views - baseline.channel.views : 0;
-    const subscriberGrowth = baseline?.channel?.subscribers
-      ? (subscriberGain / baseline.channel.subscribers) * 100
-      : 0;
-    const viewGrowth = baseline?.channel?.views
-      ? (viewGain / baseline.channel.views) * 100
-      : 0;
-    const rates = calculateRates(current.videos);
-    const recentViews = current.videos.reduce((sum, video) => sum + video.views, 0);
-    const viewsPerSubscriber = current.channel.subscribers
-      ? recentViews / current.channel.subscribers
-      : 0;
-    const score = Math.round(Math.min(
-      100,
-      35 + Math.min(subscriberGrowth * 12, 25) + Math.min(viewGrowth * 18, 20) +
-      Math.min((rates.likes + rates.comments) * 5, 20)
-    ));
-    const hasMonthlyMovement = Boolean(subscriberGain || viewGain);
-    const topVideo = [...current.videos].sort((a, b) => b.views - a.views)[0];
-    const months = monthlyData(data.history);
-
-    document.querySelector("#pulseScore").textContent = score;
-    document.querySelector("#pulseRing").style.setProperty("--pulse-score", `${score * 3.6}deg`);
-    document.querySelector("#pulseStatus").textContent = hasMonthlyMovement ? "Tracking live" : "Baseline month";
-    document.querySelector("#pulseHeadline").textContent =
-      score >= 75 ? "Strong momentum" : score >= 55 ? "Healthy signal" : "Baseline building";
-    const platformLabel = activeView === "shorts" ? "Shorts" : "Long-form YouTube";
-    document.querySelector("#pulseExplanation").textContent = hasMonthlyMovement
-      ? `${platformLabel} has added ${fullNumber(viewGain)} views this month. The ${fullNumber(subscriberGain)} subscriber change is channel-wide.`
-      : "Keep refreshing over time to reveal true month-on-month momentum.";
-    document.querySelector("#audienceMomentum").textContent =
-      baseline ? `${subscriberGain >= 0 ? "+" : ""}${fullNumber(subscriberGain)}` : "Baseline";
-    document.querySelector("#viewMomentum").textContent =
-      baseline ? `${viewGain >= 0 ? "+" : ""}${compactNumber(viewGain)}` : "Baseline";
-    document.querySelector("#likeMomentum").textContent = percentage(rates.likes);
-    document.querySelector("#commentMomentum").textContent = percentage(rates.comments);
-    document.querySelector("#growthPeriod").textContent = months.length > 1
-      ? `Last ${months.length} months`
-      : "First month";
-    document.querySelector("#topVideoTitle").textContent = topVideo?.title || "No recent videos";
-    document.querySelector("#topVideoSignal").textContent = topVideo
-      ? `${compactNumber(topVideo.views)} views, ${compactNumber(topVideo.likes)} likes and ${compactNumber(topVideo.comments)} comments.`
-      : "Publish or connect recent videos to reveal the strongest content.";
-    document.querySelector("#likeRate").textContent = percentage(rates.likes);
-    document.querySelector("#commentRate").textContent = percentage(rates.comments);
-    renderGrowthChart(months);
-  }
-
-  function createMetric(label, value) {
-    const item = document.createElement("span");
-    item.className = "video-metric";
-
-    const strong = document.createElement("strong");
-    strong.textContent = compactNumber(value);
-    item.append(strong, ` ${label}`);
-    return item;
-  }
-
-  function formatDuration(seconds) {
-    if (!seconds) return "";
-    const minutes = Math.floor(seconds / 60);
-    const remainder = seconds % 60;
-    return `${minutes}:${String(remainder).padStart(2, "0")}`;
-  }
-
-  function renderVideos(videos) {
-    videoList.replaceChildren();
-    emptyState.hidden = videos.length > 0;
-
-    if (!videos.length) return;
-    const maximumViews = Math.max(...videos.map((video) => video.views), 1);
-
-    videos.forEach((video, index) => {
-      const card = document.createElement("a");
-      card.className = "video-performance-card";
-      card.href = `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
-      card.target = "_blank";
-      card.rel = "noreferrer";
-
-      const rank = document.createElement("span");
-      rank.className = "video-rank";
-      rank.textContent = String(index + 1).padStart(2, "0");
-
-      const image = document.createElement("img");
-      image.src = video.thumbnail;
-      image.alt = "";
-      image.loading = "lazy";
-
-      const copy = document.createElement("div");
-      copy.className = "video-performance-copy";
-
-      const heading = document.createElement("h3");
-      heading.textContent = video.title;
-
-      const badge = document.createElement("span");
-      badge.className = `content-format-badge${fallbackIsShort(video) ? " short" : ""}`;
-      badge.textContent = fallbackIsShort(video) ? "Short" : "Video";
-
-      const date = document.createElement("p");
-      const dateText = video.publishedAt
-        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(video.publishedAt))
-        : "Publish date unavailable";
-      const durationText = formatDuration(video.durationSeconds);
-      date.textContent = durationText ? `${dateText} · ${durationText}` : dateText;
-
-      const metrics = document.createElement("div");
-      metrics.className = "video-metrics";
-      metrics.append(
-        createMetric("views", video.views),
-        createMetric("likes", video.likes),
-        createMetric("comments", video.comments)
+  function youtubeContent(platform) {
+    const videos = state.youtube?.current?.videos || [];
+    if (platform === "shorts") {
+      return videos.filter((video) =>
+        isShort(video) && (!video.publishedAt || sameMonth(video.publishedAt))
       );
-
-      const track = document.createElement("span");
-      track.className = "performance-track";
-      const fill = document.createElement("span");
-      fill.style.width = `${Math.max((video.views / maximumViews) * 100, 2)}%`;
-      track.append(fill);
-
-      copy.append(badge, heading, date, metrics, track);
-      card.append(rank, image, copy);
-      videoList.append(card);
-    });
+    }
+    return videos.filter((video) => !isShort(video));
   }
 
-  function instagramRates(media) {
-    const totals = (media || []).reduce((result, item) => {
-      result.reach += item.reach || item.views;
-      result.likes += item.likes;
-      result.comments += item.comments;
+  function totals(items, reachField = "views") {
+    return (items || []).reduce((result, item) => {
+      result.views += numberValue(item[reachField] || item.views || item.reach);
+      result.likes += numberValue(item.likes);
+      result.comments += numberValue(item.comments);
+      result.shares += numberValue(item.shares);
+      result.saves += numberValue(item.saved);
       return result;
-    }, { reach: 0, likes: 0, comments: 0 });
+    }, { views: 0, likes: 0, comments: 0, shares: 0, saves: 0 });
+  }
+
+  function engagementRates(items, reachField = "views") {
+    const total = totals(items, reachField);
     return {
-      likes: totals.reach ? (totals.likes / totals.reach) * 100 : 0,
-      comments: totals.reach ? (totals.comments / totals.reach) * 100 : 0
+      likes: total.views ? total.likes / total.views * 100 : 0,
+      comments: total.views ? total.comments / total.views * 100 : 0,
+      engagement: total.views
+        ? (total.likes + total.comments + total.shares + total.saves) / total.views * 100
+        : 0
     };
   }
 
-  function renderInstagramGrowth(data) {
-    const chart = document.querySelector("#growthChart");
-    chart.replaceChildren();
-    const snapshots = data?.history || [];
-    const months = new Map();
-    snapshots.forEach((snapshot) => {
-      const key = monthKey(snapshot.checkedAt);
-      months.set(key, snapshot);
-    });
-    const entries = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
-
-    if (!entries.length) {
-      const empty = document.createElement("p");
-      empty.className = "chart-empty";
-      empty.textContent = "Monthly tracking begins with the first Instagram refresh.";
-      chart.append(empty);
-      return;
-    }
-
-    const values = entries.map(([, snapshot]) =>
-      snapshot.month?.reach || snapshot.month?.views || 0
-    );
-    const maximum = Math.max(...values, 1);
-    entries.forEach(([key], index) => {
-      const column = document.createElement("div");
-      column.className = "chart-column";
-      const value = document.createElement("strong");
-      value.textContent = compactNumber(values[index]);
-      const bar = document.createElement("span");
-      bar.className = "chart-bar instagram-chart-bar";
-      bar.style.height = `${Math.max((values[index] / maximum) * 100, 5)}%`;
-      const label = document.createElement("small");
-      label.textContent = new Intl.DateTimeFormat("en-GB", { month: "short" })
-        .format(new Date(`${key}-01T12:00:00`));
-      column.append(value, bar, label);
-      chart.append(column);
-    });
-  }
-
-  function renderInstagramMedia(media) {
-    videoList.replaceChildren();
-    emptyState.hidden = media.length > 0;
-    emptyState.querySelector("strong").textContent = "No Instagram posts this month";
-    emptyState.querySelector("p").textContent =
-      "New posts and Reels will appear here after the next Instagram refresh.";
-    if (!media.length) return;
-
-    const maximumReach = Math.max(...media.map((item) => item.reach || item.views), 1);
-    media.forEach((item, index) => {
-      const card = document.createElement("a");
-      card.className = "video-performance-card instagram-performance-card";
-      card.href = item.permalink || `https://www.instagram.com/${encodeURIComponent(item.id)}`;
-      card.target = "_blank";
-      card.rel = "noreferrer";
-
-      const rank = document.createElement("span");
-      rank.className = "video-rank";
-      rank.textContent = String(index + 1).padStart(2, "0");
-
-      const image = document.createElement("img");
-      image.src = item.thumbnail;
-      image.alt = "";
-      image.loading = "lazy";
-
-      const copy = document.createElement("div");
-      copy.className = "video-performance-copy";
-      const badge = document.createElement("span");
-      badge.className = "content-format-badge instagram";
-      badge.textContent = item.productType === "REELS" ? "Reel" : "Post";
-      const heading = document.createElement("h3");
-      heading.textContent = item.caption.split("\n")[0].slice(0, 120) || "Instagram post";
-      const date = document.createElement("p");
-      date.textContent = item.publishedAt
-        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(item.publishedAt))
-        : "Publish date unavailable";
-      const metrics = document.createElement("div");
-      metrics.className = "video-metrics";
-      metrics.append(
-        createMetric(item.views ? "views" : "reached", item.views || item.reach),
-        createMetric("likes", item.likes),
-        createMetric("comments", item.comments)
+  function platformData(platform) {
+    if (platform === "youtube" || platform === "shorts") {
+      const current = state.youtube?.current;
+      const content = youtubeContent(platform);
+      const total = totals(content);
+      const rates = engagementRates(content);
+      const base = baseline(state.youtube, platform);
+      const baseContent = (base?.videos || []).filter((video) =>
+        platform === "shorts" ? isShort(video) : !isShort(video)
       );
-      const track = document.createElement("span");
-      track.className = "performance-track";
-      const fill = document.createElement("span");
-      fill.style.width =
-        `${Math.max(((item.reach || item.views) / maximumReach) * 100, 2)}%`;
-      track.append(fill);
-      copy.append(badge, heading, date, metrics, track);
-      card.append(rank, image, copy);
-      videoList.append(card);
-    });
-  }
-
-  function renderInstagram(data) {
-    refreshButton.textContent = "Refresh Instagram";
-    document.querySelector("#channelName").textContent = data?.current
-      ? `@${data.current.account.username} Instagram`
-      : "Instagram overview";
-    document.querySelector("#channelDescription").textContent =
-      "Follower growth, monthly reach and the posts and Reels driving engagement.";
-    document.querySelector(".social-summary article:first-child p").textContent = "Followers";
-    document.querySelector("#viewCountLabel").textContent = "Accounts reached this month";
-    document.querySelector("#videoCountLabel").textContent = "Posts and Reels this month";
-    document.querySelector("#averageViewLabel").textContent = "Profile views this month";
-    document.querySelector("#recentViewNote").textContent = "Current calendar month";
-    document.querySelector("#boardAverageLabel").textContent = "Average reach";
-    document.querySelector("#trendFutureLabel").textContent = "Instagram tracked separately";
-    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
-      "Instagram accounts reached";
-    document.querySelector(".social-board h2").textContent = "Instagram this month";
-    document.querySelector(".signal-feature > span").textContent = "Top Instagram post";
-
-    if (!data?.current) {
-      document.querySelector("#socialLastUpdated").textContent = "Not connected";
-      ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
-        .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
-      document.querySelector("#subscriberDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#viewDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#videoDelta").textContent = "Monthly baseline not started";
-      renderInstagramMedia([]);
-      document.querySelector("#pulseScore").textContent = "-";
-      document.querySelector("#pulseHeadline").textContent = "Waiting for first snapshot";
-      document.querySelector("#pulseExplanation").textContent =
-        "Instagram growth and engagement will appear after the secure connection is complete.";
-      document.querySelector("#pulseStatus").textContent = "Building baseline";
-      document.querySelector("#growthPeriod").textContent = "Waiting for data";
-      document.querySelector("#audienceMomentum").textContent = "-";
-      document.querySelector("#viewMomentum").textContent = "-";
-      document.querySelector("#likeMomentum").textContent = "-";
-      document.querySelector("#commentMomentum").textContent = "-";
-      document.querySelector("#topVideoTitle").textContent = "No Instagram data yet";
-      document.querySelector("#topVideoSignal").textContent =
-        "The first snapshot will identify the strongest post or Reel.";
-      document.querySelector("#likeRate").textContent = "-";
-      document.querySelector("#commentRate").textContent = "-";
-      document.querySelector("#pulseRing").style.setProperty("--pulse-score", "0deg");
-      renderInstagramGrowth(null);
-      return;
+      const baseViews = totals(baseContent).views;
+      return {
+        connected: Boolean(current),
+        audience: numberValue(current?.channel?.subscribers),
+        audienceLabel: "subscribers",
+        reach: total.views,
+        reachLabel: platform === "shorts" ? "Shorts views" : "video views",
+        output: content.length,
+        outputLabel: platform === "shorts" ? "Shorts this month" : "recent videos",
+        engagement: rates.engagement,
+        likes: rates.likes,
+        comments: rates.comments,
+        audienceDelta: base
+          ? numberValue(current?.channel?.subscribers) - numberValue(base.channel?.subscribers)
+          : null,
+        reachDelta: base ? total.views - baseViews : null,
+        content,
+        checkedAt: current?.checkedAt
+      };
     }
 
-    const current = data.current;
-    const baseline = currentMonthBaseline(data);
-    const rates = instagramRates(current.media);
-    const followerGain = baseline
-      ? current.account.followers - baseline.account.followers
-      : 0;
-    const reach = current.month.reach ||
-      current.media.reduce((sum, item) => sum + (item.reach || item.views), 0);
-    const measuredMediaReach = current.media.reduce(
-      (sum, item) => sum + (item.reach || item.views),
-      0
-    );
-    const averageReach = current.media.length
-      ? Math.round(measuredMediaReach / current.media.length)
-      : 0;
-    const topPost = [...current.media].sort(
-      (a, b) => (b.reach || b.views) - (a.reach || a.views)
-    )[0];
-    const score = Math.round(Math.min(
-      100,
-      35 + Math.min(Math.max(followerGain, 0) * 2, 20) +
-      Math.min(rates.likes * 5, 25) + Math.min(rates.comments * 20, 20)
-    ));
+    if (platform === "instagram") {
+      const current = state.meta?.current;
+      const media = current?.media || [];
+      const measuredReach = totals(media, "reach").views;
+      const rates = engagementRates(media, "reach");
+      const base = baseline(state.meta, platform);
+      return {
+        connected: Boolean(current?.account),
+        audience: numberValue(current?.account?.followers),
+        audienceLabel: "followers",
+        reach: numberValue(current?.month?.reach) || measuredReach,
+        reachLabel: "accounts reached",
+        output: numberValue(current?.month?.posts),
+        outputLabel: "posts and Reels",
+        engagement: rates.engagement,
+        likes: rates.likes,
+        comments: rates.comments,
+        audienceDelta: base
+          ? numberValue(current.account.followers) - numberValue(base.account?.followers)
+          : null,
+        reachDelta: null,
+        content: media,
+        checkedAt: current?.checkedAt
+      };
+    }
 
-    document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
-    document.querySelector("#subscriberCount").textContent = compactNumber(current.account.followers);
-    document.querySelector(".social-summary article:first-child p").textContent = "Followers";
-    document.querySelector("#channelViewCount").textContent = compactNumber(reach);
-    document.querySelector("#videoCount").textContent = fullNumber(current.month.posts);
-    document.querySelector("#recentViewCount").textContent = compactNumber(current.month.profileViews);
-    document.querySelector("#averageRecentViews").textContent = compactNumber(averageReach);
-    document.querySelector("#subscriberDelta").textContent = baseline
-      ? `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)} this month`
-      : "Building this month's baseline";
-    document.querySelector("#viewDelta").textContent = "Current calendar month";
-    document.querySelector("#videoDelta").textContent = "Current calendar month";
-    document.querySelector("#pulseScore").textContent = score;
-    document.querySelector("#pulseRing").style.setProperty("--pulse-score", `${score * 3.6}deg`);
-    document.querySelector("#pulseStatus").textContent = baseline ? "Tracking live" : "Baseline month";
-    document.querySelector("#pulseHeadline").textContent =
-      score >= 75 ? "Strong momentum" : score >= 55 ? "Healthy signal" : "Baseline building";
-    document.querySelector("#pulseExplanation").textContent =
-      `${compactNumber(reach)} accounts reached across ${current.month.posts} posts and Reels this month.`;
-    document.querySelector("#audienceMomentum").textContent = baseline
-      ? `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)}`
-      : "Baseline";
-    document.querySelector("#viewMomentum").textContent = compactNumber(reach);
-    document.querySelector("#likeMomentum").textContent = percentage(rates.likes);
-    document.querySelector("#commentMomentum").textContent = percentage(rates.comments);
-    document.querySelector("#growthPeriod").textContent =
-      data.history?.length > 1 ? "Month on month" : "First month";
-    document.querySelector("#topVideoTitle").textContent =
-      topPost?.caption.split("\n")[0].slice(0, 100) || "No posts this month";
-    document.querySelector("#topVideoSignal").textContent = topPost
-      ? `${compactNumber(topPost.reach || topPost.views)} reached, ${compactNumber(topPost.likes)} likes and ${compactNumber(topPost.comments)} comments.`
-      : "The strongest post will appear after Instagram returns this month's media.";
-    document.querySelector("#likeRate").textContent = percentage(rates.likes);
-    document.querySelector("#commentRate").textContent = percentage(rates.comments);
-    renderInstagramGrowth(data);
-    renderInstagramMedia(current.media);
-  }
+    if (platform === "facebook") {
+      const current = state.meta?.current;
+      const facebook = current?.facebook;
+      const posts = facebook?.posts || [];
+      const rates = engagementRates(posts);
+      const base = baseline(state.meta, platform);
+      return {
+        connected: Boolean(facebook?.page),
+        audience: numberValue(facebook?.page?.followers),
+        audienceLabel: "page followers",
+        reach: numberValue(facebook?.month?.views) || totals(posts).views,
+        reachLabel: "content views",
+        output: numberValue(facebook?.month?.posts),
+        outputLabel: "posts this month",
+        engagement: rates.engagement,
+        likes: rates.likes,
+        comments: rates.comments,
+        audienceDelta: base?.facebook
+          ? numberValue(facebook.page.followers) -
+            numberValue(base.facebook.page?.followers)
+          : null,
+        reachDelta: null,
+        content: posts,
+        checkedAt: current?.checkedAt,
+        access: facebook?.access || {}
+      };
+    }
 
-  function facebookRates(posts) {
-    const totals = (posts || []).reduce((result, post) => {
-      result.views += post.views || post.reach;
-      result.likes += post.likes;
-      result.comments += post.comments;
-      return result;
-    }, { views: 0, likes: 0, comments: 0 });
     return {
-      likes: totals.views ? (totals.likes / totals.views) * 100 : 0,
-      comments: totals.views ? (totals.comments / totals.views) * 100 : 0
+      connected: false,
+      comingSoon: true,
+      audience: 0,
+      audienceLabel: "followers",
+      reach: 0,
+      reachLabel: "video views",
+      output: 0,
+      outputLabel: "posts",
+      engagement: 0,
+      likes: 0,
+      comments: 0,
+      audienceDelta: null,
+      reachDelta: null,
+      content: []
     };
   }
 
-  function renderFacebookGrowth(data) {
-    const chart = document.querySelector("#growthChart");
-    chart.replaceChildren();
-    const months = new Map();
-    (data?.history || []).forEach((snapshot) => {
-      if (!snapshot.facebook) return;
-      months.set(monthKey(snapshot.checkedAt), snapshot.facebook);
-    });
-    const entries = [...months.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-6);
-
-    if (!entries.length) {
-      const empty = document.createElement("p");
-      empty.className = "chart-empty";
-      empty.textContent = "Monthly tracking begins with the first Facebook refresh.";
-      chart.append(empty);
-      return;
-    }
-
-    const values = entries.map(([, facebook]) => facebook.page?.followers || 0);
-    const maximum = Math.max(...values, 1);
-    entries.forEach(([key], index) => {
-      const column = document.createElement("div");
-      column.className = "chart-column";
-      const value = document.createElement("strong");
-      value.textContent = compactNumber(values[index]);
-      const bar = document.createElement("span");
-      bar.className = "chart-bar facebook-chart-bar";
-      bar.style.height = `${Math.max((values[index] / maximum) * 100, 5)}%`;
-      const label = document.createElement("small");
-      label.textContent = new Intl.DateTimeFormat("en-GB", { month: "short" })
-        .format(new Date(`${key}-01T12:00:00`));
-      column.append(value, bar, label);
-      chart.append(column);
-    });
+  function platformMark(platform) {
+    return {
+      youtube: "YT",
+      shorts: "S",
+      instagram: "IG",
+      facebook: "FB",
+      tiktok: "TT"
+    }[platform];
   }
 
-  function renderFacebookPosts(posts) {
-    videoList.replaceChildren();
-    emptyState.hidden = posts.length > 0;
-    if (!posts.length) return;
+  function metricDelta(value, noun) {
+    if (value == null) return "Baseline building";
+    if (value === 0) return `No ${noun} change yet`;
+    return `${value > 0 ? "+" : ""}${full(value)} this month`;
+  }
 
-    const maximumPerformance = Math.max(
-      ...posts.map((post) =>
-        post.views || post.reach || post.likes + post.comments + post.shares
-      ),
-      1
-    );
-    posts.forEach((post, index) => {
-      const card = document.createElement("a");
-      card.className = "video-performance-card facebook-performance-card";
-      card.href = post.permalink || "#";
-      card.target = "_blank";
-      card.rel = "noreferrer";
-
-      const rank = document.createElement("span");
-      rank.className = "video-rank";
-      rank.textContent = String(index + 1).padStart(2, "0");
-
-      const image = document.createElement("img");
-      image.src = post.thumbnail;
-      image.alt = "";
-      image.loading = "lazy";
-
-      const copy = document.createElement("div");
-      copy.className = "video-performance-copy";
-      const badge = document.createElement("span");
-      badge.className = "content-format-badge facebook";
-      badge.textContent = "Facebook post";
-      const heading = document.createElement("h3");
-      heading.textContent = post.caption.split("\n")[0].slice(0, 120) || "Facebook post";
-      const date = document.createElement("p");
-      date.textContent = post.publishedAt
-        ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(post.publishedAt))
-        : "Publish date unavailable";
-      const metrics = document.createElement("div");
-      metrics.className = "video-metrics";
-      metrics.append(
-        createMetric(post.views ? "views" : "reached", post.views || post.reach),
-        createMetric("reactions", post.likes),
-        createMetric("comments", post.comments),
-        createMetric("shares", post.shares)
-      );
-      const engagement = post.likes + post.comments + post.shares;
-      const performance = post.views || post.reach || engagement;
-      const track = document.createElement("span");
-      track.className = "performance-track";
-      const fill = document.createElement("span");
-      fill.style.width = `${Math.max((performance / maximumPerformance) * 100, 2)}%`;
-      track.append(fill);
-      copy.append(badge, heading, date, metrics, track);
-      card.append(rank, image, copy);
-      videoList.append(card);
+  function renderPlatformCards() {
+    elements.cards.replaceChildren();
+    PLATFORM_ORDER.forEach((platform) => {
+      const data = platformData(platform);
+      const card = document.createElement("button");
+      card.className = `platform-overview-card platform-${platform}`;
+      card.type = "button";
+      card.dataset.platform = platform;
+      card.innerHTML = `
+        <span class="platform-card-top">
+          <i>${platformMark(platform)}</i>
+          <span>${data.comingSoon ? "Coming soon" : data.connected ? "Live" : "Connect"}</span>
+        </span>
+        <strong>${PLATFORM_LABELS[platform]}</strong>
+        <span class="platform-card-number">${data.connected ? compact(data.audience) : "-"}</span>
+        <small>${data.audienceLabel}</small>
+        <span class="platform-card-signal">${
+          data.comingSoon
+            ? "API connection prepared"
+            : data.connected
+              ? `${compact(data.reach)} ${data.reachLabel}`
+              : "Data unavailable"
+        }</span>
+        <b>Open insight &rarr;</b>`;
+      card.addEventListener("click", () => openDrilldown(platform));
+      elements.cards.append(card);
     });
   }
 
-  function renderFacebook(data) {
-    const current = data?.current;
-    const facebook = current?.facebook;
-    const posts = facebook?.posts || [];
-    const postsAvailable = facebook?.access?.posts === true;
-    const insightsAvailable = facebook?.access?.insights === true;
-    const baselineSnapshot = (data?.history || []).find((snapshot) =>
-      monthKey(snapshot.checkedAt) === monthKey(current?.checkedAt || Date.now())
-    );
-    const baselineFollowers = baselineSnapshot?.facebook?.page?.followers;
-    const followerGain = baselineFollowers == null
-      ? null
-      : facebook.page.followers - baselineFollowers;
-    const rates = facebookRates(posts);
-    const topPost = [...posts].sort(
-      (a, b) =>
-        (b.views || b.reach || b.likes + b.comments + b.shares) -
-        (a.views || a.reach || a.likes + a.comments + a.shares)
-    )[0];
-
-    refreshButton.textContent = "Refresh Facebook";
-    document.querySelector("#channelName").textContent = facebook
-      ? `${facebook.page.name} Facebook`
-      : "Facebook overview";
-    document.querySelector("#channelDescription").textContent =
-      "Page audience, publishing activity and the posts building Ella's Facebook presence.";
-    document.querySelector(".social-summary article:first-child p").textContent = "Page followers";
-    document.querySelector("#viewCountLabel").textContent = "Page views this month";
-    document.querySelector("#videoCountLabel").textContent = "Posts this month";
-    document.querySelector("#averageViewLabel").textContent = "Engagements this month";
-    document.querySelector("#recentViewNote").textContent =
-      insightsAvailable ? "Current calendar month" : "Awaiting Meta access";
-    document.querySelector("#boardAverageLabel").textContent = "Page followers";
-    document.querySelector("#trendFutureLabel").textContent = "Facebook tracked separately";
-    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
-      "Facebook followers";
-    document.querySelector(".social-board h2").textContent = "Facebook this month";
-    document.querySelector(".signal-feature > span").textContent = "Top Facebook post";
-
-    if (!facebook) {
-      document.querySelector("#socialLastUpdated").textContent = "Not connected";
-      ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
-        .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
-      document.querySelector("#subscriberDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#viewDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#videoDelta").textContent = "Monthly baseline not started";
-      renderFacebookPosts([]);
-      renderFacebookGrowth(null);
-      return;
-    }
-
-    emptyState.querySelector("strong").textContent = postsAvailable
-      ? "No Facebook posts this month"
-      : "Facebook post insights are pending";
-    emptyState.querySelector("p").textContent = postsAvailable
-      ? "New Page posts will appear here after the next Facebook refresh."
-      : "The Page is connected. Meta has not yet released its post-level engagement data to this app.";
-
-    document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
-    document.querySelector("#subscriberCount").textContent = compactNumber(facebook.page.followers);
-    document.querySelector("#channelViewCount").textContent = insightsAvailable
-      ? compactNumber(facebook.month.views)
-      : "-";
-    document.querySelector("#videoCount").textContent = postsAvailable
-      ? fullNumber(facebook.month.posts)
-      : "-";
-    document.querySelector("#recentViewCount").textContent = insightsAvailable
-      ? compactNumber(facebook.month.engagements)
-      : "-";
-    document.querySelector("#averageRecentViews").textContent =
-      compactNumber(facebook.page.followers);
-    document.querySelector("#subscriberDelta").textContent = followerGain == null
-      ? "Building this month's baseline"
-      : `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)} this month`;
-    document.querySelector("#viewDelta").textContent = insightsAvailable
-      ? "Current calendar month"
-      : "Meta permission pending";
-    document.querySelector("#videoDelta").textContent = postsAvailable
-      ? "Current calendar month"
-      : "Meta permission pending";
-    document.querySelector("#pulseScore").textContent = insightsAvailable ? "50" : "-";
-    document.querySelector("#pulseRing").style.setProperty(
-      "--pulse-score",
-      insightsAvailable ? "180deg" : "0deg"
-    );
-    document.querySelector("#pulseStatus").textContent =
-      insightsAvailable ? "Tracking live" : "Page connected";
-    document.querySelector("#pulseHeadline").textContent =
-      insightsAvailable ? "Facebook baseline" : "Audience connected";
-    document.querySelector("#pulseExplanation").textContent = insightsAvailable
-      ? `${compactNumber(facebook.month.engagements)} engagements across ${facebook.month.posts} posts this month.`
-      : postsAvailable
-        ? "Follower and post tracking are live. Page-level engagement insights are still awaiting Meta access."
-        : "Follower tracking is live. Post and engagement insights will appear once Meta releases access.";
-    document.querySelector("#audienceMomentum").textContent = followerGain == null
-      ? "Baseline"
-      : `${followerGain >= 0 ? "+" : ""}${fullNumber(followerGain)}`;
-    document.querySelector("#viewMomentum").textContent = insightsAvailable
-      ? compactNumber(facebook.month.views)
-      : "Pending";
-    document.querySelector("#likeMomentum").textContent = insightsAvailable
-      ? percentage(rates.likes)
-      : "-";
-    document.querySelector("#commentMomentum").textContent = insightsAvailable
-      ? percentage(rates.comments)
-      : "-";
-    document.querySelector("#growthPeriod").textContent =
-      data.history?.length > 1 ? "Month on month" : "First month";
-    document.querySelector("#topVideoTitle").textContent =
-      topPost?.caption.split("\n")[0].slice(0, 100) ||
-      (postsAvailable ? "No posts this month" : "Post insights pending");
-    document.querySelector("#topVideoSignal").textContent = topPost
-      ? `${compactNumber(topPost.views || topPost.reach)} ${topPost.views ? "views" : "reached"}, ${compactNumber(topPost.likes)} reactions, ${compactNumber(topPost.comments)} comments and ${compactNumber(topPost.shares)} shares.`
-      : postsAvailable
-        ? "The Page connection is healthy. New posts will be measured here automatically."
-        : "The Page connection is healthy; Meta is not yet returning post-level performance.";
-    document.querySelector("#likeRate").textContent = insightsAvailable
-      ? percentage(rates.likes)
-      : "-";
-    document.querySelector("#commentRate").textContent = insightsAvailable
-      ? percentage(rates.comments)
-      : "-";
-    renderFacebookGrowth(data);
-    renderFacebookPosts(posts);
+  function momentumScore(data) {
+    if (!data.connected) return 0;
+    const audienceSignal = data.audienceDelta == null
+      ? 8
+      : Math.min(Math.max(data.audienceDelta, 0) * 3, 28);
+    const reachSignal = Math.min(Math.log10(data.reach + 1) * 10, 35);
+    const engagementSignal = Math.min(data.engagement * 8, 37);
+    return Math.round(audienceSignal + reachSignal + engagementSignal);
   }
 
-  function render(data) {
-    if (activeView === "instagram") {
-      renderInstagram(savedInstagramData);
-      return;
-    }
-    if (activeView === "facebook") {
-      renderFacebook(savedInstagramData);
-      return;
-    }
-    refreshButton.textContent = "Refresh YouTube";
-    document.querySelector(".social-summary article:first-child p").textContent = "Subscribers";
-    document.querySelector(".signal-feature > span").textContent = "Top recent video";
-    if (!data?.current) {
-      document.querySelector("#channelName").textContent = "YouTube overview";
-      document.querySelector("#channelDescription").textContent =
-        "Ella's YouTube growth, audience momentum and recent video performance.";
-      document.querySelector("#socialLastUpdated").textContent = "Not connected";
-      ["subscriberCount", "channelViewCount", "videoCount", "recentViewCount", "averageRecentViews"]
-        .forEach((id) => { document.querySelector(`#${id}`).textContent = "-"; });
-      document.querySelector("#subscriberDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#viewDelta").textContent = "Monthly baseline not started";
-      document.querySelector("#videoDelta").textContent = "Monthly baseline not started";
-      renderVideos([]);
-      renderIntelligence(null);
+  function renderMomentum() {
+    const scored = PLATFORM_ORDER
+      .filter((platform) => platform !== "tiktok")
+      .map((platform) => ({
+        platform,
+        data: platformData(platform),
+        score: momentumScore(platformData(platform))
+      }))
+      .filter((item) => item.data.connected)
+      .sort((a, b) => b.score - a.score);
+
+    elements.momentumBars.replaceChildren();
+    if (!scored.length) {
+      elements.momentumHeadline.textContent = "Connecting the picture";
+      elements.momentumCopy.textContent =
+        "Refresh the connected platforms to reveal the strongest source of momentum.";
       return;
     }
 
-    const selectedData = dataForView(data);
-    const current = selectedData.current;
-    const baseline = currentMonthBaseline(selectedData);
-    const recentViews = current.videos.reduce((sum, video) => sum + video.views, 0);
-    const averageViews = current.videos.length ? Math.round(recentViews / current.videos.length) : 0;
-
-    const isShorts = activeView === "shorts";
-    document.querySelector("#channelName").textContent = isShorts
-      ? `${current.channel.title} Shorts`
-      : `${current.channel.title} YouTube`;
-    document.querySelector("#channelDescription").textContent =
-      isShorts
-        ? "Short-form reach, engagement and recent Shorts performance."
-        : "Long-form video reach, engagement and recent performance.";
-    document.querySelector("#socialLastUpdated").textContent = formatDate(current.checkedAt);
-    document.querySelector("#subscriberCount").textContent =
-      current.channel.subscribersHidden ? "Hidden" : compactNumber(current.channel.subscribers);
-    document.querySelector("#channelViewCount").textContent = compactNumber(current.channel.views);
-    document.querySelector("#videoCount").textContent = fullNumber(current.channel.videos);
-    document.querySelector("#recentViewCount").textContent = compactNumber(averageViews);
-    document.querySelector("#averageRecentViews").textContent = compactNumber(averageViews);
-    document.querySelector("#subscriberDelta").textContent = current.channel.subscribersHidden
-      ? "Subscriber count is private"
-      : deltaText(current.channel.subscribers, baseline?.channel?.subscribers, "subscriber");
-    document.querySelector("#viewDelta").textContent =
-      deltaText(current.channel.views, baseline?.channel?.views, "view");
-    document.querySelector("#videoDelta").textContent =
-      deltaText(current.channel.videos, baseline?.channel?.videos, isShorts ? "Short" : "video");
-    document.querySelector("#viewCountLabel").textContent = isShorts ? "Shorts views this month" : "Recent video views";
-    document.querySelector("#videoCountLabel").textContent = isShorts ? "Shorts this month" : "Recent uploads";
-    document.querySelector("#averageViewLabel").textContent = isShorts ? "Average views this month" : "Average video views";
-    document.querySelector("#recentViewNote").textContent = isShorts ? "Current calendar month" : "Long-form performance";
-    document.querySelector("#boardAverageLabel").textContent = isShorts ? "This month's average" : "Long-form average";
-    document.querySelector("#trendFutureLabel").textContent = isShorts ? "Long-form tracked separately" : "Shorts tracked separately";
-    document.querySelector(".trend-legend span:first-child").lastChild.textContent =
-      isShorts ? "YouTube Shorts views gained" : "YouTube video views gained";
-    document.querySelector(".social-board h2").textContent = isShorts ? "Shorts this month" : "Recent videos";
-    renderVideos(current.videos);
-    renderIntelligence(selectedData);
+    const leader = scored[0];
+    elements.momentumStatus.textContent = "Live comparison";
+    elements.momentumHeadline.textContent =
+      `${PLATFORM_LABELS[leader.platform]} has the strongest current signal`;
+    elements.momentumCopy.textContent =
+      `${compact(leader.data.reach)} ${leader.data.reachLabel} at a ${percent(leader.data.engagement)} interaction rate across the content currently measured.`;
+    const maximum = Math.max(...scored.map((item) => item.score), 1);
+    scored.forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "momentum-bar-row";
+      row.innerHTML = `
+        <span>${PLATFORM_LABELS[item.platform]}</span>
+        <i><b style="width:${Math.max(item.score / maximum * 100, 5)}%"></b></i>
+        <strong>${item.score}</strong>`;
+      elements.momentumBars.append(row);
+    });
   }
 
-  async function refreshYouTube() {
-    setLoading(true);
-    try {
-      const current = await fetchYouTubeSnapshot();
-      savedData = {
-        current,
-        previous: savedData?.current || null,
-        history: appendHistory(savedData?.history, current)
-      };
-      localStorage.setItem(DATA_KEY, JSON.stringify(savedData));
-      render(savedData);
-      setMessage(`YouTube updated with ${current.videos.length} recent videos.`, "success");
-    } catch (error) {
-      console.error("YouTube refresh failed", error);
-      setMessage(error.message || "YouTube could not be refreshed.", "error");
-    } finally {
-      setLoading(false);
-    }
+  function bestContent(platform, data) {
+    return [...data.content].sort((a, b) => {
+      const aValue = numberValue(a.views || a.reach) +
+        numberValue(a.likes) * 3 + numberValue(a.comments) * 8 +
+        numberValue(a.shares) * 10 + numberValue(a.saved) * 10;
+      const bValue = numberValue(b.views || b.reach) +
+        numberValue(b.likes) * 3 + numberValue(b.comments) * 8 +
+        numberValue(b.shares) * 10 + numberValue(b.saved) * 10;
+      return bValue - aValue;
+    })[0];
   }
 
-  async function refreshInstagram() {
-    setLoading(true);
-    try {
-      const current = await fetchInstagramSnapshot();
-      savedInstagramData = {
-        current,
-        previous: savedInstagramData?.current || null,
-        history: appendHistory(savedInstagramData?.history, current)
-      };
-      localStorage.setItem(INSTAGRAM_DATA_KEY, JSON.stringify(savedInstagramData));
-      render(savedData);
-      const platform = activeView === "facebook" ? "Facebook" : "Instagram";
-      const detail = activeView === "facebook"
-        ? `${current.facebook.page.followers} Page followers`
-        : `${current.media.length} posts and Reels this month`;
-      setMessage(`${platform} updated with ${detail}.`, "success");
-    } catch (error) {
-      console.error("Instagram refresh failed", error);
-      setMessage(error.message || "Instagram could not be refreshed.", "error");
-    } finally {
-      setLoading(false);
-    }
-  }
+  function renderActions() {
+    const connected = PLATFORM_ORDER
+      .filter((platform) => platform !== "tiktok")
+      .map((platform) => ({ platform, data: platformData(platform) }))
+      .filter((item) => item.data.connected);
+    const actions = [];
 
-  refreshButton.addEventListener("click", () => {
-    if (activeView === "instagram" || activeView === "facebook") {
-      refreshInstagram();
-      return;
-    }
-    refreshYouTube();
-  });
-
-  platformTabs.forEach((button) => {
-    button.addEventListener("click", () => {
-      activeView = button.dataset.view || "youtube";
-      platformTabs.forEach((tabButton) => {
-        tabButton.classList.toggle("active", tabButton === button);
-      });
-      render(savedData);
-      if (activeView === "instagram" || activeView === "facebook") {
-        const lastCheck = savedInstagramData?.current?.checkedAt
-          ? new Date(savedInstagramData.current.checkedAt).getTime()
-          : 0;
-        if (Date.now() - lastCheck > 12 * 60 * 60 * 1000) refreshInstagram();
+    connected.forEach(({ platform, data }) => {
+      const best = bestContent(platform, data);
+      if (best) {
+        const title = best.title || best.caption || "Top content";
+        actions.push({
+          priority: data.engagement >= 3 ? "Repeat" : "Learn",
+          title: `Build on ${PLATFORM_LABELS[platform]}'s strongest format`,
+          copy: `"${title.split("\n")[0].slice(0, 78)}" is the clearest current content signal. Reuse its hook, subject or format rather than simply reposting it.`,
+          score: momentumScore(data) + data.engagement
+        });
       }
     });
-  });
 
-  window.addEventListener("ella-cloud-data-updated", (event) => {
-    const keys = event.detail?.keys || [];
-    if (keys.includes(DATA_KEY)) savedData = readJson(DATA_KEY);
-    if (keys.includes(INSTAGRAM_DATA_KEY)) {
-      savedInstagramData = readJson(INSTAGRAM_DATA_KEY);
+    const instagram = platformData("instagram");
+    const shorts = platformData("shorts");
+    if (instagram.connected && shorts.connected) {
+      actions.push({
+        priority: "Cross-post",
+        title: "Treat Reels and Shorts as one experiment",
+        copy: "Compare the same opening idea across both platforms. Keep the better hook and edit the next version around its first three seconds.",
+        score: 70
+      });
     }
-    if (!keys.includes(DATA_KEY) && !keys.includes(INSTAGRAM_DATA_KEY)) return;
-    render(savedData);
+    actions.push({
+      priority: "Measure",
+      title: "Use the bio links as the conversion check",
+      copy: "Reach shows attention. Spotify, ticket and community clicks show whether that attention is becoming useful artist growth.",
+      score: 60
+    });
+
+    elements.actions.replaceChildren();
+    actions.sort((a, b) => b.score - a.score).slice(0, 4).forEach((action, index) => {
+      const item = document.createElement("article");
+      item.className = "social-action-item";
+      item.innerHTML = `
+        <span>${String(index + 1).padStart(2, "0")}</span>
+        <div><small>${action.priority}</small><strong>${action.title}</strong><p>${action.copy}</p></div>`;
+      elements.actions.append(item);
+    });
+  }
+
+  function normalizedBioRows() {
+    if (!state.bio) return [];
+    if (Array.isArray(state.bio)) return state.bio;
+    if (Array.isArray(state.bio.rows)) return state.bio.rows;
+    return [];
+  }
+
+  function renderBio() {
+    const rows = normalizedBioRows();
+    elements.bioEmpty.hidden = rows.length > 0;
+    elements.bioList.replaceChildren();
+    if (!rows.length) {
+      elements.bioViews.textContent = "-";
+      elements.bioClicks.textContent = "-";
+      elements.bioRate.textContent = "-";
+      elements.bioTop.textContent = "-";
+      return;
+    }
+
+    const totalsByPlatform = new Map();
+    rows.forEach((row) => {
+      const platform = row.platform;
+      if (!totalsByPlatform.has(platform)) {
+        totalsByPlatform.set(platform, { views: 0, clicks: 0, buttons: new Map() });
+      }
+      const entry = totalsByPlatform.get(platform);
+      entry.views = Math.max(entry.views, numberValue(row.views));
+      entry.clicks += numberValue(row.clicks);
+      if (row.button_name) {
+        entry.buttons.set(
+          row.button_name,
+          numberValue(entry.buttons.get(row.button_name)) + numberValue(row.clicks)
+        );
+      }
+    });
+
+    let totalViews = 0;
+    let totalClicks = 0;
+    const allButtons = new Map();
+    totalsByPlatform.forEach((entry) => {
+      totalViews += entry.views;
+      totalClicks += entry.clicks;
+      entry.buttons.forEach((clicks, button) => {
+        allButtons.set(button, numberValue(allButtons.get(button)) + clicks);
+      });
+    });
+    const topButton = [...allButtons.entries()].sort((a, b) => b[1] - a[1])[0];
+    elements.bioViews.textContent = full(totalViews);
+    elements.bioClicks.textContent = full(totalClicks);
+    elements.bioRate.textContent = percent(totalViews ? totalClicks / totalViews * 100 : 0);
+    elements.bioTop.textContent = topButton?.[0] || "No clicks yet";
+
+    ["instagram", "tiktok", "facebook", "youtube"].forEach((platform) => {
+      const entry = totalsByPlatform.get(platform) || { views: 0, clicks: 0, buttons: new Map() };
+      const best = [...entry.buttons.entries()].sort((a, b) => b[1] - a[1])[0];
+      const rate = entry.views ? entry.clicks / entry.views * 100 : 0;
+      const item = document.createElement("article");
+      item.className = "bio-platform-row";
+      item.innerHTML = `
+        <div class="bio-platform-name"><i>${platformMark(platform)}</i><strong>${PLATFORM_LABELS[platform]}</strong></div>
+        <div><span>Visits</span><strong>${full(entry.views)}</strong></div>
+        <div><span>Clicks</span><strong>${full(entry.clicks)}</strong></div>
+        <div><span>Clicks per visit</span><strong>${percent(rate)}</strong></div>
+        <div><span>Most chosen</span><strong>${best?.[0] || "-"}</strong></div>`;
+      elements.bioList.append(item);
+    });
+  }
+
+  function contentType(platform, item) {
+    if (platform === "shorts") return "Short";
+    if (platform === "youtube") return "Video";
+    if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
+    return "Facebook post";
+  }
+
+  function contentUrl(platform, item) {
+    if (platform === "youtube" || platform === "shorts") {
+      return `https://www.youtube.com/watch?v=${encodeURIComponent(item.id)}`;
+    }
+    return item.permalink || "#";
+  }
+
+  function contentTitle(item) {
+    return (item.title || item.caption || "Untitled content").split("\n")[0];
+  }
+
+  function contentPerformance(item) {
+    return numberValue(item.views || item.reach) +
+      numberValue(item.likes) * 3 +
+      numberValue(item.comments) * 8 +
+      numberValue(item.shares) * 10 +
+      numberValue(item.saved) * 10;
+  }
+
+  function renderContent(platform, data) {
+    elements.content.replaceChildren();
+    const content = [...data.content].sort((a, b) =>
+      contentPerformance(b) - contentPerformance(a)
+    );
+    elements.drillEmpty.hidden = content.length > 0;
+    if (!content.length) {
+      elements.drillEmpty.innerHTML = platform === "tiktok"
+        ? "<strong>TikTok is coming soon</strong><p>The drill-down is ready and will populate when the developer connection is complete.</p>"
+        : "<strong>No content returned</strong><p>Refresh the platform after new content is published.</p>";
+      return;
+    }
+
+    const maximum = Math.max(...content.map(contentPerformance), 1);
+    content.forEach((item, index) => {
+      const card = document.createElement("a");
+      card.className = "drilldown-content-row";
+      card.href = contentUrl(platform, item);
+      card.target = "_blank";
+      card.rel = "noreferrer";
+      const views = numberValue(item.views || item.reach);
+      const engagement = views
+        ? (numberValue(item.likes) + numberValue(item.comments) +
+          numberValue(item.shares) + numberValue(item.saved)) / views * 100
+        : 0;
+      card.innerHTML = `
+        <span class="content-rank">${String(index + 1).padStart(2, "0")}</span>
+        <img src="${item.thumbnail || ""}" alt="">
+        <div class="content-row-copy">
+          <small>${contentType(platform, item)}</small>
+          <strong>${contentTitle(item).slice(0, 125)}</strong>
+          <p>${item.publishedAt ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(item.publishedAt)) : "Date unavailable"}</p>
+        </div>
+        <div class="content-row-metrics">
+          <span><strong>${compact(views)}</strong>${item.views ? "views" : "reached"}</span>
+          <span><strong>${compact(item.likes)}</strong>${platform === "facebook" ? "reactions" : "likes"}</span>
+          <span><strong>${percent(engagement)}</strong>interaction rate</span>
+        </div>
+        <i class="content-performance-line"><b style="width:${Math.max(contentPerformance(item) / maximum * 100, 2)}%"></b></i>`;
+      elements.content.append(card);
+    });
+  }
+
+  function insightCards(platform, data) {
+    const content = data.content || [];
+    const top = bestContent(platform, data);
+    const typeGroups = new Map();
+    content.forEach((item) => {
+      const type = contentType(platform, item);
+      if (!typeGroups.has(type)) typeGroups.set(type, []);
+      typeGroups.get(type).push(item);
+    });
+    const bestType = [...typeGroups.entries()]
+      .map(([type, items]) => ({
+        type,
+        average: items.length
+          ? items.reduce((sum, item) => sum + contentPerformance(item), 0) / items.length
+          : 0
+      }))
+      .sort((a, b) => b.average - a.average)[0];
+
+    const dated = content.filter((item) => item.publishedAt);
+    const days = new Map();
+    dated.forEach((item) => {
+      const day = new Intl.DateTimeFormat("en-GB", { weekday: "long" })
+        .format(new Date(item.publishedAt));
+      if (!days.has(day)) days.set(day, []);
+      days.get(day).push(item);
+    });
+    const bestDay = [...days.entries()]
+      .map(([day, items]) => ({
+        day,
+        average: items.reduce((sum, item) => sum + contentPerformance(item), 0) / items.length
+      }))
+      .sort((a, b) => b.average - a.average)[0];
+
+    if (platform === "tiktok") {
+      return [
+        ["Connection", "Coming soon", "The interface is ready for TikTok's video, audience and engagement data."],
+        ["Planned signal", "Retention first", "The drill-down will prioritise watch time and completion over raw views."],
+        ["Cross-platform", "Compare short-form", "TikTok will sit beside Reels and Shorts for like-for-like creative testing."]
+      ];
+    }
+
+    return [
+      [
+        "Strongest content",
+        top ? contentTitle(top).slice(0, 52) : "Building signal",
+        top
+          ? `${compact(top.views || top.reach)} ${top.views ? "views" : "reached"} with ${compact(top.comments)} comments.`
+          : "More content is needed before a pattern can be called."
+      ],
+      [
+        "Best format",
+        bestType?.type || "Not enough data",
+        bestType
+          ? `${bestType.type} currently produces the strongest average performance signal.`
+          : "Format comparison begins after multiple content types are measured."
+      ],
+      [
+        "Publishing pattern",
+        bestDay?.day || "Not enough data",
+        bestDay
+          ? `${bestDay.day} has the strongest average among the recent posts available. Treat this as a test, not a rule.`
+          : "Posting-day guidance appears after enough dated content is available."
+      ]
+    ];
+  }
+
+  function renderDrilldown(platform) {
+    const data = platformData(platform);
+    elements.eyebrow.textContent = "Platform intelligence";
+    elements.title.textContent = PLATFORM_LABELS[platform];
+    elements.description.textContent = {
+      youtube: "Long-form video performance, audience growth and the subjects worth developing.",
+      shorts: "Short-form reach, interaction and the creative ideas worth repeating.",
+      instagram: "Reels, posts and the signals converting reach into a returning audience.",
+      facebook: "Page growth, post response and Ella's community activity on Facebook.",
+      tiktok: "A retention-led short-form view, ready for the TikTok API connection."
+    }[platform];
+    elements.updated.textContent = data.checkedAt
+      ? `Updated ${formatDate(data.checkedAt)}`
+      : data.comingSoon ? "Coming soon" : "Awaiting data";
+
+    elements.drillHero.className = `drilldown-hero platform-${platform}`;
+    elements.drillHero.innerHTML = `
+      <div class="drilldown-platform-mark">${platformMark(platform)}</div>
+      <div>
+        <span>${data.comingSoon ? "Connection prepared" : data.connected ? "Live platform" : "Not connected"}</span>
+        <strong>${data.connected ? compact(data.audience) : "-"}</strong>
+        <p>${data.audienceLabel}</p>
+      </div>
+      <div class="drilldown-hero-signal">
+        <span>Current signal</span>
+        <strong>${data.comingSoon ? "Coming Soon" : data.connected ? `${compact(data.reach)} ${data.reachLabel}` : "Data unavailable"}</strong>
+        <p>${data.comingSoon ? "No invented data. This will activate when TikTok is connected." : metricDelta(data.audienceDelta, data.audienceLabel)}</p>
+      </div>`;
+
+    const metrics = [
+      [data.audienceLabel, data.connected ? compact(data.audience) : "-", metricDelta(data.audienceDelta, data.audienceLabel)],
+      [data.reachLabel, data.connected ? compact(data.reach) : "-", data.reachDelta == null ? "Current measured period" : metricDelta(data.reachDelta, "reach")],
+      [data.outputLabel, data.connected ? full(data.output) : "-", "Current content set"],
+      ["Interaction rate", data.connected ? percent(data.engagement) : "-", "Likes, comments, saves and shares"]
+    ];
+    elements.drillMetrics.innerHTML = metrics.map(([label, value, note]) =>
+      `<article><span>${label}</span><strong>${value}</strong><small>${note}</small></article>`
+    ).join("");
+
+    elements.drillInsights.innerHTML = insightCards(platform, data)
+      .map(([label, title, copy]) =>
+        `<article class="social-premium-panel"><span>${label}</span><strong>${title}</strong><p>${copy}</p></article>`
+      ).join("");
+    elements.contentEyebrow.textContent = platform === "tiktok" ? "Prepared view" : "Content performance";
+    elements.contentTitle.textContent = platform === "shorts"
+      ? "Shorts this month"
+      : platform === "instagram"
+        ? "Posts and Reels this month"
+        : platform === "facebook"
+          ? "Facebook this month"
+          : platform === "tiktok"
+            ? "TikTok content"
+            : "Recent long-form videos";
+    elements.contentSummary.textContent = data.connected
+      ? `${data.content.length} items measured`
+      : data.comingSoon ? "Coming soon" : "Awaiting data";
+    renderContent(platform, data);
+  }
+
+  function openDrilldown(platform) {
+    state.activePlatform = platform;
+    elements.overview.hidden = true;
+    elements.drilldown.hidden = false;
+    renderDrilldown(platform);
+    history.replaceState(null, "", `#${platform}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function closeDrilldown() {
+    state.activePlatform = null;
+    elements.overview.hidden = false;
+    elements.drilldown.hidden = true;
+    elements.eyebrow.textContent = "Audience intelligence";
+    elements.title.textContent = "Growth overview";
+    elements.description.textContent =
+      "A clear view of what is building Ella's audience, and what to do next.";
+    renderOverview();
+    history.replaceState(null, "", location.pathname);
+  }
+
+  function renderOverview() {
+    renderPlatformCards();
+    renderMomentum();
+    renderActions();
+    renderBio();
+    const dates = [
+      state.youtube?.current?.checkedAt,
+      state.meta?.current?.checkedAt
+    ].filter(Boolean).sort();
+    elements.updated.textContent = dates.length
+      ? `Latest data ${formatDate(dates[dates.length - 1])}`
+      : "Awaiting first refresh";
+  }
+
+  async function ensureSupabase() {
+    if (state.supabase) return state.supabase;
+    if (!config.supabaseUrl || !config.supabaseAnonKey) return null;
+    if (!window.supabase) {
+      await new Promise((resolve, reject) => {
+        const existing = document.querySelector("script[data-social-supabase]");
+        if (existing) {
+          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("error", reject, { once: true });
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+        script.dataset.socialSupabase = "true";
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.append(script);
+      });
+    }
+    state.supabase = window.supabase.createClient(
+      config.supabaseUrl,
+      config.supabaseAnonKey
+    );
+    return state.supabase;
+  }
+
+  async function loadCloudSnapshots() {
+    const client = await ensureSupabase();
+    if (!client) return;
+    const { data, error } = await client.rpc("get_social_snapshots", { p_days: 400 });
+    if (error) return;
+    const youtubeRows = (data || []).filter((row) => row.platform === "youtube");
+    const metaRows = (data || []).filter((row) => row.platform === "meta");
+    if (youtubeRows.length) {
+      const current = youtubeRows[youtubeRows.length - 1].payload;
+      state.youtube = {
+        current,
+        previous: youtubeRows.length > 1 ? youtubeRows[youtubeRows.length - 2].payload : null,
+        history: youtubeRows.map((row) => row.payload)
+      };
+    }
+    if (metaRows.length) {
+      const current = metaRows[metaRows.length - 1].payload;
+      state.meta = {
+        current,
+        previous: metaRows.length > 1 ? metaRows[metaRows.length - 2].payload : null,
+        history: metaRows.map((row) => row.payload)
+      };
+    }
+  }
+
+  async function loadBio() {
+    const client = await ensureSupabase();
+    if (!client) return;
+    const days = state.bioPeriod === "month" ? 0 : Number(state.bioPeriod);
+    const { data, error } = await client.rpc("get_bio_link_summary", { p_days: days });
+    if (!error) state.bio = data;
+  }
+
+  async function fetchSnapshot(url, label) {
+    if (!url) throw new Error(`${label} is not configured.`);
+    const endpoint = new URL(url);
+    endpoint.searchParams.set("refresh", String(Date.now()));
+    const response = await fetch(endpoint, { cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok || !payload.snapshot) {
+      throw new Error(payload?.error || `${label} data is unavailable.`);
+    }
+    return payload.snapshot;
+  }
+
+  function setMessage(text, stateName = "") {
+    elements.message.textContent = text;
+    elements.message.dataset.state = stateName;
+  }
+
+  async function refreshAll() {
+    if (state.refreshing) return;
+    state.refreshing = true;
+    elements.refresh.disabled = true;
+    elements.refresh.textContent = "Refreshing";
+    setMessage("Fetching YouTube, Instagram and Facebook...", "loading");
+    const results = await Promise.allSettled([
+      fetchSnapshot(config.youtubeStatsUrl, "YouTube"),
+      fetchSnapshot(config.instagramStatsUrl, "Instagram and Facebook")
+    ]);
+    const errors = [];
+
+    if (results[0].status === "fulfilled") {
+      const current = results[0].value;
+      state.youtube = {
+        current,
+        previous: state.youtube?.current || null,
+        history: appendHistory(state.youtube?.history, current)
+      };
+      localStorage.setItem(LOCAL_YOUTUBE_KEY, JSON.stringify(state.youtube));
+    } else {
+      errors.push(results[0].reason?.message || "YouTube failed");
+    }
+    if (results[1].status === "fulfilled") {
+      const current = results[1].value;
+      state.meta = {
+        current,
+        previous: state.meta?.current || null,
+        history: appendHistory(state.meta?.history, current)
+      };
+      localStorage.setItem(LOCAL_META_KEY, JSON.stringify(state.meta));
+    } else {
+      errors.push(results[1].reason?.message || "Instagram and Facebook failed");
+    }
+    await loadBio();
+    if (state.activePlatform) renderDrilldown(state.activePlatform);
+    else renderOverview();
+    setMessage(
+      errors.length
+        ? `Updated what was available. ${errors.join(" ")}`
+        : "All connected platforms are up to date.",
+      errors.length ? "error" : "success"
+    );
+    state.refreshing = false;
+    elements.refresh.disabled = false;
+    elements.refresh.textContent = "Refresh all";
+  }
+
+  elements.refresh.addEventListener("click", refreshAll);
+  elements.back.addEventListener("click", closeDrilldown);
+  document.querySelectorAll("[data-bio-period]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      document.querySelectorAll("[data-bio-period]").forEach((item) =>
+        item.classList.toggle("active", item === button)
+      );
+      state.bioPeriod = button.dataset.bioPeriod || "month";
+      await loadBio();
+      renderBio();
+    });
   });
 
-  refreshButton.disabled = false;
-  render(savedData);
+  async function initialise() {
+    renderOverview();
+    await Promise.allSettled([loadCloudSnapshots(), loadBio()]);
+    const requestedPlatform = location.hash.slice(1);
+    if (PLATFORM_ORDER.includes(requestedPlatform)) openDrilldown(requestedPlatform);
+    else renderOverview();
 
-  const lastCheckTime = savedData?.current?.checkedAt
-    ? new Date(savedData.current.checkedAt).getTime()
-    : 0;
-  const refreshAge = Date.now() - lastCheckTime;
-  if (refreshAge > 12 * 60 * 60 * 1000) {
-    refreshYouTube();
+    const newest = Math.max(
+      new Date(state.youtube?.current?.checkedAt || 0).getTime(),
+      new Date(state.meta?.current?.checkedAt || 0).getTime()
+    );
+    if (!newest || Date.now() - newest > 12 * 60 * 60 * 1000) refreshAll();
   }
+
+  initialise();
 })();

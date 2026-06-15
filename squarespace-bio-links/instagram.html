@@ -1,0 +1,150 @@
+<div id="ella-bio-links-instagram"></div>
+<style>
+  #ella-bio-links-instagram {
+    --ink: #21150e;
+    --paper: #f3e6b7;
+    --gold: #e4cf87;
+    --soft: #f8efcf;
+    background:
+      radial-gradient(circle at 50% -12%, rgba(255,255,255,.7), transparent 34%),
+      linear-gradient(180deg, var(--gold), var(--paper));
+    box-sizing: border-box;
+    color: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    min-height: 100svh;
+    padding: 42px 18px 56px;
+  }
+  #ella-bio-links-instagram * { box-sizing: border-box; }
+  #ella-bio-links-instagram .ella-links-card {
+    margin: 0 auto;
+    max-width: 590px;
+    text-align: center;
+  }
+  #ella-bio-links-instagram .ella-links-avatar {
+    border: 3px solid var(--ink);
+    border-radius: 50%;
+    display: block;
+    height: 108px;
+    margin: 0 auto 18px;
+    object-fit: cover;
+    object-position: 50% 32%;
+    width: 108px;
+  }
+  #ella-bio-links-instagram h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(2.2rem, 9vw, 3.7rem);
+    letter-spacing: -.04em;
+    line-height: .95;
+    margin: 0 0 28px;
+  }
+  #ella-bio-links-instagram .ella-links-list {
+    display: grid;
+    gap: 13px;
+  }
+  #ella-bio-links-instagram .ella-link {
+    align-items: center;
+    background: var(--soft);
+    border: 2px solid var(--ink);
+    box-shadow: 5px 5px 0 var(--ink);
+    color: var(--ink);
+    display: grid;
+    font-size: .94rem;
+    font-weight: 800;
+    grid-template-columns: 44px 1fr 44px;
+    letter-spacing: .045em;
+    min-height: 66px;
+    padding: 9px 10px;
+    text-decoration: none;
+    text-transform: uppercase;
+    transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  }
+  #ella-bio-links-instagram .ella-link:hover,
+  #ella-bio-links-instagram .ella-link:focus-visible {
+    background: #fff7dc;
+    box-shadow: 2px 2px 0 var(--ink);
+    transform: translate(3px, 3px);
+  }
+  #ella-bio-links-instagram .ella-link-icon {
+    align-items: center;
+    border: 1px solid rgba(33,21,14,.36);
+    border-radius: 50%;
+    display: flex;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: .75rem;
+    height: 36px;
+    justify-content: center;
+    width: 36px;
+  }
+  #ella-bio-links-instagram .ella-link-icon img {
+    height: 19px;
+    width: 19px;
+  }
+  #ella-bio-links-instagram .ella-link-arrow { font-size: 1.25rem; }
+  @media (max-width: 520px) {
+    #ella-bio-links-instagram { padding-top: 30px; }
+    #ella-bio-links-instagram .ella-link { box-shadow: 4px 4px 0 var(--ink); }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const root = document.querySelector("#ella-bio-links-instagram");
+  const platform = "instagram";
+  const supabaseClient = window.supabase
+    ? window.supabase.createClient(
+        "https://hmwnkhgsocdevehebjpq.supabase.co",
+        "sb_publishable_5RLD78oK3TMo-SnPf1tljA_9d7-zuHn"
+      )
+    : null;
+  const destinations = [
+    { name: "WhatsApp Community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/21150E" },
+    { name: "Next Gig Tickets", url: "https://wegottickets.com/f/21926", icon: "LIVE" },
+    { name: "SoundCloud", url: "https://tr.ee/vFU4yDVL81", logo: "https://cdn.simpleicons.org/soundcloud/21150E" },
+    { name: "Spotify", url: "https://tr.ee/Z-ltGrkEZ1", logo: "https://cdn.simpleicons.org/spotify/21150E" },
+    { name: "Apple Music", url: "https://music.apple.com/gb/album/taking-shape/1840436179", logo: "https://cdn.simpleicons.org/applemusic/21150E" }
+  ];
+
+  function trackedUrl(rawUrl) {
+    const url = new URL(rawUrl);
+    url.searchParams.set("utm_source", platform);
+    url.searchParams.set("utm_medium", "bio");
+    return url.toString();
+  }
+
+  function record(eventType, buttonName = null) {
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from("bio_link_clicks").insert({
+      platform,
+      event_type: eventType,
+      button_name: buttonName
+    });
+  }
+
+  root.innerHTML = `
+    <main class="ella-links-card">
+      <img class="ella-links-avatar" src="https://images.squarespace-cdn.com/content/v1/691c7aea460cb8492f028449/27d985fe-0c41-4c52-98ed-e1488718fec3/Ella-Gig-2026-8_websize.jpeg?format=750w" alt="Ella Crow">
+      <h1>Ella Crow</h1>
+      <div class="ella-links-list"></div>
+    </main>`;
+
+  const list = root.querySelector(".ella-links-list");
+  destinations.forEach((destination) => {
+    const link = document.createElement("a");
+    link.className = "ella-link";
+    link.href = trackedUrl(destination.url);
+    const icon = destination.logo
+      ? `<img src="${destination.logo}" alt="">`
+      : destination.icon;
+    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span>${destination.name}</span><span class="ella-link-arrow">&rarr;</span>`;
+    link.addEventListener("click", async (event) => {
+      event.preventDefault();
+      const target = link.href;
+      await Promise.race([record("click", destination.name), new Promise(resolve => setTimeout(resolve, 650))]);
+      window.location.assign(target);
+    });
+    list.append(link);
+  });
+
+  record("view");
+})();
+</script>

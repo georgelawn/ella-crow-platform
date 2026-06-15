@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Ella Crow | Social Tracker</title>
-    <link rel="stylesheet" href="styles.css?v=13">
+    <title>Ella Crow | Social</title>
+    <link rel="stylesheet" href="styles.css?v=14">
   </head>
   <body>
     <header class="topbar">
       <div>
         <p class="eyebrow">Ella Crow Management</p>
-        <h1>Social Tracker</h1>
+        <h1>Social</h1>
       </div>
       <div class="header-actions">
         <a class="ghost-button nav-link" href="index.html">Gigs</a>
@@ -25,165 +25,99 @@
       </div>
     </header>
 
-    <main class="shell social-shell">
-      <section class="social-platform-tabs" aria-label="Social platforms">
-        <button class="platform-tab active" data-view="youtube" type="button">
-          <span class="platform-mark youtube-mark">YT</span>
-          <span>YouTube</span>
-          <small>Long-form videos</small>
-        </button>
-        <button class="platform-tab" data-view="shorts" type="button">
-          <span class="platform-mark shorts-mark">S</span>
-          <span>YouTube Shorts</span>
-          <small>Short-form videos</small>
-        </button>
-        <button class="platform-tab" data-view="instagram" type="button">
-          <span class="platform-mark instagram-mark">IG</span>
-          <span>Instagram</span>
-          <small>Posts and Reels</small>
-        </button>
-        <button class="platform-tab" data-view="facebook" type="button">
-          <span class="platform-mark facebook-mark">FB</span>
-          <span>Facebook</span>
-          <small>Page performance</small>
-        </button>
-        <button class="platform-tab" type="button" disabled>
-          <span class="platform-mark tiktok-mark">TT</span>
-          <span>TikTok</span>
-          <small>Coming later</small>
-        </button>
-      </section>
-
-      <section class="social-hero">
+    <main class="shell social-command">
+      <section class="social-command-head">
         <div>
-          <p class="eyebrow">Audience Pulse</p>
-          <h2 id="channelName">YouTube overview</h2>
-          <p class="social-subtitle" id="channelDescription">
-            Ella's YouTube growth, audience momentum and recent video performance.
-          </p>
+          <p class="eyebrow" id="socialEyebrow">Audience intelligence</p>
+          <h2 id="socialTitle">Growth overview</h2>
+          <p id="socialDescription">A clear view of what is building Ella's audience, and what to do next.</p>
         </div>
-        <div class="social-refresh">
-          <span id="socialLastUpdated">Not connected</span>
-          <button class="primary-button" id="refreshYouTubeButton" type="button" disabled>Refresh YouTube</button>
+        <div class="social-command-actions">
+          <span id="socialLastUpdated">Loading live data</span>
+          <button class="primary-button" id="refreshSocialButton" type="button">Refresh all</button>
         </div>
       </section>
 
-      <section class="summary-grid social-summary" aria-label="YouTube summary">
-        <article>
-          <span id="subscriberCount">-</span>
-          <p>Subscribers</p>
-          <small id="subscriberDelta">Monthly baseline not started</small>
-        </article>
-        <article>
-          <span id="channelViewCount">-</span>
-          <p id="viewCountLabel">Recent video views</p>
-          <small id="viewDelta">Monthly baseline not started</small>
-        </article>
-        <article>
-          <span id="videoCount">-</span>
-          <p id="videoCountLabel">Recent uploads</p>
-          <small id="videoDelta">Monthly baseline not started</small>
-        </article>
-        <article>
-          <span id="recentViewCount">-</span>
-          <p id="averageViewLabel">Average views</p>
-          <small id="recentViewNote">Long-form performance</small>
-        </article>
+      <p class="social-command-message" id="socialMessage" role="status"></p>
+
+      <section id="socialOverview">
+        <section class="social-platform-grid" id="platformOverviewCards" aria-label="Platform overview"></section>
+
+        <section class="social-overview-grid">
+          <article class="social-premium-panel social-momentum-panel">
+            <div class="social-panel-heading">
+              <div>
+                <p class="eyebrow">Momentum</p>
+                <h2>Where growth is moving</h2>
+              </div>
+              <span class="social-status-pill" id="momentumStatus">Building baseline</span>
+            </div>
+            <div class="momentum-feature">
+              <strong id="momentumHeadline">Connecting the picture</strong>
+              <p id="momentumCopy">The strongest signal will appear once the latest platform data is loaded.</p>
+            </div>
+            <div class="momentum-bars" id="momentumBars"></div>
+          </article>
+
+          <article class="social-premium-panel social-actions-panel">
+            <div class="social-panel-heading">
+              <div>
+                <p class="eyebrow">Next Moves</p>
+                <h2>What to do now</h2>
+              </div>
+            </div>
+            <div class="social-action-list" id="growthActions"></div>
+          </article>
+        </section>
+
+        <section class="social-premium-panel bio-performance-panel">
+          <div class="social-panel-heading bio-panel-heading">
+            <div>
+              <p class="eyebrow">Bio Links</p>
+              <h2>Attention into action</h2>
+              <p>Visits to Ella's platform link pages and the destinations people choose next.</p>
+            </div>
+            <div class="bio-period-toggle" aria-label="Bio link reporting period">
+              <button class="active" data-bio-period="month" type="button">This month</button>
+              <button data-bio-period="30" type="button">30 days</button>
+              <button data-bio-period="90" type="button">90 days</button>
+            </div>
+          </div>
+          <div class="bio-summary-strip">
+            <div><span>Page visits</span><strong id="bioTotalViews">-</strong></div>
+            <div><span>Button clicks</span><strong id="bioTotalClicks">-</strong></div>
+            <div><span>Clicks per visit</span><strong id="bioClickRate">-</strong></div>
+            <div><span>Top destination</span><strong id="bioTopButton">-</strong></div>
+          </div>
+          <div class="bio-platform-list" id="bioPlatformList"></div>
+          <div class="social-empty-state" id="bioEmptyState" hidden>
+            <strong>Tracking is ready</strong>
+            <p>Bio-link visits and clicks will appear after the final Supabase reporting function is added.</p>
+          </div>
+        </section>
       </section>
 
-      <section class="growth-dashboard" aria-label="Social growth insights">
-        <article class="pulse-card">
-          <div class="pulse-card-heading">
+      <section id="socialDrilldown" hidden>
+        <button class="social-back-button" id="socialBackButton" type="button">&larr; All platforms</button>
+        <section class="drilldown-hero" id="drilldownHero"></section>
+        <section class="drilldown-metrics" id="drilldownMetrics"></section>
+        <section class="drilldown-insight-grid" id="drilldownInsights"></section>
+        <section class="social-premium-panel drilldown-content-panel">
+          <div class="social-panel-heading">
             <div>
-              <p class="eyebrow">Overall Momentum</p>
-              <h2>Social pulse</h2>
+              <p class="eyebrow" id="contentEyebrow">Content performance</p>
+              <h2 id="contentTitle">Recent content</h2>
             </div>
-            <span class="pulse-status" id="pulseStatus">Building baseline</span>
+            <span id="contentSummary"></span>
           </div>
-          <div class="social-pulse-score">
-            <div class="pulse-ring" id="pulseRing">
-              <span id="pulseScore">-</span>
-            </div>
-            <div>
-              <strong id="pulseHeadline">Waiting for first snapshot</strong>
-              <p id="pulseExplanation">
-                This score will blend audience growth, views and engagement across every connected platform.
-              </p>
-            </div>
-          </div>
-          <div class="pulse-breakdown">
-            <span><strong id="audienceMomentum">-</strong> Audience</span>
-            <span><strong id="viewMomentum">-</strong> Reach</span>
-            <span><strong id="likeMomentum">-</strong> Like rate</span>
-            <span><strong id="commentMomentum">-</strong> Comment rate</span>
-          </div>
-        </article>
-
-        <article class="growth-card trend-card">
-          <div class="growth-card-heading">
-            <div>
-              <p class="eyebrow">Month On Month</p>
-              <h2>Growth curve</h2>
-            </div>
-            <span id="growthPeriod">Waiting for data</span>
-          </div>
-          <div class="growth-chart" id="growthChart" aria-label="Monthly channel view growth chart"></div>
-          <div class="trend-legend">
-            <span><i class="legend-youtube"></i>YouTube views gained</span>
-            <span id="trendFutureLabel">Shorts tracked separately</span>
-          </div>
-        </article>
-
-        <article class="growth-card signal-card">
-          <div class="growth-card-heading">
-            <div>
-              <p class="eyebrow">Content Signal</p>
-              <h2>What is landing</h2>
-            </div>
-          </div>
-          <div class="signal-feature">
-            <span>Top recent video</span>
-            <strong id="topVideoTitle">No video data yet</strong>
-            <p id="topVideoSignal">The first snapshot will identify the strongest content signal.</p>
-          </div>
-          <div class="signal-grid">
-            <div>
-              <span>Like rate</span>
-              <strong id="likeRate">-</strong>
-            </div>
-            <div>
-              <span>Comment rate</span>
-              <strong id="commentRate">-</strong>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="social-workspace social-workspace-wide">
-        <section class="gig-board social-board" aria-label="YouTube content performance">
-          <div class="board-toolbar">
-            <div>
-              <p class="eyebrow">Content Performance</p>
-              <h2>Recent uploads</h2>
-            </div>
-            <div class="social-total">
-              <span id="boardAverageLabel">Long-form average</span>
-              <strong id="averageRecentViews">-</strong>
-            </div>
-          </div>
-
-          <p class="social-message social-board-message" id="socialMessage" role="status"></p>
-          <div class="social-empty" id="socialEmptyState">
-            <strong>No YouTube data yet</strong>
-            <p>The first performance snapshot will appear when the secure YouTube connection is ready.</p>
-          </div>
-          <div class="video-performance-list" id="videoPerformanceList"></div>
+          <div class="drilldown-content-list" id="drilldownContent"></div>
+          <div class="social-empty-state" id="drilldownEmpty" hidden></div>
         </section>
       </section>
     </main>
 
     <script src="cloud-config.js?v=6"></script>
     <script src="app-cloud.js?v=6"></script>
-    <script src="social.js?v=10"></script>
+    <script src="social.js?v=11"></script>
   </body>
 </html>
