@@ -2,10 +2,9 @@
   const config = window.ELLA_CLOUD_CONFIG || {};
   const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
-  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
+  const PLATFORM_ORDER = ["youtube", "instagram", "facebook", "tiktok"];
   const PLATFORM_LABELS = {
     youtube: "YouTube",
-    shorts: "YouTube Shorts",
     instagram: "Instagram",
     facebook: "Facebook",
     tiktok: "TikTok"
@@ -30,15 +29,15 @@
     message: document.querySelector("#socialMessage"),
     refresh: document.querySelector("#refreshSocialButton"),
     cards: document.querySelector("#platformOverviewCards"),
-    momentumStatus: document.querySelector("#momentumStatus"),
-    momentumHeadline: document.querySelector("#momentumHeadline"),
-    momentumCopy: document.querySelector("#momentumCopy"),
-    momentumBars: document.querySelector("#momentumBars"),
-    actions: document.querySelector("#growthActions"),
+    viewShareDonut: document.querySelector("#viewShareDonut"),
+    viewShareLegend: document.querySelector("#viewShareLegend"),
+    totalPlatformViews: document.querySelector("#totalPlatformViews"),
+    weekdayPerformance: document.querySelector("#weekdayPerformance"),
     bioViews: document.querySelector("#bioTotalViews"),
     bioClicks: document.querySelector("#bioTotalClicks"),
     bioRate: document.querySelector("#bioClickRate"),
     bioTop: document.querySelector("#bioTopButton"),
+    bioDestinationTable: document.querySelector("#bioDestinationTable"),
     bioList: document.querySelector("#bioPlatformList"),
     bioEmpty: document.querySelector("#bioEmptyState"),
     back: document.querySelector("#socialBackButton"),
@@ -96,6 +95,11 @@
     return monthKey(value) === monthKey(comparison);
   }
 
+  function shiftedMonth(offset) {
+    const date = new Date();
+    return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1));
+  }
+
   function appendHistory(history, snapshot) {
     const next = Array.isArray(history) ? [...history] : [];
     const day = new Date(snapshot.checkedAt).toISOString().slice(0, 10);
@@ -126,14 +130,21 @@
       numberValue(video?.durationSeconds) <= 180;
   }
 
-  function youtubeContent(platform) {
+  function youtubeContent(platform = "youtube") {
     const videos = state.youtube?.current?.videos || [];
-    if (platform === "shorts") {
-      return videos.filter((video) =>
-        isShort(video) && (!video.publishedAt || sameMonth(video.publishedAt))
-      );
-    }
-    return videos.filter((video) => !isShort(video));
+    if (platform === "shorts") return videos.filter((video) => isShort(video));
+    return videos;
+  }
+
+  function contentForMonth(platform, offset = 0) {
+    const comparison = shiftedMonth(offset);
+    let content = [];
+    if (platform === "youtube") content = youtubeContent();
+    if (platform === "instagram") content = state.meta?.current?.media || [];
+    if (platform === "facebook") content = state.meta?.current?.facebook?.posts || [];
+    return content.filter((item) =>
+      item.publishedAt && sameMonth(item.publishedAt, comparison)
+    );
   }
 
   function totals(items, reachField = "views") {
@@ -159,31 +170,28 @@
   }
 
   function platformData(platform) {
-    if (platform === "youtube" || platform === "shorts") {
+    if (platform === "youtube") {
       const current = state.youtube?.current;
-      const content = youtubeContent(platform);
+      const content = contentForMonth("youtube");
       const total = totals(content);
       const rates = engagementRates(content);
-      const base = baseline(state.youtube, platform);
-      const baseContent = (base?.videos || []).filter((video) =>
-        platform === "shorts" ? isShort(video) : !isShort(video)
-      );
-      const baseViews = totals(baseContent).views;
+      const lastMonthContent = contentForMonth("youtube", -1);
+      const lastMonthViews = totals(lastMonthContent).views;
       return {
         connected: Boolean(current),
-        audience: numberValue(current?.channel?.subscribers),
-        audienceLabel: "subscribers",
         reach: total.views,
-        reachLabel: platform === "shorts" ? "Shorts views" : "video views",
+        reachLabel: "views this month",
+        lastMonthViews,
+        hasLastMonth: lastMonthContent.length > 0,
         output: content.length,
-        outputLabel: platform === "shorts" ? "Shorts this month" : "recent videos",
+        outputLabel: "videos this month",
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
-        audienceDelta: base
-          ? numberValue(current?.channel?.subscribers) - numberValue(base.channel?.subscribers)
-          : null,
-        reachDelta: base ? total.views - baseViews : null,
+        audience: numberValue(current?.channel?.subscribers),
+        audienceLabel: "subscribers",
+        audienceDelta: null,
+        reachDelta: lastMonthContent.length ? total.views - lastMonthViews : null,
         content,
         checkedAt: current?.checkedAt
       };
@@ -200,7 +208,9 @@
         audience: numberValue(current?.account?.followers),
         audienceLabel: "followers",
         reach: numberValue(current?.month?.reach) || measuredReach,
-        reachLabel: "accounts reached",
+        reachLabel: "views this month",
+        lastMonthViews: 0,
+        hasLastMonth: false,
         output: numberValue(current?.month?.posts),
         outputLabel: "posts and Reels",
         engagement: rates.engagement,
@@ -226,7 +236,9 @@
         audience: numberValue(facebook?.page?.followers),
         audienceLabel: "page followers",
         reach: numberValue(facebook?.month?.views) || totals(posts).views,
-        reachLabel: "content views",
+        reachLabel: "views this month",
+        lastMonthViews: 0,
+        hasLastMonth: false,
         output: numberValue(facebook?.month?.posts),
         outputLabel: "posts this month",
         engagement: rates.engagement,
@@ -250,6 +262,8 @@
       audienceLabel: "followers",
       reach: 0,
       reachLabel: "video views",
+      lastMonthViews: 0,
+      hasLastMonth: false,
       output: 0,
       outputLabel: "posts",
       engagement: 0,
@@ -264,7 +278,6 @@
   function platformMark(platform) {
     return {
       youtube: "YT",
-      shorts: "S",
       instagram: "IG",
       facebook: "FB",
       tiktok: "TT"
@@ -291,13 +304,15 @@
           <span>${data.comingSoon ? "Coming soon" : data.connected ? "Live" : "Connect"}</span>
         </span>
         <strong>${PLATFORM_LABELS[platform]}</strong>
-        <span class="platform-card-number">${data.connected ? compact(data.audience) : "-"}</span>
-        <small>${data.audienceLabel}</small>
+        <span class="platform-card-number">${data.connected ? compact(data.reach) : "-"}</span>
+        <small>views this month</small>
         <span class="platform-card-signal">${
           data.comingSoon
             ? "API connection prepared"
             : data.connected
-              ? `${compact(data.reach)} ${data.reachLabel}`
+              ? data.hasLastMonth
+                ? `${compact(data.lastMonthViews)} last month · ${data.reachDelta >= 0 ? "+" : ""}${compact(data.reachDelta)}`
+                : "Last-month baseline unavailable"
               : "Data unavailable"
         }</span>
         <b>Open insight &rarr;</b>`;
@@ -306,50 +321,47 @@
     });
   }
 
-  function momentumScore(data) {
-    if (!data.connected) return 0;
-    const audienceSignal = data.audienceDelta == null
-      ? 8
-      : Math.min(Math.max(data.audienceDelta, 0) * 3, 28);
-    const reachSignal = Math.min(Math.log10(data.reach + 1) * 10, 35);
-    const engagementSignal = Math.min(data.engagement * 8, 37);
-    return Math.round(audienceSignal + reachSignal + engagementSignal);
-  }
+  const PLATFORM_COLOURS = {
+    youtube: "#8f3527",
+    instagram: "#a55f78",
+    facebook: "#506f91",
+    tiktok: "#23170f"
+  };
 
-  function renderMomentum() {
-    const scored = PLATFORM_ORDER
-      .filter((platform) => platform !== "tiktok")
-      .map((platform) => ({
-        platform,
-        data: platformData(platform),
-        score: momentumScore(platformData(platform))
-      }))
-      .filter((item) => item.data.connected)
-      .sort((a, b) => b.score - a.score);
+  function renderViewShare() {
+    const entries = PLATFORM_ORDER.map((platform) => ({
+      platform,
+      views: platformData(platform).connected
+        ? platformData(platform).reach
+        : 0
+    }));
+    const totalViews = entries.reduce((sum, item) => sum + item.views, 0);
+    elements.totalPlatformViews.textContent = compact(totalViews);
+    elements.viewShareLegend.replaceChildren();
 
-    elements.momentumBars.replaceChildren();
-    if (!scored.length) {
-      elements.momentumHeadline.textContent = "Connecting the picture";
-      elements.momentumCopy.textContent =
-        "Refresh the connected platforms to reveal the strongest source of momentum.";
-      return;
-    }
+    let cursor = 0;
+    const segments = entries.map((item) => {
+      const share = totalViews ? item.views / totalViews * 100 : 0;
+      const start = cursor;
+      cursor += share;
+      return `${PLATFORM_COLOURS[item.platform]} ${start}% ${cursor}%`;
+    });
+    elements.viewShareDonut.style.setProperty(
+      "--view-share-gradient",
+      totalViews
+        ? `conic-gradient(${segments.join(",")})`
+        : "conic-gradient(rgba(82, 62, 38, 0.15) 0 100%)"
+    );
 
-    const leader = scored[0];
-    elements.momentumStatus.textContent = "Live comparison";
-    elements.momentumHeadline.textContent =
-      `${PLATFORM_LABELS[leader.platform]} has the strongest current signal`;
-    elements.momentumCopy.textContent =
-      `${compact(leader.data.reach)} ${leader.data.reachLabel} at a ${percent(leader.data.engagement)} interaction rate across the content currently measured.`;
-    const maximum = Math.max(...scored.map((item) => item.score), 1);
-    scored.forEach((item) => {
+    entries.forEach((item) => {
+      const share = totalViews ? item.views / totalViews * 100 : 0;
       const row = document.createElement("div");
-      row.className = "momentum-bar-row";
       row.innerHTML = `
+        <i style="background:${PLATFORM_COLOURS[item.platform]}"></i>
         <span>${PLATFORM_LABELS[item.platform]}</span>
-        <i><b style="width:${Math.max(item.score / maximum * 100, 5)}%"></b></i>
-        <strong>${item.score}</strong>`;
-      elements.momentumBars.append(row);
+        <strong>${compact(item.views)}</strong>
+        <small>${percent(share)}</small>`;
+      elements.viewShareLegend.append(row);
     });
   }
 
@@ -365,51 +377,52 @@
     })[0];
   }
 
-  function renderActions() {
-    const connected = PLATFORM_ORDER
-      .filter((platform) => platform !== "tiktok")
-      .map((platform) => ({ platform, data: platformData(platform) }))
-      .filter((item) => item.data.connected);
-    const actions = [];
+  function renderWeekdays() {
+    const weekdayOrder = [
+      "Monday", "Tuesday", "Wednesday", "Thursday",
+      "Friday", "Saturday", "Sunday"
+    ];
+    const dayData = new Map(weekdayOrder.map((day) => [
+      day,
+      { youtube: 0, instagram: 0, facebook: 0, tiktok: 0 }
+    ]));
 
-    connected.forEach(({ platform, data }) => {
-      const best = bestContent(platform, data);
-      if (best) {
-        const title = best.title || best.caption || "Top content";
-        actions.push({
-          priority: data.engagement >= 3 ? "Repeat" : "Learn",
-          title: `Build on ${PLATFORM_LABELS[platform]}'s strongest format`,
-          copy: `"${title.split("\n")[0].slice(0, 78)}" is the clearest current content signal. Reuse its hook, subject or format rather than simply reposting it.`,
-          score: momentumScore(data) + data.engagement
-        });
-      }
-    });
-
-    const instagram = platformData("instagram");
-    const shorts = platformData("shorts");
-    if (instagram.connected && shorts.connected) {
-      actions.push({
-        priority: "Cross-post",
-        title: "Treat Reels and Shorts as one experiment",
-        copy: "Compare the same opening idea across both platforms. Keep the better hook and edit the next version around its first three seconds.",
-        score: 70
+    ["youtube", "instagram", "facebook"].forEach((platform) => {
+      const content = platform === "youtube"
+        ? youtubeContent()
+        : platformData(platform).content;
+      content.forEach((item) => {
+        if (!item.publishedAt) return;
+        const day = new Intl.DateTimeFormat("en-GB", { weekday: "long" })
+          .format(new Date(item.publishedAt));
+        const entry = dayData.get(day);
+        if (entry) entry[platform] += numberValue(item.views || item.reach);
       });
-    }
-    actions.push({
-      priority: "Measure",
-      title: "Use the bio links as the conversion check",
-      copy: "Reach shows attention. Spotify, ticket and community clicks show whether that attention is becoming useful artist growth.",
-      score: 60
     });
 
-    elements.actions.replaceChildren();
-    actions.sort((a, b) => b.score - a.score).slice(0, 4).forEach((action, index) => {
-      const item = document.createElement("article");
-      item.className = "social-action-item";
+    const rows = [...dayData.entries()].map(([day, values]) => ({
+      day,
+      values,
+      total: Object.values(values).reduce((sum, value) => sum + value, 0)
+    })).sort((a, b) => b.total - a.total);
+    const maximum = Math.max(...rows.map((row) => row.total), 1);
+    elements.weekdayPerformance.replaceChildren();
+
+    rows.forEach((row, index) => {
+      const leader = Object.entries(row.values).sort((a, b) => b[1] - a[1])[0];
+      const item = document.createElement("div");
+      item.className = "weekday-row";
+      const segments = ["youtube", "instagram", "facebook", "tiktok"]
+        .filter((platform) => row.values[platform] > 0)
+        .map((platform) =>
+          `<i style="width:${row.values[platform] / maximum * 100}%;background:${PLATFORM_COLOURS[platform]}"></i>`
+        ).join("");
       item.innerHTML = `
-        <span>${String(index + 1).padStart(2, "0")}</span>
-        <div><small>${action.priority}</small><strong>${action.title}</strong><p>${action.copy}</p></div>`;
-      elements.actions.append(item);
+        <span>${index === 0 && row.total ? "Best · " : ""}${row.day}</span>
+        <div>${segments}</div>
+        <strong>${compact(row.total)}</strong>
+        <small>${row.total ? PLATFORM_LABELS[leader[0]] : "No posts"}</small>`;
+      elements.weekdayPerformance.append(item);
     });
   }
 
@@ -424,6 +437,7 @@
     const rows = normalizedBioRows();
     elements.bioEmpty.hidden = rows.length > 0;
     elements.bioList.replaceChildren();
+    elements.bioDestinationTable.replaceChildren();
     if (!rows.length) {
       elements.bioViews.textContent = "-";
       elements.bioClicks.textContent = "-";
@@ -462,34 +476,69 @@
     const topButton = [...allButtons.entries()].sort((a, b) => b[1] - a[1])[0];
     elements.bioViews.textContent = full(totalViews);
     elements.bioClicks.textContent = full(totalClicks);
-    elements.bioRate.textContent = percent(totalViews ? totalClicks / totalViews * 100 : 0);
+    elements.bioRate.textContent = totalViews
+      ? `${(totalClicks / totalViews).toFixed(2)}x`
+      : "-";
     elements.bioTop.textContent = topButton?.[0] || "No clicks yet";
 
-    ["instagram", "tiktok", "facebook", "youtube"].forEach((platform) => {
+    const sourceOrder = ["instagram", "tiktok", "facebook", "youtube"];
+    const destinationOrder = [
+      "WhatsApp Community",
+      "Next Gig Tickets",
+      "SoundCloud",
+      "Spotify",
+      "Apple Music"
+    ];
+    const destinationHeader = document.createElement("div");
+    destinationHeader.className = "bio-destination-row bio-destination-head";
+    destinationHeader.innerHTML = `
+      <span>Destination</span><span>Total clicks</span>
+      ${sourceOrder.map((platform) => `<span>${PLATFORM_LABELS[platform]}</span>`).join("")}`;
+    elements.bioDestinationTable.append(destinationHeader);
+
+    destinationOrder.forEach((destination) => {
+      const sourceClicks = sourceOrder.map((platform) =>
+        numberValue(totalsByPlatform.get(platform)?.buttons.get(destination))
+      );
+      const destinationTotal = sourceClicks.reduce((sum, clicks) => sum + clicks, 0);
+      const item = document.createElement("div");
+      item.className = "bio-destination-row";
+      item.innerHTML = `
+        <strong>${destination}</strong>
+        <b>${full(destinationTotal)}</b>
+        ${sourceClicks.map((clicks) => `
+          <span><strong>${full(clicks)}</strong><small>${
+            destinationTotal ? percent(clicks / destinationTotal * 100, 0) : "0%"
+          }</small></span>`
+        ).join("")}`;
+      elements.bioDestinationTable.append(item);
+    });
+
+    sourceOrder.forEach((platform) => {
       const entry = totalsByPlatform.get(platform) || { views: 0, clicks: 0, buttons: new Map() };
-      const best = [...entry.buttons.entries()].sort((a, b) => b[1] - a[1])[0];
-      const rate = entry.views ? entry.clicks / entry.views * 100 : 0;
+      const sourceShare = totalClicks ? entry.clicks / totalClicks * 100 : 0;
       const item = document.createElement("article");
       item.className = "bio-platform-row";
       item.innerHTML = `
         <div class="bio-platform-name"><i>${platformMark(platform)}</i><strong>${PLATFORM_LABELS[platform]}</strong></div>
         <div><span>Visits</span><strong>${full(entry.views)}</strong></div>
         <div><span>Clicks</span><strong>${full(entry.clicks)}</strong></div>
-        <div><span>Clicks per visit</span><strong>${percent(rate)}</strong></div>
-        <div><span>Most chosen</span><strong>${best?.[0] || "-"}</strong></div>`;
+        <div><span>Click actions per visit</span><strong>${
+          entry.views ? `${(entry.clicks / entry.views).toFixed(2)}x` : "-"
+        }</strong></div>
+        <div><span>Share of clicks</span><strong>${percent(sourceShare)}</strong></div>`;
       elements.bioList.append(item);
     });
   }
 
   function contentType(platform, item) {
-    if (platform === "shorts") return "Short";
-    if (platform === "youtube") return "Video";
+    if (platform === "youtube") return isShort(item) ? "Short" : "Video";
     if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
     return "Facebook post";
   }
 
   function contentUrl(platform, item) {
-    if (platform === "youtube" || platform === "shorts") {
+    if (platform === "youtube") {
       return `https://www.youtube.com/watch?v=${encodeURIComponent(item.id)}`;
     }
     return item.permalink || "#";
@@ -622,7 +671,6 @@
     elements.title.textContent = PLATFORM_LABELS[platform];
     elements.description.textContent = {
       youtube: "Long-form video performance, audience growth and the subjects worth developing.",
-      shorts: "Short-form reach, interaction and the creative ideas worth repeating.",
       instagram: "Reels, posts and the signals converting reach into a returning audience.",
       facebook: "Page growth, post response and Ella's community activity on Facebook.",
       tiktok: "A retention-led short-form view, ready for the TikTok API connection."
@@ -660,9 +708,7 @@
         `<article class="social-premium-panel"><span>${label}</span><strong>${title}</strong><p>${copy}</p></article>`
       ).join("");
     elements.contentEyebrow.textContent = platform === "tiktok" ? "Prepared view" : "Content performance";
-    elements.contentTitle.textContent = platform === "shorts"
-      ? "Shorts this month"
-      : platform === "instagram"
+    elements.contentTitle.textContent = platform === "instagram"
         ? "Posts and Reels this month"
         : platform === "facebook"
           ? "Facebook this month"
@@ -698,8 +744,8 @@
 
   function renderOverview() {
     renderPlatformCards();
-    renderMomentum();
-    renderActions();
+    renderViewShare();
+    renderWeekdays();
     renderBio();
     const dates = [
       state.youtube?.current?.checkedAt,

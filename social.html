@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=14">
+    <link rel="stylesheet" href="styles.css?v=15">
   </head>
   <body>
     <header class="topbar">
@@ -43,30 +43,33 @@
       <section id="socialOverview">
         <section class="social-platform-grid" id="platformOverviewCards" aria-label="Platform overview"></section>
 
-        <section class="social-overview-grid">
-          <article class="social-premium-panel social-momentum-panel">
+        <section class="social-overview-grid social-measurement-grid">
+          <article class="social-premium-panel view-share-panel">
             <div class="social-panel-heading">
               <div>
-                <p class="eyebrow">Momentum</p>
-                <h2>Where growth is moving</h2>
+                <p class="eyebrow">Share of Views</p>
+                <h2>Where attention lives</h2>
               </div>
-              <span class="social-status-pill" id="momentumStatus">Building baseline</span>
+              <span id="viewSharePeriod">This month</span>
             </div>
-            <div class="momentum-feature">
-              <strong id="momentumHeadline">Connecting the picture</strong>
-              <p id="momentumCopy">The strongest signal will appear once the latest platform data is loaded.</p>
+            <div class="view-share-layout">
+              <div class="view-share-donut" id="viewShareDonut">
+                <div><strong id="totalPlatformViews">-</strong><span>Total views</span></div>
+              </div>
+              <div class="view-share-legend" id="viewShareLegend"></div>
             </div>
-            <div class="momentum-bars" id="momentumBars"></div>
           </article>
 
-          <article class="social-premium-panel social-actions-panel">
+          <article class="social-premium-panel weekday-panel">
             <div class="social-panel-heading">
               <div>
-                <p class="eyebrow">Next Moves</p>
-                <h2>What to do now</h2>
+                <p class="eyebrow">Publishing Days</p>
+                <h2>Views by day and platform</h2>
               </div>
+              <span>Recent content</span>
             </div>
-            <div class="social-action-list" id="growthActions"></div>
+            <p class="weekday-explanation">Views grouped by the weekday each measured post or video was published.</p>
+            <div class="weekday-performance" id="weekdayPerformance"></div>
           </article>
         </section>
 
@@ -86,10 +89,14 @@
           <div class="bio-summary-strip">
             <div><span>Page visits</span><strong id="bioTotalViews">-</strong></div>
             <div><span>Button clicks</span><strong id="bioTotalClicks">-</strong></div>
-            <div><span>Clicks per visit</span><strong id="bioClickRate">-</strong></div>
+            <div><span>Click actions per visit</span><strong id="bioClickRate">-</strong></div>
             <div><span>Top destination</span><strong id="bioTopButton">-</strong></div>
           </div>
-          <div class="bio-platform-list" id="bioPlatformList"></div>
+          <div class="bio-destination-table" id="bioDestinationTable"></div>
+          <div class="bio-source-summary">
+            <p class="eyebrow">Source totals</p>
+            <div class="bio-platform-list" id="bioPlatformList"></div>
+          </div>
           <div class="social-empty-state" id="bioEmptyState" hidden>
             <strong>Tracking is ready</strong>
             <p>Bio-link visits and clicks will appear after the final Supabase reporting function is added.</p>
@@ -118,6 +125,6 @@
 
     <script src="cloud-config.js?v=6"></script>
     <script src="app-cloud.js?v=6"></script>
-    <script src="social.js?v=11"></script>
+    <script src="social.js?v=12"></script>
   </body>
 </html>
