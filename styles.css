@@ -916,8 +916,58 @@
     flex-direction: column;
   }
   .social-command-actions { align-items: stretch; }
+  .social-platform-grid {
+    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .platform-overview-card {
+    min-height: 172px;
+    padding: 14px;
+  }
+  .platform-card-top {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .platform-card-top i,
+  .bio-platform-name i {
+    font-size: 0.55rem;
+    height: 30px;
+    width: 30px;
+  }
+  .platform-card-top > span,
+  .platform-overview-card > small,
+  .platform-card-signal,
+  .platform-overview-card > b {
+    font-size: 0.6rem;
+  }
+  .platform-overview-card > strong {
+    font-size: 0.86rem;
+  }
+  .platform-card-number {
+    font-size: 2.25rem;
+    margin-top: 10px;
+  }
   .social-overview-grid,
+  .social-measurement-grid,
   .drilldown-insight-grid { grid-template-columns: 1fr; }
+  .view-share-layout {
+    gap: 18px;
+    grid-template-columns: 1fr;
+    margin-top: 20px;
+  }
+  .view-share-donut {
+    max-width: 210px;
+  }
+  .weekday-row {
+    gap: 8px;
+    grid-template-columns: 82px minmax(70px, 1fr) 54px;
+    min-height: 48px;
+    padding: 8px 0;
+  }
+  .weekday-row > small {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
   .bio-summary-strip,
   .drilldown-metrics { grid-template-columns: repeat(2, 1fr); }
   .bio-summary-strip > div:nth-child(2) { border-right: 0; }
@@ -940,7 +990,73 @@
 }
 
 @media (max-width: 520px) {
-  .platform-card-top { gap: 2px; }
+  .social-command {
+    gap: 18px;
+  }
+  .social-command-head {
+    padding-bottom: 18px;
+  }
+  .social-command-head h2 {
+    font-size: 2rem;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+  .social-command-head p:not(.eyebrow) {
+    font-size: 0.95rem;
+    margin-top: 10px;
+  }
+  .social-platform-grid {
+    grid-template-columns: 1fr;
+  }
+  .platform-overview-card {
+    display: grid;
+    gap: 7px 12px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    min-height: 0;
+    padding: 14px;
+  }
+  .platform-card-top {
+    align-self: start;
+    flex-direction: column;
+    gap: 6px;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+  .platform-card-top > span {
+    font-size: 0.52rem;
+    padding: 3px 5px;
+  }
+  .platform-overview-card > strong {
+    align-self: end;
+    font-size: 0.88rem;
+    grid-column: 2;
+    line-height: 1.15;
+    white-space: normal;
+  }
+  .platform-card-number {
+    align-self: center;
+    font-size: 2rem;
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    margin-top: 0;
+  }
+  .platform-overview-card > small {
+    align-self: start;
+    grid-column: 2;
+    margin-top: 0;
+  }
+  .platform-card-signal {
+    grid-column: 1 / -1;
+    line-height: 1.3;
+    margin-top: 4px;
+    padding-top: 10px;
+    white-space: normal;
+  }
+  .platform-overview-card > b {
+    grid-column: 1 / -1;
+    margin-top: 0;
+  }
   .social-premium-panel { padding: 18px; }
   .bio-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
@@ -4740,12 +4856,36 @@ summary:focus-visible {
 
   .contact-card:not(.editing) {
     gap: 8px;
+    grid-template-columns: 1fr auto;
     min-height: 50px;
     padding: 10px;
   }
 
   .contact-card:not(.editing):not(.expanded) {
-    height: 50px;
+    height: auto;
+    min-height: 50px;
+  }
+
+  .contact-card:not(.editing):not(.expanded)::after {
+    align-self: center;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    content: "View";
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    padding: 5px 7px;
+    text-transform: uppercase;
+  }
+
+  .contact-card:not(.editing):not(.expanded) .contact-display,
+  .contact-card:not(.editing):not(.expanded) .card-actions {
+    display: none;
+  }
+
+  .contact-card.expanded {
+    grid-template-columns: 1fr;
   }
 
   .contact-card:not(.editing) .contact-display {
@@ -4760,11 +4900,19 @@ summary:focus-visible {
   .contact-card:not(.editing) .card-actions {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
 
   .contact-card:not(.editing) .small-button {
+    border-color: var(--line);
+    color: var(--brown);
     min-height: 38px;
     padding: 7px 8px;
+  }
+
+  .contact-card:not(.editing) .small-button.danger {
+    border-color: rgba(141, 47, 33, 0.48);
+    color: var(--danger);
   }
 
   .contact-section-heading span {
