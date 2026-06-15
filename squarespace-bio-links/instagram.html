@@ -15,9 +15,8 @@
     font-family: Arial, Helvetica, sans-serif;
     margin: 18px auto;
     max-width: 980px;
-    min-height: 100svh;
     overflow: hidden;
-    padding: 42px 18px 56px;
+    padding: 42px 18px 32px;
   }
   #ella-bio-links-instagram * { box-sizing: border-box; }
   #ella-bio-links-instagram .ella-links-card {
@@ -46,7 +45,9 @@
     display: grid;
     gap: 13px;
   }
-  #ella-bio-links-instagram .ella-link {
+  #ella-bio-links-instagram .ella-link,
+  #ella-bio-links-instagram .ella-music-toggle,
+  #ella-bio-links-instagram .ella-music-option {
     align-items: center;
     background: var(--soft);
     border: 2px solid var(--ink);
@@ -84,7 +85,21 @@
     height: 19px;
     width: 19px;
   }
+  #ella-bio-links-instagram .ella-link-icon .ella-live-badge {
+    font-size: .64rem;
+    letter-spacing: .08em;
+    line-height: 1;
+  }
+  #ella-bio-links-instagram .ella-link-copy { display: block; }
+  #ella-bio-links-instagram .ella-link-copy small { color: var(--muted); display: block; font-size: .62rem; font-weight: 800; letter-spacing: .14em; margin-top: 2px; text-transform: uppercase; }
   #ella-bio-links-instagram .ella-link-arrow { font-size: 1.25rem; }
+  #ella-bio-links-instagram details.ella-music { display:block; }
+  #ella-bio-links-instagram details.ella-music > summary { list-style:none; }
+  #ella-bio-links-instagram details.ella-music > summary::-webkit-details-marker { display:none; }
+  #ella-bio-links-instagram .ella-music-panel { display:grid; gap:10px; margin-top:10px; padding:0 6px 2px; }
+  #ella-bio-links-instagram .ella-music-option { background:#fff7dc; min-height:58px; }
+  #ella-bio-links-instagram .ella-music-option span:last-child { font-size:1.1rem; }
+  #ella-bio-links-instagram .ella-music-option small { color:var(--muted); display:block; font-size:.62rem; font-weight:800; letter-spacing:.14em; margin-top:2px; text-transform:uppercase; }
   @media (max-width: 520px) {
     #ella-bio-links-instagram { padding-top: 30px; }
     #ella-bio-links-instagram .ella-link { box-shadow: 4px 4px 0 var(--ink); }
@@ -102,11 +117,10 @@
       )
     : null;
   const destinations = [
-    { name: "WhatsApp Community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/21150E" },
-    { name: "Next Gig Tickets", url: "https://wegottickets.com/f/21926", icon: "LIVE" },
-    { name: "SoundCloud", url: "https://soundcloud.com/ellacrow", logo: "https://cdn.simpleicons.org/soundcloud/21150E" },
-    { name: "Spotify", url: "https://open.spotify.com/album/5vCuP1VdJcAjyLkE6h8kFA?si=XlkpPGXXR0idG7v0B_PqlA", logo: "https://cdn.simpleicons.org/spotify/21150E" },
-    { name: "Apple Music", url: "https://music.apple.com/gb/album/taking-shape/1840436179", logo: "https://cdn.simpleicons.org/applemusic/21150E" }
+    { label: "Join the community &#128038;", detail: "WhatsApp community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/21150E", track: "WhatsApp Community" },
+    { label: "Come and watch me live &#127908;", detail: "Tickets are here", url: "https://wegottickets.com/f/21926", icon: "LIVE", track: "Next Gig Tickets" },
+    { label: "Listen to my unreleased music &#128144;", detail: "SoundCloud", url: "https://soundcloud.com/ellacrow", logo: "https://cdn.simpleicons.org/soundcloud/21150E", track: "SoundCloud" },
+    { label: "Listen to my music &#11088;", detail: "Spotify and Apple Music", music: true, icon: "&#9835;", track: "Music menu" }
   ];
 
   function trackedUrl(rawUrl) {
@@ -133,22 +147,53 @@
     </main>`;
 
   const list = root.querySelector(".ella-links-list");
-  destinations.forEach((destination) => {
+  function buildLink(destination) {
     const link = document.createElement("a");
     link.className = "ella-link";
     link.href = trackedUrl(destination.url);
-    const icon = destination.logo
-      ? `<img src="${destination.logo}" alt="">`
-      : destination.icon;
-    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span>${destination.name}</span><span class="ella-link-arrow">&rarr;</span>`;
+    const icon = destination.logo ? `<img src="${destination.logo}" alt="">` : destination.icon === "LIVE" ? `<span class="ella-live-badge">LIVE</span>` : destination.icon;
+    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-arrow">&rarr;</span>`;
     link.addEventListener("click", async (event) => {
       event.preventDefault();
       const target = link.href;
-      await Promise.race([record("click", destination.name), new Promise(resolve => setTimeout(resolve, 650))]);
+      await Promise.race([record("click", destination.track), new Promise(resolve => setTimeout(resolve, 650))]);
       window.location.assign(target);
     });
-    list.append(link);
-  });
+    return link;
+  }
+  function buildMusic() {
+    const wrapper = document.createElement("details");
+    wrapper.className = "ella-music";
+    const summary = document.createElement("summary");
+    summary.className = "ella-music-toggle";
+    summary.innerHTML = `<span class="ella-link-icon">&#9835;</span><span class="ella-link-copy">Listen to my music &#11088;<small>Spotify and Apple Music</small></span><span class="ella-link-arrow">+</span>`;
+    const panel = document.createElement("div");
+    panel.className = "ella-music-panel";
+    [
+      { label: "Spotify", detail: "Stream on Spotify", url: "https://open.spotify.com/album/5vCuP1VdJcAjyLkE6h8kFA?si=XlkpPGXXR0idG7v0B_PqlA", logo: "https://cdn.simpleicons.org/spotify/21150E" },
+      { label: "Apple Music", detail: "Listen on Apple", url: "https://music.apple.com/gb/album/taking-shape/1840436179", logo: "https://cdn.simpleicons.org/applemusic/21150E" }
+    ].forEach((item) => {
+      const link = document.createElement("a");
+      link.className = "ella-music-option";
+      link.href = trackedUrl(item.url);
+      const icon = item.logo ? `<img src="${item.logo}" alt="">` : item.icon;
+      link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${item.label}<small>${item.detail}</small></span><span class="ella-link-arrow">&rarr;</span>`;
+      link.addEventListener("click", async (event) => {
+        event.preventDefault();
+        const target = link.href;
+        await Promise.race([record("click", item.label), new Promise(resolve => setTimeout(resolve, 650))]);
+        window.location.assign(target);
+      });
+      panel.append(link);
+    });
+    wrapper.append(summary, panel);
+    summary.addEventListener("click", (event) => {
+      event.preventDefault();
+      wrapper.open = !wrapper.open;
+    });
+    return wrapper;
+  }
+  destinations.forEach((destination) => { list.append(destination.music ? buildMusic() : buildLink(destination)); });
 
   void Promise.resolve(record("view")).catch(() => {});
 })();

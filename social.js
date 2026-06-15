@@ -2,6 +2,7 @@
   const config = window.ELLA_CLOUD_CONFIG || {};
   const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
+  const LOCAL_TIKTOK_KEY = "ella-crow-social-tiktok-v1";
   const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
   const COMPARISON_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
   const PLATFORM_LABELS = {
@@ -14,6 +15,7 @@
   const state = {
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
+    tiktok: readJson(LOCAL_TIKTOK_KEY),
     bio: null,
     bioPeriod: "month",
     activePlatform: null,
@@ -146,6 +148,7 @@
     }
     if (platform === "instagram") content = state.meta?.current?.media || [];
     if (platform === "facebook") content = state.meta?.current?.facebook?.posts || [];
+    if (platform === "tiktok") content = state.tiktok?.current?.videos || [];
     return content.filter((item) =>
       item.publishedAt && sameMonth(item.publishedAt, comparison)
     );
@@ -256,6 +259,38 @@
         content: posts,
         checkedAt: current?.checkedAt,
         access: facebook?.access || {}
+      };
+    }
+
+    if (platform === "tiktok") {
+      const current = state.tiktok?.current;
+      const content = contentForMonth(platform);
+      const total = totals(content);
+      const rates = engagementRates(content);
+      const lastMonthContent = contentForMonth(platform, -1);
+      const lastMonthViews = totals(lastMonthContent).views;
+      const base = baseline(state.tiktok, platform);
+      return {
+        connected: Boolean(current?.account),
+        comingSoon: false,
+        audience: numberValue(current?.account?.followers),
+        audienceLabel: "followers",
+        reach: total.views,
+        reachLabel: "views this month",
+        lastMonthViews,
+        hasLastMonth: lastMonthContent.length > 0,
+        output: content.length,
+        outputLabel: "TikToks this month",
+        engagement: rates.engagement,
+        likes: rates.likes,
+        comments: rates.comments,
+        audienceDelta: base
+          ? numberValue(current.account.followers) -
+            numberValue(base.account?.followers)
+          : null,
+        reachDelta: lastMonthContent.length ? total.views - lastMonthViews : null,
+        content,
+        checkedAt: current?.checkedAt
       };
     }
 
@@ -393,7 +428,7 @@
       { shorts: 0, instagram: 0, facebook: 0, tiktok: 0 }
     ]));
 
-    ["shorts", "instagram", "facebook"].forEach((platform) => {
+    ["shorts", "instagram", "facebook", "tiktok"].forEach((platform) => {
       const content = platform === "shorts"
         ? youtubeContent("shorts")
         : platformData(platform).content;
@@ -541,6 +576,7 @@
     if (platform === "shorts") return "Short";
     if (platform === "youtube") return "Video";
     if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
+    if (platform === "tiktok") return "TikTok";
     return "Facebook post";
   }
 
@@ -548,6 +584,7 @@
     if (platform === "youtube" || platform === "shorts") {
       return `https://www.youtube.com/watch?v=${encodeURIComponent(item.id)}`;
     }
+    if (platform === "tiktok") return item.shareUrl || "#";
     return item.permalink || "#";
   }
 
@@ -570,7 +607,7 @@
     );
     elements.drillEmpty.hidden = content.length > 0;
     if (!content.length) {
-      elements.drillEmpty.innerHTML = platform === "tiktok"
+      elements.drillEmpty.innerHTML = platform === "tiktok" && !data.connected
         ? "<strong>TikTok is coming soon</strong><p>The drill-down is ready and will populate when the developer connection is complete.</p>"
         : "<strong>No content returned</strong><p>Refresh the platform after new content is published.</p>";
       return;
@@ -639,7 +676,7 @@
       }))
       .sort((a, b) => b.average - a.average)[0];
 
-    if (platform === "tiktok") {
+    if (platform === "tiktok" && !data.connected) {
       return [
         ["Connection", "Coming soon", "The interface is ready for TikTok's video, audience and engagement data."],
         ["Planned signal", "Retention first", "The drill-down will prioritise watch time and completion over raw views."],
@@ -681,7 +718,7 @@
       shorts: "Short-form video performance, engagement and the creative ideas worth repeating.",
       instagram: "Reels, posts and the signals converting reach into a returning audience.",
       facebook: "Page growth, post response and Ella's community activity on Facebook.",
-      tiktok: "A retention-led short-form view, ready for the TikTok API connection."
+      tiktok: "Short-form video performance, engagement and the creative ideas worth repeating."
     }[platform];
     elements.updated.textContent = data.checkedAt
       ? `Updated ${formatDate(data.checkedAt)}`
@@ -715,7 +752,7 @@
       .map(([label, title, copy]) =>
         `<article class="social-premium-panel"><span>${label}</span><strong>${title}</strong><p>${copy}</p></article>`
       ).join("");
-    elements.contentEyebrow.textContent = platform === "tiktok" ? "Prepared view" : "Content performance";
+    elements.contentEyebrow.textContent = "Content performance";
     elements.contentTitle.textContent = platform === "instagram"
         ? "Posts and Reels this month"
         : platform === "facebook"
@@ -759,7 +796,8 @@
     renderBio();
     const dates = [
       state.youtube?.current?.checkedAt,
-      state.meta?.current?.checkedAt
+      state.meta?.current?.checkedAt,
+      state.tiktok?.current?.checkedAt
     ].filter(Boolean).sort();
     elements.updated.textContent = dates.length
       ? `Latest data ${formatDate(dates[dates.length - 1])}`
@@ -799,6 +837,7 @@
     if (error) return;
     const youtubeRows = (data || []).filter((row) => row.platform === "youtube");
     const metaRows = (data || []).filter((row) => row.platform === "meta");
+    const tiktokRows = (data || []).filter((row) => row.platform === "tiktok");
     if (youtubeRows.length) {
       const current = youtubeRows[youtubeRows.length - 1].payload;
       state.youtube = {
@@ -813,6 +852,16 @@
         current,
         previous: metaRows.length > 1 ? metaRows[metaRows.length - 2].payload : null,
         history: metaRows.map((row) => row.payload)
+      };
+    }
+    if (tiktokRows.length) {
+      const current = tiktokRows[tiktokRows.length - 1].payload;
+      state.tiktok = {
+        current,
+        previous: tiktokRows.length > 1
+          ? tiktokRows[tiktokRows.length - 2].payload
+          : null,
+        history: tiktokRows.map((row) => row.payload)
       };
     }
   }
@@ -847,10 +896,11 @@
     state.refreshing = true;
     elements.refresh.disabled = true;
     elements.refresh.textContent = "Refreshing";
-    setMessage("Fetching YouTube, Instagram and Facebook...", "loading");
+    setMessage("Fetching YouTube, Instagram, Facebook and TikTok...", "loading");
     const results = await Promise.allSettled([
       fetchSnapshot(config.youtubeStatsUrl, "YouTube"),
-      fetchSnapshot(config.instagramStatsUrl, "Instagram and Facebook")
+      fetchSnapshot(config.instagramStatsUrl, "Instagram and Facebook"),
+      fetchSnapshot(config.tiktokStatsUrl, "TikTok")
     ]);
     const errors = [];
 
@@ -875,6 +925,17 @@
       localStorage.setItem(LOCAL_META_KEY, JSON.stringify(state.meta));
     } else {
       errors.push(results[1].reason?.message || "Instagram and Facebook failed");
+    }
+    if (results[2].status === "fulfilled") {
+      const current = results[2].value;
+      state.tiktok = {
+        current,
+        previous: state.tiktok?.current || null,
+        history: appendHistory(state.tiktok?.history, current)
+      };
+      localStorage.setItem(LOCAL_TIKTOK_KEY, JSON.stringify(state.tiktok));
+    } else {
+      errors.push(results[2].reason?.message || "TikTok failed");
     }
     await loadBio();
     if (state.activePlatform) renderDrilldown(state.activePlatform);
@@ -912,7 +973,8 @@
 
     const newest = Math.max(
       new Date(state.youtube?.current?.checkedAt || 0).getTime(),
-      new Date(state.meta?.current?.checkedAt || 0).getTime()
+      new Date(state.meta?.current?.checkedAt || 0).getTime(),
+      new Date(state.tiktok?.current?.checkedAt || 0).getTime()
     );
     if (!newest || Date.now() - newest > 12 * 60 * 60 * 1000) refreshAll();
   }
