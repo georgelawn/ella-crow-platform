@@ -19,6 +19,13 @@
 .social-command {
   display: grid;
   gap: 22px;
+  min-width: 0;
+}
+
+.social-command > *,
+#socialOverview {
+  min-width: 0;
+  width: 100%;
 }
 
 .social-command-head {
@@ -70,8 +77,8 @@
 
 .social-platform-grid {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(3px, 0.8vw, 12px);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .platform-overview-card {
@@ -81,8 +88,10 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  min-height: 246px;
-  padding: 17px;
+  min-height: clamp(150px, 19vw, 246px);
+  min-width: 0;
+  overflow: hidden;
+  padding: clamp(6px, 1.15vw, 17px);
   text-align: left;
   transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
@@ -96,8 +105,10 @@
 .platform-card-top {
   align-items: center;
   display: flex;
+  gap: 4px;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: clamp(12px, 2vw, 28px);
+  min-width: 0;
 }
 
 .platform-card-top i,
@@ -106,36 +117,46 @@
   border: 2px solid currentColor;
   display: flex;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.65rem;
+  flex: 0 0 auto;
+  font-size: clamp(0.34rem, 0.6vw, 0.65rem);
   font-style: normal;
   font-weight: 900;
-  height: 34px;
+  height: clamp(20px, 2.5vw, 34px);
   justify-content: center;
-  width: 34px;
+  width: clamp(20px, 2.5vw, 34px);
 }
 
 .platform-card-top > span {
   border: 1px solid currentColor;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.58rem;
+  font-size: clamp(0.3rem, 0.52vw, 0.58rem);
   font-weight: 900;
-  letter-spacing: 0.08em;
-  padding: 4px 6px;
+  letter-spacing: clamp(0, 0.08vw, 0.08em);
+  max-width: 100%;
+  overflow: hidden;
+  padding: clamp(2px, 0.35vw, 4px) clamp(2px, 0.5vw, 6px);
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .platform-overview-card > strong {
-  font-size: 1rem;
+  font-size: clamp(0.42rem, 1.05vw, 1rem);
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .platform-card-number {
   font-family: Arial, Helvetica, sans-serif;
-  font-size: clamp(2rem, 4vw, 3.3rem);
+  font-size: clamp(1rem, 3.5vw, 3.3rem);
   font-weight: 900;
   letter-spacing: -0.06em;
   line-height: 1;
-  margin-top: 14px;
+  margin-top: clamp(6px, 1vw, 14px);
+  white-space: nowrap;
 }
 
 .platform-overview-card > small,
@@ -146,25 +167,35 @@
 
 .platform-overview-card > small {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: clamp(0.32rem, 0.58vw, 0.66rem);
   font-weight: 800;
   margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .platform-card-signal {
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: clamp(0.32rem, 0.6vw, 0.68rem);
+  line-height: 1.15;
   margin-top: auto;
-  padding-top: 14px;
+  overflow: hidden;
+  padding-top: clamp(6px, 1vw, 14px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .platform-overview-card > b {
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  margin-top: 9px;
+  font-size: clamp(0.31rem, 0.55vw, 0.62rem);
+  letter-spacing: clamp(0, 0.07vw, 0.08em);
+  margin-top: clamp(5px, 0.7vw, 9px);
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .platform-youtube { background: #f1dfb0; }
@@ -872,8 +903,6 @@
 }
 
 @media (max-width: 1080px) {
-  .social-platform-grid { grid-template-columns: repeat(3, 1fr); }
-  .platform-overview-card { min-height: 220px; }
   .bio-platform-row { grid-template-columns: 1.25fr repeat(4, 0.8fr); }
   .drilldown-content-row { grid-template-columns: 32px 100px minmax(0, 1fr); }
   .content-row-metrics { grid-column: 3; }
@@ -887,7 +916,6 @@
     flex-direction: column;
   }
   .social-command-actions { align-items: stretch; }
-  .social-platform-grid { grid-template-columns: repeat(2, 1fr); }
   .social-overview-grid,
   .drilldown-insight-grid { grid-template-columns: 1fr; }
   .bio-summary-strip,
@@ -912,8 +940,7 @@
 }
 
 @media (max-width: 520px) {
-  .social-platform-grid { grid-template-columns: 1fr; }
-  .platform-overview-card { min-height: 190px; }
+  .platform-card-top { gap: 2px; }
   .social-premium-panel { padding: 18px; }
   .bio-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
