@@ -993,6 +993,23 @@
   .social-command {
     gap: 18px;
   }
+  .social-command,
+  .social-command *,
+  .social-command *::before,
+  .social-command *::after {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .social-command h2,
+  .social-command strong,
+  .social-command span,
+  .social-command small,
+  .social-command p,
+  .social-command b,
+  .social-command button {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
   .social-command-head {
     padding-bottom: 18px;
   }
@@ -1009,18 +1026,18 @@
     grid-template-columns: 1fr;
   }
   .platform-overview-card {
-    display: grid;
-    gap: 7px 12px;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
     min-height: 0;
+    overflow: hidden;
     padding: 14px;
   }
   .platform-card-top {
-    align-self: start;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
     gap: 6px;
-    grid-column: 1;
-    grid-row: 1 / span 2;
+    justify-content: space-between;
     margin-bottom: 0;
   }
   .platform-card-top > span {
@@ -1034,36 +1051,59 @@
     width: 32px;
   }
   .platform-overview-card > strong {
-    align-self: end;
     font-size: 0.88rem;
-    grid-column: 2;
     line-height: 1.15;
     white-space: normal;
   }
   .platform-card-number {
-    align-self: center;
+    align-self: start;
     font-size: 2rem;
-    grid-column: 3;
-    grid-row: 1 / span 2;
+    line-height: 1;
     margin-top: 0;
   }
   .platform-overview-card > small {
-    align-self: start;
-    grid-column: 2;
     margin-top: 0;
   }
   .platform-card-signal {
-    grid-column: 1 / -1;
     line-height: 1.3;
     margin-top: 4px;
     padding-top: 10px;
     white-space: normal;
   }
   .platform-overview-card > b {
-    grid-column: 1 / -1;
     margin-top: 0;
   }
-  .social-premium-panel { padding: 18px; }
+  .social-premium-panel {
+    overflow: hidden;
+    padding: 18px;
+  }
+  .social-panel-heading {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .social-panel-heading > span {
+    align-self: start;
+  }
+  .view-share-legend > div {
+    gap: 7px;
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+  }
+  .view-share-legend small {
+    grid-column: 2 / -1;
+    text-align: left;
+  }
+  .weekday-row {
+    align-items: stretch;
+    grid-template-columns: 1fr auto;
+  }
+  .weekday-row > div {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .weekday-row > small {
+    grid-column: 1 / -1;
+  }
   .bio-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
   .bio-summary-strip > div { border-right: 0; }
@@ -1079,6 +1119,7 @@
     gap: 9px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     min-width: 0;
+    overflow: hidden;
     padding: 13px 0;
   }
   .bio-destination-row > strong {
@@ -1119,10 +1160,49 @@
   }
   .drilldown-content-row {
     align-items: start;
-    grid-template-columns: 28px 82px 1fr;
+    grid-template-columns: 28px minmax(0, 1fr);
+    overflow: hidden;
   }
-  .content-row-metrics { grid-column: 2 / -1; }
-  .content-performance-line { left: 124px; }
+  .drilldown-content-row > img {
+    grid-column: 2;
+    max-width: 100%;
+    width: min(160px, 100%);
+  }
+  .content-row-copy,
+  .content-row-metrics {
+    grid-column: 1 / -1;
+  }
+  .content-row-metrics {
+    grid-template-columns: 1fr;
+  }
+  .content-performance-line {
+    bottom: 0;
+    left: 0;
+  }
+  .drilldown-hero {
+    gap: 16px;
+    grid-template-columns: 1fr;
+    overflow: hidden;
+    padding: 20px;
+  }
+  .drilldown-platform-mark {
+    height: 54px;
+    width: 54px;
+  }
+  .drilldown-hero > div:nth-child(2) > strong {
+    font-size: 2rem;
+  }
+  .drilldown-metrics {
+    grid-template-columns: 1fr;
+  }
+  .drilldown-metrics article,
+  .drilldown-metrics article:last-child,
+  .drilldown-metrics article:nth-child(2) {
+    border: 2px solid var(--line);
+  }
+  .drilldown-metrics article + article {
+    border-top: 0;
+  }
 }
 
 /* Finance performance dashboard */
@@ -5070,32 +5150,51 @@ summary:focus-visible {
     letter-spacing: 0.06em;
     padding-left: 7px;
     padding-right: 7px;
+    white-space: normal;
   }
 
   .platform-overview-card {
     gap: 8px;
-    grid-template-columns: 1fr auto;
   }
 
   .platform-card-top {
-    align-items: start;
-    flex-direction: row;
-    grid-column: 1 / -1;
-    grid-row: auto;
-  }
-
-  .platform-overview-card > strong,
-  .platform-overview-card > small {
-    grid-column: 1;
+    align-items: center;
   }
 
   .platform-card-number {
-    grid-column: 2;
-    grid-row: 2 / span 2;
+    font-size: 1.8rem;
+  }
+
+  .social-command-head h2 {
+    font-size: 1.75rem;
   }
 
   .bio-destination-row,
   .bio-platform-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 300px) {
+  .header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .header-actions .nav-link {
+    font-size: 0.72rem;
+    min-height: 40px;
+  }
+
+  .social-command-head h2 {
+    font-size: 1.55rem;
+  }
+
+  .social-empty-state {
+    padding: 20px 12px;
+  }
+
+  .social-empty-state strong {
+    font-size: 1rem;
+    overflow-wrap: anywhere;
   }
 }
