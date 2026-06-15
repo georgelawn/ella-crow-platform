@@ -903,6 +903,21 @@
 }
 
 @media (max-width: 1080px) {
+  .social-measurement-grid {
+    grid-template-columns: 1fr;
+  }
+  .bio-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bio-summary-strip > div:nth-child(2) {
+    border-right: 0;
+  }
+  .bio-summary-strip > div:nth-child(n+3) {
+    border-top: 1px solid var(--line);
+  }
+  .weekday-row {
+    grid-template-columns: 108px minmax(0, 1fr) 55px 75px;
+  }
   .bio-platform-row { grid-template-columns: 1.25fr repeat(4, 0.8fr); }
   .drilldown-content-row { grid-template-columns: 32px 100px minmax(0, 1fr); }
   .content-row-metrics { grid-column: 3; }
