@@ -12,6 +12,8 @@
     "ella-crow-manual-todos-v1",
     "ella-crow-social-youtube-v1",
     "ella-crow-social-instagram-v1",
+    "ella-crow-social-tiktok-v1",
+    "ella-crow-social-creative-matches-v1",
     "ella-crow-instruments-v1",
     "ella-crow-roster-migrated-v1"
   ];

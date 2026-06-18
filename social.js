@@ -1417,6 +1417,18 @@
     state.creativeSearch = null;
     renderCreativeMatches();
   });
+  window.addEventListener("ella-cloud-data-updated", (event) => {
+    const keys = event.detail?.keys || [];
+    if (keys.includes(LOCAL_CREATIVE_MATCHES_KEY)) {
+      state.manualCreativeMatches = readJson(LOCAL_CREATIVE_MATCHES_KEY) || {};
+      renderCreativeMatches();
+    }
+    if (keys.includes(LOCAL_TIKTOK_KEY)) {
+      state.tiktok = readJson(LOCAL_TIKTOK_KEY);
+      if (state.activePlatform === "tiktok") renderDrilldown("tiktok");
+      else renderOverview();
+    }
+  });
   document.querySelectorAll("[data-bio-period]").forEach((button) => {
     button.addEventListener("click", async () => {
       document.querySelectorAll("[data-bio-period]").forEach((item) =>
