@@ -3,8 +3,10 @@
   const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
   const LOCAL_TIKTOK_KEY = "ella-crow-social-tiktok-v1";
+  const LOCAL_CREATIVE_MATCHES_KEY = "ella-crow-social-creative-matches-v1";
   const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
   const COMPARISON_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
+  const CREATIVE_PLATFORMS = ["tiktok", "youtube", "instagram", "facebook"];
   const PLATFORM_LABELS = {
     youtube: "YouTube",
     shorts: "YouTube Shorts",
@@ -16,6 +18,9 @@
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
     tiktok: readJson(LOCAL_TIKTOK_KEY),
+    manualCreativeMatches: readJson(LOCAL_CREATIVE_MATCHES_KEY) || {},
+    creativeVisibleCount: 5,
+    creativeSearch: null,
     bio: null,
     bioPeriod: "month",
     activePlatform: null,
@@ -44,6 +49,12 @@
     bioDestinationTable: document.querySelector("#bioDestinationTable"),
     bioList: document.querySelector("#bioPlatformList"),
     bioEmpty: document.querySelector("#bioEmptyState"),
+    creativeSummary: document.querySelector("#creativeMatchSummary"),
+    creativeTopMatches: document.querySelector("#creativeTopMatches"),
+    creativeMatches: document.querySelector("#creativeMatches"),
+    creativeSearchPanel: document.querySelector("#creativeSearchPanel"),
+    creativeShowMore: document.querySelector("#creativeShowMore"),
+    creativeEmpty: document.querySelector("#creativeMatchEmpty"),
     back: document.querySelector("#socialBackButton"),
     drillHero: document.querySelector("#drilldownHero"),
     drillMetrics: document.querySelector("#drilldownMetrics"),
@@ -134,6 +145,16 @@
       numberValue(video?.durationSeconds) <= 180;
   }
 
+  function isFacebookVideoPost(item) {
+    if (numberValue(item?.views) > 0) return true;
+    if (numberValue(item?.durationSeconds) > 0) return true;
+    const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+    return attachments.some((attachment) => {
+      const text = `${attachment.mediaType || ""} ${attachment.type || ""}`.toLowerCase();
+      return text.includes("video") || text.includes("reel");
+    });
+  }
+
   function youtubeContent(platform = "youtube") {
     const videos = state.youtube?.current?.videos || [];
     if (platform === "shorts") return videos.filter((video) => isShort(video));
@@ -147,7 +168,9 @@
       content = youtubeContent(platform);
     }
     if (platform === "instagram") content = state.meta?.current?.media || [];
-    if (platform === "facebook") content = state.meta?.current?.facebook?.posts || [];
+    if (platform === "facebook") {
+      content = (state.meta?.current?.facebook?.posts || []).filter(isFacebookVideoPost);
+    }
     if (platform === "tiktok") content = state.tiktok?.current?.videos || [];
     return content.filter((item) =>
       item.publishedAt && sameMonth(item.publishedAt, comparison)
@@ -235,7 +258,7 @@
     if (platform === "facebook") {
       const current = state.meta?.current;
       const facebook = current?.facebook;
-      const posts = facebook?.posts || [];
+      const posts = (facebook?.posts || []).filter(isFacebookVideoPost);
       const rates = engagementRates(posts);
       const base = baseline(state.meta, platform);
       return {
@@ -600,6 +623,403 @@
       numberValue(item.saved) * 10;
   }
 
+  function contentText(item) {
+    return [
+      item.title,
+      item.caption,
+      item.description,
+      Array.isArray(item.tags) ? item.tags.join(" ") : ""
+    ].filter(Boolean).join(" ");
+  }
+
+  function extractHashtags(text) {
+    return [...String(text).toLowerCase().matchAll(/#[a-z0-9_]+/g)]
+      .map((match) => match[0].slice(1));
+  }
+
+  function textTokens(text) {
+    return String(text)
+      .toLowerCase()
+      .replace(/https?:\/\/\S+/g, " ")
+      .replace(/[^\w#]+/g, " ")
+      .split(/\s+/)
+      .map((token) => token.replace(/^#/, ""))
+      .filter((token) => token.length > 2);
+  }
+
+  function overlapScore(left, right) {
+    const a = new Set(left);
+    const b = new Set(right);
+    if (!a.size || !b.size) return 0;
+    const shared = [...a].filter((token) => b.has(token)).length;
+    return shared / Math.max(a.size, b.size);
+  }
+
+  function sharedTokenCount(left, right) {
+    const rightTokens = new Set(right);
+    return [...new Set(left)].filter((token) => rightTokens.has(token)).length;
+  }
+
+  function creativeContentByPlatform() {
+    return {
+      tiktok: state.tiktok?.current?.videos || [],
+      youtube: youtubeContent("shorts"),
+      instagram: state.meta?.current?.media || [],
+      facebook: (state.meta?.current?.facebook?.posts || []).filter(isFacebookVideoPost)
+    };
+  }
+
+  function comparableContent() {
+    const byPlatform = creativeContentByPlatform();
+    return CREATIVE_PLATFORMS.flatMap((platform) =>
+      (byPlatform[platform] || [])
+        .filter((item) => item.publishedAt)
+        .map((item) => {
+          const text = contentText(item);
+          return {
+            platform,
+            item,
+            id: `${platform}:${item.id}`,
+            contentId: String(item.id || ""),
+            publishedTime: new Date(item.publishedAt).getTime(),
+            title: contentTitle(item),
+            hashtags: extractHashtags(text),
+            tokens: textTokens(text),
+            duration: numberValue(item.durationSeconds),
+            views: numberValue(item.views || item.reach),
+            performance: contentPerformance(item)
+          };
+        })
+    ).filter((entry) => Number.isFinite(entry.publishedTime));
+  }
+
+  function matchScore(a, b) {
+    if (a.platform === b.platform) return null;
+    const minutesApart = Math.abs(a.publishedTime - b.publishedTime) / 60000;
+    if (minutesApart > 72 * 60) return null;
+
+    let score = 0;
+    const reasons = [];
+    if (minutesApart <= 120) {
+      score += 45;
+      reasons.push("same upload window");
+    } else if (minutesApart <= 8 * 60) {
+      score += 36;
+      reasons.push("same-day upload window");
+    } else if (minutesApart <= 24 * 60) {
+      score += 26;
+      reasons.push("posted within 24 hours");
+    } else {
+      score += 12;
+      reasons.push("posted within 3 days");
+    }
+
+    const hashtagOverlap = overlapScore(a.hashtags, b.hashtags);
+    if (hashtagOverlap) {
+      score += hashtagOverlap * 10;
+      reasons.push("matching hashtags");
+    }
+
+    if (a.duration && b.duration) {
+      const durationGap = Math.abs(a.duration - b.duration);
+      if (durationGap <= 2) {
+        score += 20;
+        reasons.push("same duration");
+      } else if (durationGap <= 6) {
+        score += 12;
+        reasons.push("similar duration");
+      }
+    }
+
+    const tokenOverlap = overlapScore(a.tokens, b.tokens);
+    if (tokenOverlap) {
+      score += tokenOverlap * 16;
+      reasons.push("similar title or caption");
+    }
+    if (minutesApart <= 8 * 60 && sharedTokenCount(a.tokens, b.tokens) >= 4) {
+      score += 6;
+      reasons.push("shared phrase");
+    }
+
+    return {
+      score: Math.min(Math.round(score), 99),
+      reasons: [...new Set(reasons)]
+    };
+  }
+
+  function platformEntryMap(entries) {
+    return entries.reduce((map, entry) => {
+      if (!map[entry.platform] || entry.performance > map[entry.platform].performance) {
+        map[entry.platform] = entry;
+      }
+      return map;
+    }, {});
+  }
+
+  function groupIdForEntries(entries) {
+    const earliest = [...entries].sort((a, b) => a.publishedTime - b.publishedTime)[0];
+    return earliest?.id || `creative:${Date.now()}`;
+  }
+
+  function saveManualCreativeMatches() {
+    localStorage.setItem(
+      LOCAL_CREATIVE_MATCHES_KEY,
+      JSON.stringify(state.manualCreativeMatches)
+    );
+  }
+
+  function applyManualCreativeMatches(groups, entries) {
+    const byId = new Map(entries.map((entry) => [entry.id, entry]));
+
+    groups.forEach((group) => {
+      const manual = state.manualCreativeMatches[group.id] || {};
+      Object.entries(manual).forEach(([platform, entryId]) => {
+        const entry = byId.get(entryId);
+        if (!entry || entry.platform !== platform) return;
+        groups.forEach((candidate) => {
+          if (candidate === group) return;
+          candidate.entries = candidate.entries.filter((item) => item.id !== entry.id);
+        });
+        group.entries = group.entries.filter((item) => item.platform !== platform);
+        group.entries.push(entry);
+        group.manualPlatforms.add(platform);
+      });
+    });
+
+    return groups
+      .filter((group) => group.entries.length)
+      .map((group) => {
+        group.entries = group.entries.sort((a, b) => a.publishedTime - b.publishedTime);
+        group.platforms = platformEntryMap(group.entries);
+        group.totalViews = group.entries.reduce((sum, entry) => sum + entry.views, 0);
+        group.latestTime = Math.max(...group.entries.map((entry) => entry.publishedTime));
+        group.earliestTime = Math.min(...group.entries.map((entry) => entry.publishedTime));
+        group.title = [...group.entries].sort((a, b) => b.performance - a.performance)[0]?.title || "Matched video";
+        return group;
+      });
+  }
+
+  function creativeGroups() {
+    const entries = comparableContent().sort((a, b) => b.publishedTime - a.publishedTime);
+    const assigned = new Set();
+    const groups = [];
+
+    entries.forEach((seed) => {
+      if (assigned.has(seed.id)) return;
+      const matches = [seed];
+      const matchNotes = [];
+      const candidates = entries
+        .filter((candidate) => !assigned.has(candidate.id) && candidate.id !== seed.id)
+        .map((candidate) => ({ candidate, match: matchScore(seed, candidate) }))
+        .filter(({ match }) => match && match.score >= 48)
+        .sort((a, b) => b.match.score - a.match.score);
+
+      ["shorts", "instagram", "facebook", "tiktok"].forEach((platform) => {
+        if (platform === seed.platform) return;
+        const best = candidates.find(({ candidate }) => candidate.platform === platform);
+        if (!best) return;
+        matches.push(best.candidate);
+        matchNotes.push(best.match);
+      });
+
+      if (matches.length < 2) return;
+      matches.forEach((entry) => assigned.add(entry.id));
+      const entriesByTime = [...matches].sort((a, b) => a.publishedTime - b.publishedTime);
+      const strongestEntry = [...matches].sort((a, b) => b.performance - a.performance)[0];
+      const confidence = Math.round(
+        matchNotes.reduce((sum, note) => sum + note.score, 0) / Math.max(matchNotes.length, 1)
+      );
+      groups.push({
+        id: groupIdForEntries(entriesByTime),
+        confidence,
+        reasons: [...new Set(matchNotes.flatMap((note) => note.reasons))],
+        entries: entriesByTime,
+        platforms: platformEntryMap(entriesByTime),
+        manualPlatforms: new Set(),
+        totalViews: matches.reduce((sum, entry) =>
+          sum + entry.views, 0
+        ),
+        latestTime: Math.max(...matches.map((entry) => entry.publishedTime)),
+        earliestTime: Math.min(...matches.map((entry) => entry.publishedTime)),
+        title: strongestEntry?.title || "Matched video"
+      });
+    });
+
+    entries.forEach((entry) => {
+      if (assigned.has(entry.id)) return;
+      groups.push({
+        id: entry.id,
+        confidence: 0,
+        reasons: ["single-platform upload"],
+        entries: [entry],
+        platforms: { [entry.platform]: entry },
+        manualPlatforms: new Set(),
+        totalViews: entry.views,
+        latestTime: entry.publishedTime,
+        earliestTime: entry.publishedTime,
+        title: entry.title
+      });
+    });
+
+    return applyManualCreativeMatches(groups, entries);
+  }
+
+  function creativeMatchUrl(platform, item) {
+    return contentUrl(platform === "youtube" ? "youtube" : platform, item);
+  }
+
+  function creativePlatformLabel(platform) {
+    if (platform === "youtube") return "YouTube Shorts";
+    return PLATFORM_LABELS[platform] || platformMark(platform);
+  }
+
+  function platformCell(group, platform) {
+    const entry = group.platforms[platform];
+    if (!entry) {
+      return `
+        <button class="creative-platform-missing" data-creative-search="${group.id}" data-platform="${platform}" type="button">
+          <b>${platformMark(platform)}</b>
+          <span>Find match</span>
+        </button>`;
+    }
+    const engagement = entry.views
+      ? (numberValue(entry.item.likes) + numberValue(entry.item.comments) +
+        numberValue(entry.item.shares) + numberValue(entry.item.saved)) / entry.views * 100
+      : 0;
+    return `
+      <a class="${group.manualPlatforms.has(platform) ? "manual" : ""}" href="${creativeMatchUrl(platform, entry.item)}" target="_blank" rel="noreferrer">
+        <b>${platformMark(platform)}</b>
+        <strong>${compact(entry.views)}</strong>
+        <small>${percent(engagement)} interaction</small>
+      </a>`;
+  }
+
+  function renderCreativeCard(group, rank = null) {
+    const topEntry = group.entries.find((entry) => entry.item.thumbnail) || group.entries[0];
+    const date = new Intl.DateTimeFormat("en-GB", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    }).format(new Date(group.earliestTime));
+    const card = document.createElement("article");
+    card.className = "creative-match-card";
+    card.dataset.creativeId = group.id;
+    card.innerHTML = `
+      <img src="${topEntry.item.thumbnail || ""}" alt="">
+      <div class="creative-match-copy">
+        <span>${rank ? `#${rank} performer · ` : ""}${group.confidence ? `${group.confidence}% likely match · ` : ""}${date}</span>
+        <strong>${group.title.slice(0, 92)}</strong>
+        <p>${group.reasons.slice(0, 3).join(", ")}</p>
+        <div class="creative-platform-strip">
+          ${CREATIVE_PLATFORMS.map((platform) => platformCell(group, platform)).join("")}
+        </div>
+      </div>
+      <div class="creative-match-total">
+        <span>Total views</span>
+        <strong>${compact(group.totalViews)}</strong>
+      </div>`;
+    return card;
+  }
+
+  function unmatchedCreativeEntries(platform, groups) {
+    const available = groups
+      .filter((group) => group.entries.length === 1)
+      .flatMap((group) => group.entries.map((entry) => ({ ...entry, groupId: group.id })));
+    return available
+      .filter((entry) =>
+        entry.platform === platform &&
+        entry.groupId !== state.creativeSearch?.groupId
+      )
+      .sort((a, b) => b.publishedTime - a.publishedTime);
+  }
+
+  function renderCreativeSearch(groups) {
+    const search = state.creativeSearch;
+    elements.creativeSearchPanel.hidden = !search;
+    elements.creativeSearchPanel.replaceChildren();
+    document.body.classList.toggle("creative-modal-open", Boolean(search));
+    if (!search) return;
+
+    const group = groups.find((item) => item.id === search.groupId) || {
+      id: search.groupId,
+      title: "this video"
+    };
+    const options = unmatchedCreativeEntries(search.platform, groups);
+    const title = document.createElement("div");
+    const dialog = document.createElement("div");
+    dialog.className = "creative-search-dialog";
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-modal", "true");
+    dialog.setAttribute("aria-label", `${creativePlatformLabel(search.platform)} unmatched videos`);
+    const heading = document.createElement("div");
+    heading.className = "creative-search-heading";
+    heading.innerHTML = `
+      <div>
+        <span>Manual match</span>
+        <strong>${creativePlatformLabel(search.platform)} unmatched videos</strong>
+        <p>Choose the upload that belongs with "${group.title.slice(0, 78)}".</p>
+      </div>
+      <button class="small-button" data-creative-search-close type="button">Close</button>`;
+    dialog.append(heading);
+
+    if (!options.length) {
+      const empty = document.createElement("p");
+      empty.className = "creative-search-empty";
+      empty.textContent = "No unmatched videos are available for this platform.";
+      dialog.append(empty);
+      elements.creativeSearchPanel.append(dialog);
+      return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "creative-search-results";
+
+    options.slice(0, 30).forEach((entry) => {
+      const row = document.createElement("button");
+      row.className = "creative-search-option";
+      row.type = "button";
+      row.dataset.creativeManualGroup = group.id;
+      row.dataset.creativeManualPlatform = search.platform;
+      row.dataset.creativeManualEntry = entry.id;
+      row.innerHTML = `
+        <img src="${entry.item.thumbnail || ""}" alt="">
+        <span>
+          <strong>${entry.title.slice(0, 88)}</strong>
+          <small>${new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(entry.publishedTime))}</small>
+        </span>
+        <b>${compact(entry.views)}</b>`;
+      list.append(row);
+    });
+    dialog.append(list);
+    elements.creativeSearchPanel.append(dialog);
+  }
+
+  function renderCreativeMatches() {
+    const groups = creativeGroups();
+    const matchedGroups = groups.filter((group) => group.entries.length > 1);
+    const topGroups = [...matchedGroups].sort((a, b) => b.totalViews - a.totalViews).slice(0, 3);
+    const topIds = new Set(topGroups.map((group) => group.id));
+    const recentGroups = [...matchedGroups]
+      .filter((group) => !topIds.has(group.id))
+      .sort((a, b) => b.latestTime - a.latestTime);
+    const recentVisible = recentGroups.slice(0, state.creativeVisibleCount);
+
+    elements.creativeTopMatches.replaceChildren();
+    elements.creativeMatches.replaceChildren();
+    elements.creativeEmpty.hidden = matchedGroups.length > 0;
+    elements.creativeSummary.textContent = matchedGroups.length
+      ? `${matchedGroups.length} matched ${matchedGroups.length === 1 ? "video" : "videos"}`
+      : "Awaiting matches";
+
+    topGroups.forEach((group, index) =>
+      elements.creativeTopMatches.append(renderCreativeCard(group, index + 1))
+    );
+    recentVisible.forEach((group) =>
+      elements.creativeMatches.append(renderCreativeCard(group))
+    );
+    elements.creativeShowMore.hidden = recentGroups.length <= state.creativeVisibleCount;
+    renderCreativeSearch(groups);
+  }
+
   function renderContent(platform, data) {
     elements.content.replaceChildren();
     const content = [...data.content].sort((a, b) =>
@@ -793,6 +1213,7 @@
     renderPlatformCards();
     renderViewShare();
     renderWeekdays();
+    renderCreativeMatches();
     renderBio();
     const dates = [
       state.youtube?.current?.checkedAt,
@@ -953,6 +1374,49 @@
 
   elements.refresh.addEventListener("click", refreshAll);
   elements.back.addEventListener("click", closeDrilldown);
+  elements.creativeShowMore.addEventListener("click", () => {
+    state.creativeVisibleCount += 5;
+    renderCreativeMatches();
+  });
+  elements.overview.addEventListener("click", (event) => {
+    const searchButton = event.target.closest("[data-creative-search]");
+    if (searchButton) {
+      state.creativeSearch = {
+        groupId: searchButton.dataset.creativeSearch,
+        platform: searchButton.dataset.platform
+      };
+      renderCreativeMatches();
+      return;
+    }
+
+  });
+  elements.creativeSearchPanel.addEventListener("click", (event) => {
+    if (event.target.closest("[data-creative-search-close]") ||
+      event.target === elements.creativeSearchPanel) {
+      state.creativeSearch = null;
+      renderCreativeMatches();
+      return;
+    }
+
+    const manualButton = event.target.closest("[data-creative-manual-entry]");
+    if (!manualButton) return;
+    const groupId = manualButton.dataset.creativeManualGroup;
+    const platform = manualButton.dataset.creativeManualPlatform;
+    const entryId = manualButton.dataset.creativeManualEntry;
+    if (!groupId || !platform || !entryId) return;
+    state.manualCreativeMatches[groupId] = {
+      ...(state.manualCreativeMatches[groupId] || {}),
+      [platform]: entryId
+    };
+    state.creativeSearch = null;
+    saveManualCreativeMatches();
+    renderCreativeMatches();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !state.creativeSearch) return;
+    state.creativeSearch = null;
+    renderCreativeMatches();
+  });
   document.querySelectorAll("[data-bio-period]").forEach((button) => {
     button.addEventListener("click", async () => {
       document.querySelectorAll("[data-bio-period]").forEach((item) =>

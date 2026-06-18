@@ -157,8 +157,10 @@ export default {
           id: string;
           snippet?: {
             title?: string;
+            description?: string;
             publishedAt?: string;
             thumbnails?: Record<string, { url?: string }>;
+            tags?: string[];
           };
           statistics?: {
             viewCount?: string;
@@ -175,6 +177,8 @@ export default {
           return {
             id: video.id,
             title,
+            description: video.snippet?.description || "",
+            tags,
             publishedAt: video.snippet?.publishedAt || "",
             thumbnail: thumbnailUrl(video.snippet?.thumbnails),
             views: numberValue(video.statistics?.viewCount),

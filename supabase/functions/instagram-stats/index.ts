@@ -189,6 +189,22 @@ async function facebookVideoViews(
   return 0;
 }
 
+function facebookVideoAttachments(post: {
+  attachments?: {
+    data?: Array<{
+      target?: { id?: string };
+      media_type?: string;
+      type?: string;
+    }>;
+  };
+}) {
+  return (post.attachments?.data || []).filter((attachment) => {
+    const text = `${attachment.media_type || ""} ${attachment.type || ""}`.toLowerCase();
+    return Boolean(attachment.target?.id) &&
+      (text.includes("video") || text.includes("reel"));
+  });
+}
+
 export default {
   async fetch(request: Request) {
   const origin = request.headers.get("origin");
@@ -332,14 +348,21 @@ export default {
       (post: { created_time?: string }) => post.created_time &&
         new Date(post.created_time) >= new Date(monthStartIso()),
     );
+    const recentVideoPosts = recentPagePosts.filter((post: {
+      attachments?: {
+        data?: Array<{
+          target?: { id?: string };
+          media_type?: string;
+          type?: string;
+        }>;
+      };
+    }) => facebookVideoAttachments(post).length > 0);
     const pagePostInsights = await Promise.all(
-      recentPagePosts.map(async (post: {
+      recentVideoPosts.map(async (post: {
         id: string;
         attachments?: { data?: Array<{ target?: { id?: string } }> };
       }) => {
-        const videoId = post.attachments?.data?.find(
-          (attachment) => attachment.target?.id,
-        )?.target?.id;
+        const videoId = facebookVideoAttachments(post)[0]?.target?.id;
         const [views, postReach, videoViews] = await Promise.all([
           postInsight(post.id, ["post_media_view", "post_video_views"], accessToken),
           postInsight(post.id, ["post_impressions_unique"], accessToken),
@@ -358,7 +381,7 @@ export default {
       (total, item) => total + item.views.value,
       0,
     );
-    const measuredPostEngagements = recentPagePosts.reduce(
+    const measuredPostEngagements = recentVideoPosts.reduce(
       (total, post: {
         shares?: { count?: number };
         comments?: { summary?: { total_count?: number } };
@@ -388,13 +411,13 @@ export default {
           month: {
             views: pageImpressions.value || measuredPostViews,
             engagements: pageEngagedUsers.value || measuredPostEngagements,
-            posts: recentPagePosts.length,
+            posts: recentVideoPosts.length,
           },
           access: {
             posts: pagePostsAvailable,
             insights: pageImpressions.available || pageEngagedUsers.available,
           },
-          posts: recentPagePosts.map((post: {
+          posts: recentVideoPosts.map((post: {
             id: string;
             message?: string;
             created_time?: string;
@@ -404,20 +427,32 @@ export default {
             comments?: { summary?: { total_count?: number } };
             reactions?: { summary?: { total_count?: number } };
             attachments?: {
-              data?: Array<{ target?: { id?: string } }>;
+              data?: Array<{
+                target?: { id?: string };
+                media_type?: string;
+                type?: string;
+              }>;
             };
-          }, index: number) => ({
-            id: post.id,
-            caption: post.message || "Facebook post",
-            thumbnail: post.full_picture || "",
-            permalink: post.permalink_url || "",
-            publishedAt: post.created_time || "",
-            likes: numberValue(post.reactions?.summary?.total_count),
-            comments: numberValue(post.comments?.summary?.total_count),
-            shares: numberValue(post.shares?.count),
-            views: pagePostInsights[index]?.views.value || 0,
-            reach: pagePostInsights[index]?.reach.value || 0,
-          })),
+          }, index: number) => {
+            const attachments = facebookVideoAttachments(post);
+            return {
+              id: post.id,
+              caption: post.message || "Facebook reel",
+              thumbnail: post.full_picture || "",
+              permalink: post.permalink_url || "",
+              publishedAt: post.created_time || "",
+              likes: numberValue(post.reactions?.summary?.total_count),
+              comments: numberValue(post.comments?.summary?.total_count),
+              shares: numberValue(post.shares?.count),
+              views: pagePostInsights[index]?.views.value || 0,
+              reach: pagePostInsights[index]?.reach.value || 0,
+              attachments: attachments.map((attachment) => ({
+                targetId: attachment.target?.id || "",
+                mediaType: attachment.media_type || "",
+                type: attachment.type || "",
+              })),
+            };
+          }),
         },
         account: {
           id: account.id,

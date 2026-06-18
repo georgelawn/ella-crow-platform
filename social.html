@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=24">
+    <link rel="stylesheet" href="styles.css?v=26">
   </head>
   <body>
     <header class="topbar">
@@ -73,6 +73,34 @@
           </article>
         </section>
 
+        <section class="social-premium-panel creative-match-panel">
+          <div class="social-panel-heading">
+            <div>
+              <p class="eyebrow">Cross-platform Videos</p>
+              <h2>Same creative, different uploads</h2>
+              <p>Top lifetime performers and recent videos, grouped by upload date/time, hashtags, duration and caption/title similarity.</p>
+            </div>
+            <span id="creativeMatchSummary">Building matches</span>
+          </div>
+          <div class="creative-section-heading">
+            <h3>Top 3 performers</h3>
+            <span>All available platform data</span>
+          </div>
+          <div class="creative-match-list creative-top-list" id="creativeTopMatches"></div>
+          <div class="creative-section-heading">
+            <h3>Recent videos</h3>
+            <span>Newest first</span>
+          </div>
+          <div class="creative-match-list" id="creativeMatches"></div>
+          <button class="small-button creative-show-more" id="creativeShowMore" type="button" hidden>Show 5 more</button>
+          <div class="social-empty-state" id="creativeMatchEmpty" hidden>
+            <strong>No matches yet</strong>
+            <p>Refresh the platforms after the same video has been posted in at least two places.</p>
+          </div>
+        </section>
+
+        <div class="creative-search-modal" id="creativeSearchPanel" hidden></div>
+
         <section class="social-premium-panel bio-performance-panel">
           <div class="social-panel-heading bio-panel-heading">
             <div>
@@ -125,6 +153,6 @@
 
     <script src="cloud-config.js?v=6"></script>
     <script src="app-cloud.js?v=6"></script>
-    <script src="social.js?v=13"></script>
+    <script src="social.js?v=16"></script>
   </body>
 </html>
