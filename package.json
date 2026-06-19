@@ -1,0 +1,8 @@
+{
+  "name": "ella-crow-platform",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/check-static.mjs"
+  }
+}
+

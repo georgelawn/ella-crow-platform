@@ -2,6 +2,13 @@
 
 This is a lightweight management dashboard for Ella Crow. It is designed to run as a static site on GitHub Pages, with Supabase storing shared dashboard data and Google Apps Script handling one-way Google Calendar sync.
 
+For development and fresh-thread handoff, read `AGENTS.md` and
+`PROJECT_CONTEXT.md`. Run the dependency-free project checks with:
+
+```sh
+node scripts/check-static.mjs
+```
+
 ## Current Features
 
 - Add, edit, delete, and filter gigs
