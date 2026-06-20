@@ -3080,6 +3080,13 @@ summary:focus-visible {
   font-size: 0.82rem;
 }
 
+.todo-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .status-badge {
   border: 2px solid var(--line);
   color: var(--muted);

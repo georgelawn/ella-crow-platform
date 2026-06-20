@@ -15,6 +15,8 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Social integrations: Supabase Edge Functions for YouTube, Instagram/Facebook,
   and TikTok
 - Calendar integration: Google Apps Script web app
+- Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
+  digest to a configured private chat
 - Bio pages: embeddable Squarespace snippets in `squarespace-bio-links/`
 
 Each main page has a matching JavaScript file. `styles.css` is shared across
@@ -29,6 +31,7 @@ The dashboard uses these local storage keys:
 - `ella-crow-finance-v1`
 - `ella-crow-projects-v1`
 - `ella-crow-manual-todos-v1`
+- `ella-crow-todo-snoozes-v1`
 - `ella-crow-opportunities-v1`
 - `ella-crow-contacts-v1`
 - `ella-crow-roster-v1`
@@ -75,6 +78,16 @@ used when the user explicitly requests Netlify.
 
 Supabase Edge Functions are deployed separately from the static site. A GitHub
 push does not by itself deploy changed Edge Functions or database SQL.
+
+Google Apps Script is also deployed separately from the static site. The source
+of truth is `apps-script/google-calendar-sync-webapp.gs`. For Telegram due-item
+digests, configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and
+`SUPABASE_ANON_KEY` in Apps Script Properties, then run
+`testTelegramDueDigest()` and `installTelegramDueDigestTrigger()` from Apps
+Script. To let the bot respond when the user messages `update`, run
+`installTelegramUpdatePollingTrigger()`; this deletes any Telegram webhook and
+checks for updates every minute. The digest reads the existing Supabase
+`ella_crow_store` mirror and does not write to Google Calendar.
 
 ## Verification Strategy
 

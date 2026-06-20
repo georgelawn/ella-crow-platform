@@ -1,12 +1,14 @@
 const gigStorageKey = "ella-crow-gigs-v2";
 const sessionStorageKey = "ella-crow-sessions-v1";
 const todoStorageKey = "ella-crow-manual-todos-v1";
+const todoSnoozeStorageKey = "ella-crow-todo-snoozes-v1";
 const financeStorageKey = "ella-crow-finance-v1";
 const opportunityStorageKey = "ella-crow-opportunities-v1";
 
 let gigs = loadGigs();
 let sessions = loadSessions();
 let manualTodos = loadManualTodos();
+let todoSnoozes = loadTodoSnoozes();
 let transactions = loadTransactions();
 let opportunities = loadOpportunities();
 let activeFilter = "open";
@@ -51,6 +53,15 @@ function loadManualTodos() {
   }
 }
 
+function loadTodoSnoozes() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(todoSnoozeStorageKey) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function loadTransactions() {
   try {
     const parsed = JSON.parse(localStorage.getItem(financeStorageKey) || "[]");
@@ -79,6 +90,10 @@ function saveOpportunities() {
 
 function saveManualTodos() {
   localStorage.setItem(todoStorageKey, JSON.stringify(manualTodos));
+}
+
+function saveTodoSnoozes() {
+  localStorage.setItem(todoSnoozeStorageKey, JSON.stringify(todoSnoozes));
 }
 
 function todayStamp() {
@@ -185,7 +200,16 @@ function formatDate(dateString) {
 }
 
 function isInBreach(todo) {
-  return !todo.done && dateStamp(todo.dueDate) < todayStamp();
+  return isDueForTelegram(todo);
+}
+
+function isDueForTelegram(todo) {
+  return !todo.done && dateStamp(todo.dueDate) <= todayStamp();
+}
+
+function snoozedUntil(todo) {
+  const date = todoSnoozes[todo.id];
+  return date && dateStamp(date) >= todayStamp() ? date : "";
 }
 
 function isClosedOpportunity(opportunity) {
@@ -295,7 +319,10 @@ function getAutoTodos() {
 }
 
 function allTodos() {
-  return [...getAutoTodos(), ...manualTodos];
+  return [...getAutoTodos(), ...manualTodos].map((todo) => ({
+    ...todo,
+    snoozedUntil: snoozedUntil(todo)
+  }));
 }
 
 function filteredTodos() {
@@ -341,6 +368,7 @@ function reloadTodosFromStorage() {
   transactions = loadTransactions();
   opportunities = loadOpportunities();
   manualTodos = loadManualTodos();
+  todoSnoozes = loadTodoSnoozes();
   renderTodos();
 }
 
@@ -348,6 +376,13 @@ function renderTodo(todo) {
   const breachClass = isInBreach(todo) ? " breach" : "";
   const doneClass = todo.done ? " done" : "";
   const sourceLabel = todo.type === "manual" ? "Manual" : `Auto from ${todo.category.toLowerCase()}`;
+  const activeSnooze = todo.snoozedUntil;
+  const snoozeBadge = activeSnooze ? `<span>Telegram snoozed until ${formatDate(activeSnooze)}</span>` : "";
+  const snoozeButton = isDueForTelegram(todo)
+    ? activeSnooze
+      ? `<button class="small-button" data-action="clear-snooze" data-id="${escapeHtml(todo.id)}" type="button">Clear snooze</button>`
+      : `<button class="small-button" data-action="snooze" data-id="${escapeHtml(todo.id)}" type="button">Snooze Telegram</button>`
+    : "";
 
   return `
     <article class="todo-card${breachClass}${doneClass}">
@@ -359,12 +394,28 @@ function renderTodo(todo) {
         <span>${escapeHtml(todo.category)}</span>
         <span>${sourceLabel}</span>
         <span class="due-badge">Due ${formatDate(todo.dueDate)}</span>
+        ${snoozeBadge}
       </div>
       ${todo.meta ? `<p>${escapeHtml(todo.meta)}</p>` : ""}
       ${todo.notes ? `<p>${escapeHtml(todo.notes)}</p>` : ""}
+      ${snoozeButton ? `<div class="todo-actions">${snoozeButton}</div>` : ""}
       ${todo.type === "manual" ? `<button class="small-button danger todo-delete" data-action="delete" data-id="${escapeHtml(todo.id)}" type="button">Delete</button>` : ""}
     </article>
   `;
+}
+
+function snoozeTodo(id) {
+  const days = Number(window.prompt("Snooze this task from Telegram for how many days?", "1"));
+  if (!Number.isFinite(days) || days < 1) return;
+  todoSnoozes[id] = addDays(localDateString(new Date()), Math.floor(days));
+  saveTodoSnoozes();
+  renderTodos();
+}
+
+function clearTodoSnooze(id) {
+  delete todoSnoozes[id];
+  saveTodoSnoozes();
+  renderTodos();
 }
 
 function toggleAutoTodo(todo) {
@@ -472,6 +523,18 @@ todoList.addEventListener("change", (event) => {
 });
 
 todoList.addEventListener("click", (event) => {
+  const snoozeButton = event.target.closest('button[data-action="snooze"]');
+  if (snoozeButton) {
+    snoozeTodo(snoozeButton.dataset.id);
+    return;
+  }
+
+  const clearSnoozeButton = event.target.closest('button[data-action="clear-snooze"]');
+  if (clearSnoozeButton) {
+    clearTodoSnooze(clearSnoozeButton.dataset.id);
+    return;
+  }
+
   const button = event.target.closest('button[data-action="delete"]');
   if (!button) return;
 
@@ -491,7 +554,7 @@ document.querySelectorAll(".filter").forEach((button) => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
-  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, financeStorageKey, opportunityStorageKey];
+  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, todoSnoozeStorageKey, financeStorageKey, opportunityStorageKey];
   if (keys.some((key) => todoKeys.includes(key))) reloadTodosFromStorage();
 });
 
