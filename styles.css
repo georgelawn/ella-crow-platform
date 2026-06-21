@@ -2367,6 +2367,7 @@ button {
   margin: 0 auto;
   max-width: 1220px;
   padding: 28px 24px 22px;
+  position: relative;
 }
 
 .topbar > div:first-child {
@@ -2416,13 +2417,70 @@ h2 {
 }
 
 .header-actions {
-  flex-wrap: nowrap;
-  gap: 7px;
-  justify-content: flex-start;
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  padding-bottom: 2px;
+  background: var(--paper);
+  border: 3px solid var(--line);
+  box-shadow: 0 16px 30px rgba(58, 36, 20, 0.16);
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(130px, 1fr));
+  min-width: min(380px, calc(100vw - 32px));
+  padding: 10px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 40;
+}
+
+.nav-menu {
+  justify-self: end;
+  position: relative;
+  z-index: 40;
+}
+
+.nav-menu-button {
+  align-items: center;
+  display: inline-flex;
+  gap: 10px;
+  list-style: none;
+  min-height: 42px;
+  padding: 10px 16px;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.nav-menu-button::-webkit-details-marker {
+  display: none;
+}
+
+.menu-icon {
+  background: currentColor;
+  display: inline-block;
+  height: 2px;
+  position: relative;
+  width: 18px;
+}
+
+.menu-icon::before,
+.menu-icon::after {
+  background: currentColor;
+  content: "";
+  height: 2px;
+  left: 0;
+  position: absolute;
+  width: 18px;
+}
+
+.menu-icon::before {
+  top: -6px;
+}
+
+.menu-icon::after {
+  top: 6px;
+}
+
+.nav-menu[open] .nav-menu-button {
+  background: var(--brown);
+  color: var(--gold);
 }
 
 .primary-button,
@@ -4850,10 +4908,22 @@ summary:focus-visible {
     display: grid;
     gap: 7px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    margin-left: -4px;
-    margin-right: -4px;
-    overflow-x: visible;
-    padding: 0 4px 8px;
+    left: 0;
+    margin: 0;
+    min-width: 0;
+    padding: 8px;
+    right: auto;
+    width: 100%;
+  }
+
+  .nav-menu {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .nav-menu-button {
+    justify-content: center;
+    width: 100%;
   }
 
   .header-actions .nav-link {

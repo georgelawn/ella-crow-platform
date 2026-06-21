@@ -23,10 +23,12 @@ The parent Codex workspace is not the repository.
    behavior, browser events, or a complete user flow. Prefer one focused final
    pass; do not repeatedly screenshot unchanged pages.
 6. After making any HTML or JavaScript change and completing verification, ask
-   the user whether they want it pushed to GitHub. Include `Yes, push to main`
-   as the suggested response. If they say yes, efficiently follow the GitHub
-   rules below: stage only the intended files or hunks, commit, and push to
-   `main`.
+   the user whether they want it pushed to GitHub. When the UI supports
+   clickable response options, present `Yes, push to main` as a clickable
+   suggested option. If clickable options are unavailable, include
+   `Yes, push to main` as the typed suggested response. If they say yes,
+   efficiently follow the GitHub rules below: stage only the intended files or
+   hunks, commit, and push to `main`.
 7. Summarize changed files, verification performed, and any live services
    changed.
 
@@ -45,8 +47,9 @@ The parent Codex workspace is not the repository.
   only. A push only to a `codex/...` branch is not enough to make the live site
   update.
 - For HTML or JavaScript changes, do not assume the user wants an immediate
-  push just because the code is complete. Ask first with `Yes, push to main` as
-  the suggested response, then proceed promptly if confirmed.
+  push just because the code is complete. Ask first with a clickable
+  `Yes, push to main` option when supported; otherwise provide that exact text
+  as the suggested response. Proceed promptly if confirmed.
 - When the user asks to push, first identify the intended scope from the current
   request and `git diff --name-only`. If the worktree contains unrelated edits,
   stage only the intended files or hunks; do not use `git add -A`.

@@ -5,7 +5,6 @@ const MARKER_LABEL = "Ella dashboard ID";
 const YOUTUBE_CHANNEL_ID = "UCbZAHmVbINt96YrYrotvB1Q";
 const YOUTUBE_API_ROOT = "https://www.googleapis.com/youtube/v3";
 const DEFAULT_SUPABASE_URL = "https://hmwnkhgsocdevehebjpq.supabase.co";
-const DEFAULT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwhJpMVQ1AQ0p5evufgLTmL2_Mnjk4P91WTPwHWYiD1nly69IyMc2V3WwowJRC-LJ8/exec";
 const ELLA_STORE_TABLE = "ella_crow_store";
 const DUE_DIGEST_DEFAULT_HOUR = 9;
 
@@ -48,10 +47,6 @@ function doGet(event) {
 function doPost(event) {
   try {
     const payload = JSON.parse(event.postData.contents || "{}");
-    if (payload.message || payload.edited_message) {
-      return json_(handleTelegramUpdate_(payload));
-    }
-
     const action = payload.action || "upsert";
     const itemType = payload.itemType;
     const item = payload.item || {};
@@ -210,78 +205,6 @@ function installTelegramDueDigestTrigger() {
     .create();
 
   return { ok: true, hour: hour, timezone: TIMEZONE };
-}
-
-function installTelegramUpdateWebhook() {
-  const props = PropertiesService.getScriptProperties();
-  const webAppUrl = props.getProperty("TELEGRAM_WEBHOOK_URL") || props.getProperty("WEB_APP_URL") || DEFAULT_WEB_APP_URL;
-  const result = telegramRequest_("setWebhook", {
-    url: webAppUrl,
-    allowed_updates: ["message", "edited_message"]
-  });
-  return { ok: true, webhookUrl: webAppUrl, telegram: result };
-}
-
-function installTelegramUpdatePollingTrigger() {
-  telegramRequest_("deleteWebhook", {});
-  ScriptApp.getProjectTriggers()
-    .filter(function (trigger) {
-      return trigger.getHandlerFunction() === "pollTelegramUpdates";
-    })
-    .forEach(function (trigger) {
-      ScriptApp.deleteTrigger(trigger);
-    });
-
-  ScriptApp.newTrigger("pollTelegramUpdates")
-    .timeBased()
-    .everyMinutes(1)
-    .create();
-
-  return { ok: true, interval: "1 minute" };
-}
-
-function pollTelegramUpdates() {
-  const props = PropertiesService.getScriptProperties();
-  const offset = Number(props.getProperty("TELEGRAM_UPDATE_OFFSET") || 0);
-  const updates = telegramRequest_("getUpdates", {
-    offset: offset || undefined,
-    timeout: 0,
-    allowed_updates: ["message", "edited_message"]
-  });
-  let nextOffset = offset;
-  let handled = 0;
-
-  asArray_(updates).forEach(function (update) {
-    if (typeof update.update_id === "number") {
-      nextOffset = Math.max(nextOffset, update.update_id + 1);
-    }
-    const result = handleTelegramUpdate_(update);
-    if (result.sent) handled += 1;
-  });
-
-  if (nextOffset !== offset) {
-    props.setProperty("TELEGRAM_UPDATE_OFFSET", String(nextOffset));
-  }
-
-  return { ok: true, updates: asArray_(updates).length, handled: handled };
-}
-
-function handleTelegramUpdate_(update) {
-  const message = update.message || update.edited_message || {};
-  const chatId = message.chat && message.chat.id;
-  const expectedChatId = PropertiesService.getScriptProperties().getProperty("TELEGRAM_CHAT_ID");
-  if (!chatId || String(chatId) !== String(expectedChatId)) {
-    return { ok: true, ignored: true };
-  }
-
-  const text = String(message.text || "").trim().toLowerCase();
-  if (text !== "update" && text !== "/update") {
-    return { ok: true, ignored: true, message: "Only the update command is enabled." };
-  }
-
-  const digest = dueDigestMessage_(dueTodos_());
-  sendTelegramMessage_(digest, chatId);
-  return { ok: true, sent: true };
 }
 
 function dueTodos_() {
