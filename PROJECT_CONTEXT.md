@@ -32,6 +32,7 @@ The dashboard uses these local storage keys:
 - `ella-crow-projects-v1`
 - `ella-crow-manual-todos-v1`
 - `ella-crow-todo-snoozes-v1`
+- `ella-crow-auto-todo-completions-v1`
 - `ella-crow-opportunities-v1`
 - `ella-crow-contacts-v1`
 - `ella-crow-roster-v1`

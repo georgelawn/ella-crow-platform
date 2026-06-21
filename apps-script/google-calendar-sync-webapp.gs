@@ -15,6 +15,7 @@ const STORE_KEYS = {
   finance: "ella-crow-finance-v1",
   manualTodos: "ella-crow-manual-todos-v1",
   todoSnoozes: "ella-crow-todo-snoozes-v1",
+  autoTodoCompletions: "ella-crow-auto-todo-completions-v1",
   opportunities: "ella-crow-opportunities-v1"
 };
 
@@ -292,7 +293,8 @@ function dueTodos_() {
       return !todo.done &&
         validDateKey_(todo.dueDate) &&
         todo.dueDate <= today &&
-        !isTodoSnoozed_(todo, store.todoSnoozes, today);
+        !isTodoSnoozed_(todo, store.todoSnoozes, today) &&
+        !store.autoTodoCompletions[todo.id];
     })
     .sort(function (a, b) {
       if (a.dueDate !== b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
@@ -567,6 +569,7 @@ function loadEllaStore_() {
     finance: asArray_(rowsByKey[STORE_KEYS.finance]),
     manualTodos: asArray_(rowsByKey[STORE_KEYS.manualTodos]),
     todoSnoozes: asObject_(rowsByKey[STORE_KEYS.todoSnoozes]),
+    autoTodoCompletions: asObject_(rowsByKey[STORE_KEYS.autoTodoCompletions]),
     opportunities: asArray_(rowsByKey[STORE_KEYS.opportunities])
   };
 }

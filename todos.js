@@ -2,6 +2,7 @@ const gigStorageKey = "ella-crow-gigs-v2";
 const sessionStorageKey = "ella-crow-sessions-v1";
 const todoStorageKey = "ella-crow-manual-todos-v1";
 const todoSnoozeStorageKey = "ella-crow-todo-snoozes-v1";
+const autoTodoCompletionStorageKey = "ella-crow-auto-todo-completions-v1";
 const financeStorageKey = "ella-crow-finance-v1";
 const opportunityStorageKey = "ella-crow-opportunities-v1";
 
@@ -9,6 +10,7 @@ let gigs = loadGigs();
 let sessions = loadSessions();
 let manualTodos = loadManualTodos();
 let todoSnoozes = loadTodoSnoozes();
+let autoTodoCompletions = loadAutoTodoCompletions();
 let transactions = loadTransactions();
 let opportunities = loadOpportunities();
 let activeFilter = "open";
@@ -62,6 +64,15 @@ function loadTodoSnoozes() {
   }
 }
 
+function loadAutoTodoCompletions() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(autoTodoCompletionStorageKey) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function loadTransactions() {
   try {
     const parsed = JSON.parse(localStorage.getItem(financeStorageKey) || "[]");
@@ -94,6 +105,10 @@ function saveManualTodos() {
 
 function saveTodoSnoozes() {
   localStorage.setItem(todoSnoozeStorageKey, JSON.stringify(todoSnoozes));
+}
+
+function saveAutoTodoCompletions() {
+  localStorage.setItem(autoTodoCompletionStorageKey, JSON.stringify(autoTodoCompletions));
 }
 
 function todayStamp() {
@@ -217,6 +232,8 @@ function isClosedOpportunity(opportunity) {
 }
 
 function getAutoTodos() {
+  const completionIds = new Set(Object.keys(autoTodoCompletions));
+
   const gigTodos = gigs.flatMap((gig) => {
     const status = derivedStatus(gig);
     const isUpcoming = dateStamp(gig.date) >= todayStamp();
@@ -315,7 +332,20 @@ function getAutoTodos() {
       meta: `${opportunity.contact || "No contact added"}${opportunity.source ? ` · ${opportunity.source}` : ""}`
     }));
 
-  return [...gigTodos, ...sessionTodos, ...financeTodos, ...opportunityTodos];
+  const openTodos = [...gigTodos, ...sessionTodos, ...financeTodos, ...opportunityTodos];
+  const openIds = new Set(openTodos.map((todo) => todo.id));
+  const completedTodos = Object.values(autoTodoCompletions)
+    .filter((todo) => todo && todo.id && !openIds.has(todo.id))
+    .map((todo) => ({
+      ...todo,
+      done: true,
+      completedAt: todo.completedAt || ""
+    }));
+
+  return [
+    ...openTodos.filter((todo) => !completionIds.has(todo.id)),
+    ...completedTodos
+  ];
 }
 
 function allTodos() {
@@ -369,6 +399,7 @@ function reloadTodosFromStorage() {
   opportunities = loadOpportunities();
   manualTodos = loadManualTodos();
   todoSnoozes = loadTodoSnoozes();
+  autoTodoCompletions = loadAutoTodoCompletions();
   renderTodos();
 }
 
@@ -376,6 +407,7 @@ function renderTodo(todo) {
   const breachClass = isInBreach(todo) ? " breach" : "";
   const doneClass = todo.done ? " done" : "";
   const sourceLabel = todo.type === "manual" ? "Manual" : `Auto from ${todo.category.toLowerCase()}`;
+  const disableCompletedAuto = todo.done && todo.type !== "manual";
   const activeSnooze = todo.snoozedUntil;
   const snoozeBadge = activeSnooze ? `<span>Telegram snoozed until ${formatDate(activeSnooze)}</span>` : "";
   const snoozeButton = isDueForTelegram(todo)
@@ -386,10 +418,10 @@ function renderTodo(todo) {
 
   return `
     <article class="todo-card${breachClass}${doneClass}">
-      <label class="todo-check">
-        <input type="checkbox" data-action="toggle" data-id="${escapeHtml(todo.id)}" ${todo.done ? "checked" : ""}>
+      <div class="todo-check">
+        <input type="checkbox" data-action="toggle" data-id="${escapeHtml(todo.id)}" aria-label="Complete ${escapeHtml(todo.title)}" ${todo.done ? "checked" : ""} ${disableCompletedAuto ? "disabled" : ""}>
         <span>${escapeHtml(todo.title)}</span>
-      </label>
+      </div>
       <div class="todo-meta">
         <span>${escapeHtml(todo.category)}</span>
         <span>${sourceLabel}</span>
@@ -419,6 +451,13 @@ function clearTodoSnooze(id) {
 }
 
 function toggleAutoTodo(todo) {
+  autoTodoCompletions[todo.id] = {
+    ...todo,
+    done: true,
+    completedAt: new Date().toISOString()
+  };
+  saveAutoTodoCompletions();
+
   if (todo.type === "auto-opportunity-follow-up") {
     const opportunity = opportunities.find((item) => item.id === todo.opportunityId);
     if (!opportunity) return;
@@ -554,7 +593,7 @@ document.querySelectorAll(".filter").forEach((button) => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
-  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, todoSnoozeStorageKey, financeStorageKey, opportunityStorageKey];
+  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, todoSnoozeStorageKey, autoTodoCompletionStorageKey, financeStorageKey, opportunityStorageKey];
   if (keys.some((key) => todoKeys.includes(key))) reloadTodosFromStorage();
 });
 

@@ -11,6 +11,7 @@
     "ella-crow-email-opportunities-v1",
     "ella-crow-manual-todos-v1",
     "ella-crow-todo-snoozes-v1",
+    "ella-crow-auto-todo-completions-v1",
     "ella-crow-social-youtube-v1",
     "ella-crow-social-instagram-v1",
     "ella-crow-social-tiktok-v1",

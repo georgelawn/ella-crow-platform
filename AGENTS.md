@@ -36,6 +36,16 @@ The parent Codex workspace is not the repository.
 - Do not push, commit, or open a pull request unless the user asks.
 - For isolated requested changes, prefer a new `codex/<short-description>`
   branch unless the user explicitly wants a direct change on `main`.
+- When the user asks to push, first identify the intended scope from the current
+  request and `git diff --name-only`. If the worktree contains unrelated edits,
+  stage only the intended files or hunks; do not use `git add -A`.
+- Git index writes may require escalated permissions in Codex Desktop. Request
+  escalation directly for `git add`, `git commit`, and `git push` when needed
+  instead of retrying inside the sandbox.
+- If `gh` is unavailable, still commit and push with local git when the user has
+  asked to push. State that a PR could not be opened because `gh` is missing.
+- After a successful commit or push, include the commit hash, branch name, and
+  any remaining uncommitted files in the final summary.
 
 ## Supabase
 
