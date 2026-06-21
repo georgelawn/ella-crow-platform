@@ -76,6 +76,11 @@ GitHub Pages deploys the static site from `main`. The git remote is
 publishing only to a `codex/...` branch will not update the live GitHub Pages
 site.
 
+After completing and verifying any HTML or JavaScript change, ask the user if
+they want it pushed to GitHub and include `Yes, push to main` as the suggested
+response. If they confirm, stage only the intended files or hunks, commit, and
+push to `main` so GitHub Pages can deploy it.
+
 The parent directory also contains a separate Netlify deployment helper. It is
 not the documented primary hosting path for this repository and should only be
 used when the user explicitly requests Netlify.
