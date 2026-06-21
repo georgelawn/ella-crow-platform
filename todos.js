@@ -222,6 +222,10 @@ function isDueForTelegram(todo) {
   return !todo.done && dateStamp(todo.dueDate) <= todayStamp();
 }
 
+function canSnoozeForTelegram(todo) {
+  return !todo.done && Number.isFinite(dateStamp(todo.dueDate));
+}
+
 function snoozedUntil(todo) {
   const date = todoSnoozes[todo.id];
   return date && dateStamp(date) >= todayStamp() ? date : "";
@@ -410,7 +414,7 @@ function renderTodo(todo) {
   const disableCompletedAuto = todo.done && todo.type !== "manual";
   const activeSnooze = todo.snoozedUntil;
   const snoozeBadge = activeSnooze ? `<span>Telegram snoozed until ${formatDate(activeSnooze)}</span>` : "";
-  const snoozeButton = isDueForTelegram(todo)
+  const snoozeButton = canSnoozeForTelegram(todo)
     ? activeSnooze
       ? `<button class="small-button" data-action="clear-snooze" data-id="${escapeHtml(todo.id)}" type="button">Clear snooze</button>`
       : `<button class="small-button" data-action="snooze" data-id="${escapeHtml(todo.id)}" type="button">Snooze Telegram</button>`
