@@ -34,11 +34,17 @@ The parent Codex workspace is not the repository.
   publishing. Use local git for status, diffs, branches, commits, and pushes
   where required by that workflow.
 - Do not push, commit, or open a pull request unless the user asks.
-- For isolated requested changes, prefer a new `codex/<short-description>`
-  branch unless the user explicitly wants a direct change on `main`.
+- GitHub Pages deploys from `main`. When the user asks to "push", "publish",
+  "make it live", or similar for normal app/site changes, commit the intended
+  scope and push it to `main` unless the user explicitly asks for a branch or PR
+  only. A push only to a `codex/...` branch is not enough to make the live site
+  update.
 - When the user asks to push, first identify the intended scope from the current
   request and `git diff --name-only`. If the worktree contains unrelated edits,
   stage only the intended files or hunks; do not use `git add -A`.
+- If working on a `codex/...` branch and the user asked for the change to be
+  live, push the current commit to both the working branch and `main`, or push
+  `HEAD:main` directly when no branch push is needed.
 - Git index writes may require escalated permissions in Codex Desktop. Request
   escalation directly for `git add`, `git commit`, and `git push` when needed
   instead of retrying inside the sandbox.

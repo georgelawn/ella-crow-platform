@@ -71,7 +71,10 @@ can explain and reproduce the live database state.
 ## Deployment
 
 GitHub Pages deploys the static site from `main`. The git remote is
-`georgelawn/ella-crow-platform`.
+`georgelawn/ella-crow-platform`. For this project, a user request to "push" or
+"make it live" normally means commit the intended change and push it to `main`;
+publishing only to a `codex/...` branch will not update the live GitHub Pages
+site.
 
 The parent directory also contains a separate Netlify deployment helper. It is
 not the documented primary hosting path for this repository and should only be
