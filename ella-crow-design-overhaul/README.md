@@ -1,5 +1,9 @@
 # Ella Crow Platform
 
+> Past-version backup: this directory contains the old UI/design-overhaul copy.
+> The repository root is now the canonical build and should be treated as the
+> original working version for future changes.
+
 This is a lightweight management dashboard for Ella Crow. It is designed to run as a static site on GitHub Pages, with Supabase storing shared dashboard data and Google Apps Script handling one-way Google Calendar sync.
 
 For development and fresh-thread handoff, read `AGENTS.md` and

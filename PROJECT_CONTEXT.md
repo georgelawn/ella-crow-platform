@@ -22,6 +22,13 @@ contacts, calendar events, social performance, and bio-link analytics.
 Each main page has a matching JavaScript file. `styles.css` is shared across
 the dashboard. `cloud-config.js` contains public browser configuration.
 
+The repository root is now the canonical current build. The redesign pushed to
+`main` is the baseline/original working version for future threads. The
+`ella-crow-design-overhaul/` directory is a past-version backup of the old UI,
+including earlier command-centre, watchlist, and next-move experiments; do not
+use it as active product direction unless the user explicitly asks to restore
+something from it.
+
 ## Application Data
 
 The dashboard uses these local storage keys:
@@ -117,8 +124,6 @@ and viewport.
 
 ## Known Repository State
 
-- `assets/tiktok-app-icon.png` is currently untracked. Do not delete or commit it
-  without confirming that it belongs in the requested change.
 - There is no automated end-to-end test suite.
 - There is no checked-in baseline migration matching the current live Supabase
   schema.

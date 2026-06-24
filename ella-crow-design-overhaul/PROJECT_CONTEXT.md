@@ -1,5 +1,9 @@
 # Project Context
 
+This directory is a past-version backup of the old UI/design-overhaul copy. The
+repository root is now the canonical Ella Crow Platform build and should be
+treated as the original working version for future changes.
+
 ## Purpose
 
 Ella Crow Platform is a private artist-management dashboard built as a static

@@ -9,18 +9,6 @@
     contacts: "ella-crow-contacts-v1"
   };
 
-  const pageLabels = {
-    "index.html": "Gigs",
-    "calendar.html": "Calendar",
-    "sessions.html": "Sessions",
-    "finance.html": "Finance",
-    "projects.html": "Projects",
-    "todos.html": "To Do",
-    "opportunities.html": "Opportunities",
-    "social.html": "Social",
-    "contacts.html": "Contacts"
-  };
-
   function readArray(key) {
     try {
       const value = JSON.parse(localStorage.getItem(key) || "[]");
@@ -188,46 +176,11 @@
   }
 
   function buildBriefing(data) {
-    const futureGigs = data.gigs
-      .filter((gig) => gig.date && gigStatus(gig) === "booked")
-      .sort((a, b) => dateValue(a.date) - dateValue(b.date));
-    const futureSessions = data.sessions
-      .filter((session) => session.date && sessionStatus(session) === "booked")
-      .sort((a, b) => dateValue(a.date) - dateValue(b.date));
-    const openTodos = data.todos.filter((item) => !item.done);
-    const dueTodos = openTodos.filter((item) => item.dueDate && daysUntil(item.dueDate) <= 0);
-    const followUps = data.opportunities.filter((item) =>
-      !isClosedOpportunity(item) && item.followUpDate && daysUntil(item.followUpDate) <= 7
-    );
     const pendingInvoices = data.finance.filter((item) => item.type === "revenue" && item.invoiceStatus === "pending");
     const invoiceTotal = pendingInvoices.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const atRiskProjects = data.projects.filter(projectAtRisk);
-    const activeProjects = data.projects.filter((item) => item.status !== "complete");
-
-    const next = [
-      futureGigs[0] ? { type: "Gig", title: futureGigs[0].title || "Next gig", meta: dateLabel(futureGigs[0].date), href: "index.html" } : null,
-      futureSessions[0] ? { type: "Session", title: futureSessions[0].title || "Next session", meta: dateLabel(futureSessions[0].date), href: "sessions.html" } : null,
-      followUps[0] ? { type: "Follow-up", title: followUps[0].title || "Opportunity follow-up", meta: dateLabel(followUps[0].followUpDate), href: "opportunities.html" } : null
-    ].filter(Boolean);
-
-    const risks = [
-      ...dueTodos.slice(0, 2).map((item) => ({ label: "Task due", title: item.title || "Untitled task", href: "todos.html" })),
-      ...atRiskProjects.slice(0, 2).map((item) => ({ label: "Project attention", title: item.title || "Untitled project", href: "projects.html" })),
-      ...(pendingInvoices.length ? [{ label: "Invoices pending", title: `${pendingInvoices.length} invoices · ${money(invoiceTotal)}`, href: "finance.html" }] : []),
-      ...followUps.slice(0, 2).map((item) => ({ label: "Opportunity follow-up", title: item.title || "Untitled opportunity", href: "opportunities.html" }))
-    ].slice(0, 5);
 
     return {
-      futureGigs,
-      futureSessions,
-      openTodos,
-      followUps,
-      pendingInvoices,
-      invoiceTotal,
-      atRiskProjects,
-      activeProjects,
-      next,
-      risks
+      invoiceTotal
     };
   }
 
@@ -344,14 +297,13 @@
           })[0];
         const blocked = data.projects.filter((project) => project.status === "blocked");
         const nextDeadline = nextRecord(data.projects, "deadline", (project) => project.status !== "complete");
-        const nextStep = focus?.steps?.find((step) => !step.done)?.title;
         return {
           eyebrow: "Project intelligence",
           title: "Portfolio blockers and finish lines",
-          description: "Reads the project slate for the work most likely to stall: blocked items, overdue deadlines and the next unfinished milestone.",
+          description: "Reads the project slate for active work, blocked items, overdue deadlines and nearest finish lines.",
           cards: [
             card("Primary focus", focus ? focus.title || "Untitled project" : "No active project", focus ? `${projectProgress(focus)}% complete` : "Launch a project to create momentum"),
-            card("Next step", nextStep || "No milestone set", focus ? `For ${focus.title || "the focus project"}` : "Add milestones to active projects"),
+            card("Active projects", String(active.length), active.length ? `${atRisk.length} need attention` : "No active projects"),
             card("Blocked", String(blocked.length), blocked[0] ? blocked[0].title || "Untitled project" : "No blocked projects"),
             card("Nearest finish line", nextDeadline ? dateLabel(nextDeadline.deadline) : "No deadlines", nextDeadline ? nextDeadline.title || "Untitled project" : `${atRisk.length} projects need attention`)
           ]
@@ -450,38 +402,6 @@
             <p>${safeText(item.note)}</p>
           </article>
         `).join("")}
-      </div>
-      <div class="command-split">
-        <div class="command-panel">
-          <div class="command-panel-title">
-            <h3>Cross-dashboard next moves</h3>
-            <span>${briefing.next.length || "Clear"}</span>
-          </div>
-          <div class="command-list">
-            ${briefing.next.length ? briefing.next.map((item) => `
-              <a href="${item.href}">
-                <small>${safeText(item.type)}</small>
-                <strong>${safeText(item.title)}</strong>
-                <span>${safeText(item.meta)}</span>
-              </a>
-            `).join("") : `<p class="command-empty">No dated activity is demanding attention right now.</p>`}
-          </div>
-        </div>
-        <div class="command-panel">
-          <div class="command-panel-title">
-            <h3>Global watchlist</h3>
-            <span>${briefing.risks.length || "Calm"}</span>
-          </div>
-          <div class="command-list">
-            ${briefing.risks.length ? briefing.risks.map((item) => `
-              <a href="${item.href}">
-                <small>${safeText(item.label)}</small>
-                <strong>${safeText(item.title)}</strong>
-                <span>Open ${safeText(pageLabels[item.href] || item.href)}</span>
-              </a>
-            `).join("") : `<p class="command-empty">No overdue tasks, project risks or pending follow-ups found.</p>`}
-          </div>
-        </div>
       </div>
     `;
 

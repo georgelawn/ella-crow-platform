@@ -79,10 +79,6 @@ function isAtRisk(project) {
   return new Date(`${project.deadline}T23:59:59`).getTime() < Date.now();
 }
 
-function nextStep(project) {
-  return project.steps.find((step) => !step.done)?.title || (isComplete(project) ? "Project complete" : "Add the next milestone");
-}
-
 function statusLabel(status) {
   return {
     idea: "Idea",
@@ -134,19 +130,6 @@ function renderSummary() {
   document.querySelector("#projectRevenue").textContent = formatMoney(revenue);
   document.querySelector("#atRiskProjectCount").textContent = projects.filter(isAtRisk).length;
 
-  const focus = active
-    .slice()
-    .sort((a, b) => {
-      if (isAtRisk(a) !== isAtRisk(b)) return isAtRisk(a) ? -1 : 1;
-      return progressFor(b) - progressFor(a);
-    })[0];
-
-  document.querySelector("#focusProject").textContent = focus?.title || "Nothing live yet";
-  document.querySelector("#focusNextStep").textContent = focus
-    ? `Next move: ${nextStep(focus)}`
-    : "Launch a project to set the next move.";
-  document.querySelector("#focusProgress").textContent = `${focus ? progressFor(focus) : 0}%`;
-  document.querySelector("#portfolioPulse").classList.toggle("attention", Boolean(focus && isAtRisk(focus)));
 }
 
 function filteredProjects() {
@@ -196,7 +179,6 @@ function renderProject(project) {
             ${isAtRisk(project) ? "<span>Needs attention</span>" : ""}
           </div>
           <h3>${escapeHtml(project.title)}</h3>
-          <p><strong>Next move:</strong> ${escapeHtml(nextStep(project))}</p>
         </div>
         <div class="project-card-score">
           <strong>${completedSteps}/${project.steps.length}</strong>

@@ -9,6 +9,16 @@ For development and fresh-thread handoff, read `AGENTS.md` and
 node scripts/check-static.mjs
 ```
 
+## Canonical Build
+
+The repository root is now the canonical Ella Crow Platform build. The redesign
+has been pushed and should be treated as the original working version for all
+future changes.
+
+The `ella-crow-design-overhaul/` directory is a past-version backup of the old
+UI. Do not treat it as the active source of truth unless a task explicitly asks
+to recover something from that backup.
+
 ## Current Features
 
 - Add, edit, delete, and filter gigs
