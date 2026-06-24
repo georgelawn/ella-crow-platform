@@ -1,5 +1,13 @@
 (function () {
   const mobileQuery = window.matchMedia("(max-width: 480px)");
+  const sidebarQuery = window.matchMedia("(min-width: 1081px)");
+
+  function syncNavigationMenu() {
+    document.querySelectorAll(".nav-menu").forEach((menu) => {
+      if (sidebarQuery.matches) menu.setAttribute("open", "");
+      else menu.removeAttribute("open");
+    });
+  }
 
   function buttonText(panel, expanded) {
     const heading = panel.querySelector(".panel-heading h2")?.textContent?.trim() || "Add";
@@ -44,6 +52,7 @@
   }
 
   function setup() {
+    syncNavigationMenu();
     document.querySelectorAll(".control-panel").forEach(setupPanel);
   }
 
@@ -56,4 +65,6 @@
   mobileQuery.addEventListener("change", () => {
     document.querySelectorAll(".control-panel").forEach(syncForViewport);
   });
+
+  sidebarQuery.addEventListener("change", syncNavigationMenu);
 })();
