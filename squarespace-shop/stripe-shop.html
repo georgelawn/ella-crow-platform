@@ -1,0 +1,401 @@
+<div id="ella-stripe-shop"></div>
+<style>
+  #ella-stripe-shop {
+    --ink: #2d0f1e;
+    --paper: #fce8f4;
+    --rose: #e8609a;
+    --soft: #f8d6ec;
+    --pale: #fff0f8;
+    --white: #fffafc;
+    background:
+      radial-gradient(circle at 50% -12%, rgba(255,255,255,.6), transparent 34%),
+      linear-gradient(180deg, var(--rose), var(--paper));
+    border-radius: 28px;
+    box-shadow: 0 18px 48px rgba(45,15,30,.24), 0 3px 12px rgba(45,15,30,.18);
+    box-sizing: border-box;
+    color: var(--ink);
+    font-family: var(--body-font-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+    margin: 18px auto;
+    max-width: 980px;
+    overflow: hidden;
+    padding: 34px 18px 32px;
+  }
+
+  #ella-stripe-shop * { box-sizing: border-box; }
+
+  #ella-stripe-shop .ella-shop-header {
+    margin: 0 auto 26px;
+    max-width: 820px;
+    text-align: center;
+  }
+
+  #ella-stripe-shop .ella-shop-brand-lockup {
+    align-items: center;
+    display: inline-grid;
+    gap: 12px;
+    grid-template-columns: minmax(180px, 340px) auto;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  #ella-stripe-shop .ella-shop-logo {
+    display: block;
+    height: auto;
+    margin: 0;
+    max-width: 340px;
+    width: 100%;
+  }
+
+  #ella-stripe-shop .ella-shop-badge {
+    background: var(--ink);
+    border: 2px solid var(--ink);
+    border-radius: 999px;
+    box-shadow: 0 5px 0 rgba(45,15,30,.18);
+    color: #ffffff;
+    display: inline-flex;
+    font-size: clamp(.82rem, 2.5vw, 1.05rem);
+    font-weight: 900;
+    letter-spacing: .18em;
+    line-height: 1;
+    padding: 12px 14px 11px 17px;
+    text-transform: uppercase;
+    transform: rotate(-4deg);
+  }
+
+  #ella-stripe-shop .ella-shop-intro {
+    color: rgba(45, 15, 30, .76);
+    font-size: clamp(.98rem, 2vw, 1.08rem);
+    font-weight: 750;
+    line-height: 1.5;
+    margin: 0 auto;
+    max-width: 620px;
+  }
+
+  #ella-stripe-shop .ella-shop-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 0 auto;
+    max-width: 980px;
+  }
+
+  #ella-stripe-shop .ella-product {
+    background: rgba(248,214,236,.92);
+    border: 1px solid rgba(45,15,30,.65);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(45,15,30,.1);
+    display: grid;
+    overflow: hidden;
+    position: relative;
+    transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+  }
+
+  #ella-stripe-shop .ella-product:hover {
+    background: var(--pale);
+    box-shadow: 0 6px 16px rgba(45,15,30,.14);
+    transform: translateY(-1px);
+  }
+
+  #ella-stripe-shop .ella-product-image-wrap {
+    aspect-ratio: 1 / 1;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(45,15,30,.24);
+    margin: 10px 10px 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #ella-stripe-shop .ella-product-image {
+    display: block;
+    height: 100%;
+    object-fit: cover;
+    width: 100%;
+  }
+
+  #ella-stripe-shop .ella-product-image-wrap::after {
+    border: 1px solid rgba(45,15,30,.08);
+    content: "";
+    inset: 8px;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  #ella-stripe-shop .ella-product-body {
+    display: grid;
+    gap: 9px;
+    padding: 13px 14px 15px;
+  }
+
+  #ella-stripe-shop .ella-product-kicker {
+    color: rgba(45,15,30,.62);
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .16em;
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  #ella-stripe-shop .ella-product-name {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(1.35rem, 3.2vw, 1.9rem);
+    font-weight: 700;
+    letter-spacing: 0;
+    line-height: .95;
+    margin: 0;
+  }
+
+  #ella-stripe-shop .ella-product-description {
+    color: rgba(45, 15, 30, .7);
+    font-size: .92rem;
+    font-weight: 600;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  #ella-stripe-shop .ella-product-meta {
+    color: rgba(45,15,30,.68);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: .78rem;
+    font-weight: 800;
+    gap: 6px;
+  }
+
+  #ella-stripe-shop .ella-product-meta span {
+    background: rgba(255,255,255,.42);
+    border: 1px solid rgba(45,15,30,.18);
+    border-radius: 999px;
+    padding: 5px 8px;
+  }
+
+  #ella-stripe-shop .ella-product-footer {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    justify-content: space-between;
+    margin-top: 2px;
+  }
+
+  #ella-stripe-shop .ella-product-price {
+    font-size: 1.15rem;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+
+  #ella-stripe-shop .ella-buy-button {
+    align-items: center;
+    background: rgba(45,15,30,.88);
+    border: 1px solid rgba(45,15,30,.65);
+    border-radius: 999px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    font-size: .86rem;
+    font-weight: 800;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    text-decoration: none;
+    transition: background 140ms ease, transform 140ms ease;
+  }
+
+  #ella-stripe-shop .ella-buy-button:hover,
+  #ella-stripe-shop .ella-buy-button:focus-visible {
+    background: var(--ink);
+    transform: translateY(-1px);
+  }
+
+  #ella-stripe-shop .ella-buy-button[aria-disabled="true"] {
+    background: rgba(45, 15, 30, .32);
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  #ella-stripe-shop .ella-shop-note,
+  #ella-stripe-shop .ella-shop-empty {
+    color: rgba(45, 15, 30, .72);
+    font-size: .84rem;
+    font-weight: 650;
+    line-height: 1.45;
+    margin: 18px auto 0;
+    max-width: 720px;
+    text-align: center;
+  }
+
+  @media (max-width: 540px) {
+    #ella-stripe-shop { padding: 28px 12px 26px; }
+    #ella-stripe-shop .ella-shop-brand-lockup { grid-template-columns: 1fr; justify-items: center; }
+    #ella-stripe-shop .ella-shop-logo { width: 76%; }
+    #ella-stripe-shop .ella-shop-badge { transform: rotate(-3deg) translateY(-4px); }
+    #ella-stripe-shop .ella-shop-grid { grid-template-columns: 1fr; }
+    #ella-stripe-shop .ella-product-footer { align-items: stretch; flex-direction: column; }
+    #ella-stripe-shop .ella-buy-button { width: 100%; }
+  }
+
+  @media (min-width: 541px) and (max-width: 820px) {
+    #ella-stripe-shop .ella-shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const root = document.querySelector("#ella-stripe-shop");
+  const supabaseClient = window.supabase
+    ? window.supabase.createClient(
+        "https://hmwnkhgsocdevehebjpq.supabase.co",
+        "sb_publishable_5RLD78oK3TMo-SnPf1tljA_9d7-zuHn"
+      )
+    : null;
+
+  const fallbackProducts = [
+    {
+      slug: "unisex-tees",
+      name: "Unisex Tees",
+      kicker: "Classic fit",
+      description: "Everyday heavyweight tee with an easy boxy shape. Made for gigs, rehearsals, and living in.",
+      meta: ["White tee", "S-XL", "Limited run"],
+      display_price: "&pound;20",
+      image_url: "",
+      stripe_payment_link_url: ""
+    },
+    {
+      slug: "baby-tees-1",
+      name: "Baby Tees 1",
+      kicker: "Cropped fit",
+      description: "Soft fitted baby tee with a clean front print. Cute, sharp, and slightly chaotic in the best way.",
+      meta: ["White tee", "XS-L", "Drop one"],
+      display_price: "&pound;20",
+      image_url: "",
+      stripe_payment_link_url: ""
+    },
+    {
+      slug: "baby-tees-2",
+      name: "Baby Tees 2",
+      kicker: "Alt design",
+      description: "Second baby tee design for the ones who want the other version. Same fit, different mood.",
+      meta: ["White tee", "XS-L", "Drop two"],
+      display_price: "&pound;20",
+      image_url: "",
+      stripe_payment_link_url: ""
+    }
+  ];
+
+  function normalizeProduct(product) {
+    return {
+      slug: product.slug || product.name || "shop-item",
+      name: product.name || "Shop item",
+      kicker: product.kicker || "Merch drop",
+      description: product.description || "",
+      meta: Array.isArray(product.meta) ? product.meta : [],
+      display_price: product.display_price || "",
+      image_url: product.image_url || "",
+      stripe_payment_link_url: product.stripe_payment_link_url || ""
+    };
+  }
+
+  function trackedStripeUrl(product) {
+    if (!product.stripe_payment_link_url) return "";
+    const url = new URL(product.stripe_payment_link_url);
+    url.searchParams.set("utm_source", "squarespace");
+    url.searchParams.set("utm_medium", "shop");
+    url.searchParams.set("utm_campaign", "ella_shop");
+    url.searchParams.set("utm_content", product.slug);
+    return url.toString();
+  }
+
+  function record(eventType, productSlug = null) {
+    if (!supabaseClient) return Promise.resolve();
+    return supabaseClient.from("shop_events").insert({
+      event_type: eventType,
+      product_slug: productSlug,
+      source: "squarespace_shop"
+    });
+  }
+
+  async function loadProducts() {
+    if (!supabaseClient) return fallbackProducts;
+    const { data, error } = await supabaseClient
+      .from("shop_products")
+      .select("slug,name,description,display_price,image_url,stripe_payment_link_url")
+      .eq("active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.warn("Ella shop product load failed; using fallback products.", error);
+      return fallbackProducts;
+    }
+
+    return data && data.length ? data : fallbackProducts;
+  }
+
+  function render(products) {
+    const productCards = products.map((rawProduct) => {
+      const product = normalizeProduct(rawProduct);
+      const href = trackedStripeUrl(product);
+      const disabled = href ? "" : ` aria-disabled="true"`;
+      const buttonText = href ? "Buy now" : "Coming soon";
+      const image = product.image_url
+        ? `<img class="ella-product-image" src="${product.image_url}" alt="${product.name}">`
+        : "";
+      const meta = product.meta.length
+        ? `<div class="ella-product-meta">${product.meta.map(item => `<span>${item}</span>`).join("")}</div>`
+        : "";
+      return `
+        <article class="ella-product">
+          <div class="ella-product-image-wrap">${image}</div>
+          <div class="ella-product-body">
+            <span class="ella-product-kicker">${product.kicker}</span>
+            <h3 class="ella-product-name">${product.name}</h3>
+            <p class="ella-product-description">${product.description}</p>
+            ${meta}
+            <div class="ella-product-footer">
+              <span class="ella-product-price">${product.display_price}</span>
+              <a class="ella-buy-button" href="${href || "#"}"${disabled}>${buttonText}</a>
+            </div>
+          </div>
+        </article>`;
+    }).join("");
+
+    root.innerHTML = `
+      <section class="ella-shop-header">
+        <div class="ella-shop-brand-lockup">
+          <img class="ella-shop-logo" src="https://georgelawn.github.io/ella-crow-platform/assets/ella-crow-logo.svg" alt="Ella Crow">
+          <span class="ella-shop-badge">Shop</span>
+        </div>
+        <p class="ella-shop-intro">Fresh merch for the early crowd. Three tees, one tiny drop, all &pound;20.</p>
+      </section>
+      <section class="ella-shop-grid">${productCards}</section>
+      <p class="ella-shop-note">Checkout will open securely in Stripe. Apple Pay appears automatically when it is available on your device.</p>`;
+
+    root.querySelectorAll(".ella-buy-button").forEach((link, index) => {
+      const product = normalizeProduct(products[index]);
+      link.addEventListener("click", async (event) => {
+        if (!product.stripe_payment_link_url) {
+          event.preventDefault();
+          return;
+        }
+        event.preventDefault();
+        const target = trackedStripeUrl(product);
+        await Promise.race([
+          record("checkout_click", product.slug),
+          new Promise(resolve => setTimeout(resolve, 650))
+        ]);
+        window.location.assign(target);
+      });
+    });
+  }
+
+  loadProducts()
+    .then((products) => {
+      const normalized = products.map(normalizeProduct);
+      render(normalized);
+      void Promise.resolve(record("view")).catch(() => {});
+    })
+    .catch((error) => {
+      console.warn("Ella shop failed to load.", error);
+      render(fallbackProducts);
+    });
+})();
+</script>

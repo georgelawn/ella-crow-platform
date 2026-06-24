@@ -18,6 +18,7 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat
 - Bio pages: embeddable Squarespace snippets in `squarespace-bio-links/`
+- Shop page: embeddable Squarespace Stripe snippet in `squarespace-shop/`
 
 Each main page has a matching JavaScript file. `styles.css` is shared across
 the dashboard. `cloud-config.js` contains public browser configuration.
@@ -59,6 +60,23 @@ The SQL files currently in `supabase/` are setup scripts, not migration-history
 files. Future schema changes should use `supabase/migrations/` so the repository
 can explain and reproduce the live database state.
 
+## Shop Integration
+
+The first shop implementation is a pasteable Squarespace Code Block snippet at
+`squarespace-shop/stripe-shop.html`. It follows the bio-link pattern: a
+self-contained HTML/CSS/JavaScript block that loads the public Supabase client,
+renders active products, records lightweight shop events, and sends buyers to
+Stripe-hosted Payment Links. Stripe handles card checkout and can show Apple Pay
+when available; the frontend never stores card details.
+
+Shop schema is represented by
+`supabase/migrations/20260622002634_shop_foundation.sql`. Public browser access
+is limited to selecting active products and inserting anonymous shop events.
+Order tables are RLS-enabled with no public policies; paid order writes should
+come from a future server-side Stripe webhook/Edge Function using protected
+secrets. Until the migration is applied and real Stripe Payment Links are added,
+the snippet falls back to a placeholder product with a disabled setup button.
+
 ## Security Model
 
 - The browser uses the publishable Supabase key from `cloud-config.js`.
@@ -77,9 +95,10 @@ publishing only to a `codex/...` branch will not update the live GitHub Pages
 site.
 
 After completing and verifying any HTML or JavaScript change, ask the user if
-they want it pushed to GitHub and include `Yes, push to main` as the suggested
-response. If they confirm, stage only the intended files or hunks, commit, and
-push to `main` so GitHub Pages can deploy it.
+they want it pushed to GitHub. Use a clickable `Yes, push to main` option when
+the chat UI supports clickable responses; otherwise include that exact text as
+the typed suggested response. If they confirm, stage only the intended files or
+hunks, commit, and push to `main` so GitHub Pages can deploy it.
 
 The parent directory also contains a separate Netlify deployment helper. It is
 not the documented primary hosting path for this repository and should only be
@@ -93,10 +112,8 @@ of truth is `apps-script/google-calendar-sync-webapp.gs`. For Telegram due-item
 digests, configure `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and
 `SUPABASE_ANON_KEY` in Apps Script Properties, then run
 `testTelegramDueDigest()` and `installTelegramDueDigestTrigger()` from Apps
-Script. To let the bot respond when the user messages `update`, run
-`installTelegramUpdatePollingTrigger()`; this deletes any Telegram webhook and
-checks for updates every minute. The digest reads the existing Supabase
-`ella_crow_store` mirror and does not write to Google Calendar.
+Script. The digest reads the existing Supabase `ella_crow_store` mirror and
+does not write to Google Calendar.
 
 ## Verification Strategy
 

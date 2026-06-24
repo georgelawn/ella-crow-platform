@@ -51,6 +51,8 @@ for (const file of javascriptFiles) {
 const htmlFiles = [
   ...rootFiles.filter((file) => extname(file) === ".html"),
   ...(await filesUnder("squarespace-bio-links"))
+    .filter((file) => extname(file) === ".html"),
+  ...(await filesUnder("squarespace-shop"))
     .filter((file) => extname(file) === ".html")
 ];
 
