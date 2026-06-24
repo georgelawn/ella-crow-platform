@@ -1,0 +1,57 @@
+<div id="ella-bio-links-tiktok"></div>
+<style>
+  #ella-bio-links-tiktok { --ink:#2d0f1e; --paper:#fce8f4; --rose:#e8609a; --soft:#f8d6ec; background:radial-gradient(circle at 50% -12%,rgba(255,255,255,.6),transparent 34%),linear-gradient(180deg,var(--rose),var(--paper)); border-radius:28px; box-shadow:0 18px 48px rgba(45,15,30,.24),0 3px 12px rgba(45,15,30,.18); box-sizing:border-box; color:var(--ink); font-family:var(--body-font-font-family,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif); margin:18px auto; max-width:980px; overflow:hidden; padding:36px 18px 32px; }
+  #ella-bio-links-tiktok * { box-sizing:border-box; }
+  #ella-bio-links-tiktok .ella-links-card { margin:0 auto; max-width:590px; text-align:center; }
+  #ella-bio-links-tiktok .ella-links-avatar { border:3px solid var(--ink); border-radius:50%; display:block; height:96px; margin:0 auto 14px; object-fit:cover; object-position:50% 32%; width:96px; }
+  #ella-bio-links-tiktok .ella-links-logo { display:block; height:auto; margin:0 auto 16px; max-width:340px; width:72%; }
+  #ella-bio-links-tiktok .ella-social-icons { display:flex; justify-content:center; gap:12px; margin-bottom:22px; }
+  #ella-bio-links-tiktok .ella-social-icon { align-items:center; background:rgba(45,15,30,.22); border-radius:50%; display:flex; height:40px; justify-content:center; text-decoration:none; transition:background 140ms ease,transform 140ms ease; width:40px; }
+  #ella-bio-links-tiktok .ella-social-icon:hover,#ella-bio-links-tiktok .ella-social-icon:focus-visible { background:rgba(45,15,30,.36); transform:translateY(-1px); }
+  #ella-bio-links-tiktok .ella-social-icon img,#ella-bio-links-tiktok .ella-social-icon svg { height:20px; width:20px; }
+  #ella-bio-links-tiktok .ella-links-list { display:grid; gap:13px; }
+  #ella-bio-links-tiktok .ella-link,#ella-bio-links-tiktok .ella-music-toggle,#ella-bio-links-tiktok .ella-music-option { align-items:center; background:var(--soft); border:1px solid rgba(45,15,30,.65); border-radius:999px; box-shadow:0 4px 12px rgba(45,15,30,.1); color:var(--ink); display:grid; font-size:clamp(.66rem,2.4vw,.94rem); font-weight:700; grid-template-columns:40px minmax(0,1fr) 40px; letter-spacing:.01em; min-height:68px; padding:9px 14px; text-decoration:none; transition:transform 140ms ease,box-shadow 140ms ease,background 140ms ease; }
+  #ella-bio-links-tiktok .ella-link:hover,#ella-bio-links-tiktok .ella-link:focus-visible,#ella-bio-links-tiktok .ella-music-toggle:hover,#ella-bio-links-tiktok .ella-music-toggle:focus-visible,#ella-bio-links-tiktok .ella-music-option:hover,#ella-bio-links-tiktok .ella-music-option:focus-visible { background:#fff0f8; box-shadow:0 6px 16px rgba(45,15,30,.14); transform:translateY(-1px); }
+  #ella-bio-links-tiktok .ella-link-icon { align-items:center; display:flex; font-family:Georgia,"Times New Roman",serif; font-size:1rem; height:40px; justify-content:center; width:40px; }
+  #ella-bio-links-tiktok .ella-link-icon img { height:24px; width:24px; }
+  #ella-bio-links-tiktok .ella-link-icon .ella-live-badge,#ella-bio-links-tiktok .ella-link-icon .ella-text-badge { display:inline-flex; font-family:var(--body-font-font-family,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif); font-size:.4rem; font-weight:700; justify-content:center; letter-spacing:0; line-height:1; max-width:100%; min-width:0; white-space:nowrap; }
+  #ella-bio-links-tiktok .ella-link-copy { display:block; min-width:0; white-space:nowrap; }
+  #ella-bio-links-tiktok .ella-link-copy small { color:rgba(45,15,30,.65); display:block; font-size:clamp(.56rem,1.8vw,.66rem); font-weight:600; letter-spacing:.07em; margin-top:3px; white-space:nowrap; }
+  #ella-bio-links-tiktok .ella-link-end { display:block; height:20px; width:40px; }
+  #ella-bio-links-tiktok .ella-link-chevron { font-size:1rem; line-height:1; transition:transform 160ms ease; }
+  #ella-bio-links-tiktok details[open] .ella-link-chevron { transform:rotate(180deg); }
+  #ella-bio-links-tiktok details.ella-music { display:block; }
+  #ella-bio-links-tiktok details.ella-music > summary { cursor:pointer; list-style:none; }
+  #ella-bio-links-tiktok details.ella-music > summary::-webkit-details-marker { display:none; }
+  #ella-bio-links-tiktok .ella-music-panel { display:grid; gap:10px; margin-top:10px; padding:0 6px 2px; }
+  #ella-bio-links-tiktok .ella-music-option { background:#fce0ef; min-height:58px; }
+  @media(max-width:520px){#ella-bio-links-tiktok{padding:28px 12px 26px}#ella-bio-links-tiktok .ella-links-avatar{height:88px;width:88px}#ella-bio-links-tiktok .ella-links-logo{margin-bottom:16px;width:76%}#ella-bio-links-tiktok .ella-link,#ella-bio-links-tiktok .ella-music-toggle,#ella-bio-links-tiktok .ella-music-option{grid-template-columns:34px minmax(0,1fr) 34px;padding-inline:12px}#ella-bio-links-tiktok .ella-link-icon{height:34px;width:34px}#ella-bio-links-tiktok .ella-link-icon img{height:22px;width:22px}#ella-bio-links-tiktok .ella-link-end{width:34px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(() => {
+  const root=document.querySelector("#ella-bio-links-tiktok"),platform="tiktok";
+  const supabaseClient=window.supabase?window.supabase.createClient("https://hmwnkhgsocdevehebjpq.supabase.co","sb_publishable_5RLD78oK3TMo-SnPf1tljA_9d7-zuHn"):null;
+  const socialIcons=[
+    {href:"mailto:mgmt@ellacrow.com",label:"Email",svg:`<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>`},
+    {href:"https://www.instagram.com/ellacrowmusic/",label:"Instagram",logo:"https://cdn.simpleicons.org/instagram/ffffff"},
+    {href:"https://www.tiktok.com/@ellacrowmusic",label:"TikTok",logo:"https://cdn.simpleicons.org/tiktok/ffffff"},
+    {href:"https://www.youtube.com/@ellacrowmusic",label:"YouTube",logo:"https://cdn.simpleicons.org/youtube/ffffff"}
+  ];
+  const destinations=[
+    {label:"Join the community 🐦‍⬛",detail:"WhatsApp community",url:"https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1",logo:"https://cdn.simpleicons.org/whatsapp/2d0f1e",track:"WhatsApp Community"},
+    {label:"Come and watch me live &#127908;",detail:"Tickets are here",url:"https://wegottickets.com/f/21926",icon:"LIVE",track:"Next Gig Tickets"},
+    {label:"Listen to my unreleased music &#128144;",detail:"SoundCloud",url:"https://soundcloud.com/ellacrow",logo:"https://cdn.simpleicons.org/soundcloud/2d0f1e",track:"SoundCloud"},
+    {label:"Listen to my music &#11088;",detail:"Spotify and Apple Music",music:true,icon:"&#9835;",track:"Music menu"}
+  ];
+  const trackedUrl=raw=>{const url=new URL(raw);url.searchParams.set("utm_source",platform);url.searchParams.set("utm_medium","bio");return url.toString()};
+  const record=(eventType,buttonName=null)=>supabaseClient?supabaseClient.from("bio_link_clicks").insert({platform,event_type:eventType,button_name:buttonName}):Promise.resolve();
+  const socialIconsHTML=socialIcons.map(s=>{const icon=s.svg||`<img src="${s.logo}" alt="${s.label}" width="20" height="20">`;const external=s.href.startsWith("http")?' target="_blank" rel="noopener"':"";return `<a class="ella-social-icon" href="${s.href}" aria-label="${s.label}"${external}>${icon}</a>`}).join("");
+  root.innerHTML=`<main class="ella-links-card"><img class="ella-links-avatar" src="https://images.squarespace-cdn.com/content/v1/691c7aea460cb8492f028449/27d985fe-0c41-4c52-98ed-e1488718fec3/Ella-Gig-2026-8_websize.jpeg?format=750w" alt="Ella Crow"><img class="ella-links-logo" src="https://georgelawn.github.io/ella-crow-platform/assets/ella-crow-logo.svg" alt="Ella Crow"><div class="ella-social-icons">${socialIconsHTML}</div><div class="ella-links-list"></div></main>`;
+  const list=root.querySelector(".ella-links-list");
+  function buildLink(destination){const link=document.createElement("a");link.className="ella-link";link.href=trackedUrl(destination.url);const icon=destination.logo?`<img src="${destination.logo}" alt="">`:`<span class="${destination.icon==="LIVE"?"ella-live-badge":"ella-text-badge"}">${destination.icon}</span>`;link.innerHTML=`<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true"></span>`;link.addEventListener("click",async event=>{event.preventDefault();const target=link.href;await Promise.race([record("click",destination.track),new Promise(resolve=>setTimeout(resolve,650))]);window.location.assign(target)});return link}
+  function buildMusic(){const wrapper=document.createElement("details");wrapper.className="ella-music";const summary=document.createElement("summary");summary.className="ella-music-toggle";summary.innerHTML=`<span class="ella-link-icon">&#9835;</span><span class="ella-link-copy">Listen to my music &#11088;<small>Spotify and Apple Music</small></span><span class="ella-link-chevron" aria-hidden="true">&#8964;</span>`;const panel=document.createElement("div");panel.className="ella-music-panel";[{label:"Spotify",detail:"Stream on Spotify",url:"https://open.spotify.com/album/5vCuP1VdJcAjyLkE6h8kFA?si=XlkpPGXXR0idG7v0B_PqlA",logo:"https://cdn.simpleicons.org/spotify/2d0f1e"},{label:"Apple Music",detail:"Listen on Apple",url:"https://music.apple.com/gb/album/taking-shape/1840436179",logo:"https://cdn.simpleicons.org/applemusic/2d0f1e"}].forEach(item=>{const link=document.createElement("a");link.className="ella-music-option";link.href=trackedUrl(item.url);const icon=item.logo?`<img src="${item.logo}" alt="">`:item.icon;link.innerHTML=`<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${item.label}<small>${item.detail}</small></span><span class="ella-link-end" aria-hidden="true"></span>`;link.addEventListener("click",async event=>{event.preventDefault();const target=link.href;await Promise.race([record("click",item.label),new Promise(resolve=>setTimeout(resolve,650))]);window.location.assign(target)});panel.append(link)});wrapper.append(summary,panel);summary.addEventListener("click",event=>{event.preventDefault();wrapper.open=!wrapper.open});return wrapper}
+  destinations.forEach(destination=>{list.append(destination.music?buildMusic():buildLink(destination))});
+  void Promise.resolve(record("view")).catch(()=>{});
+})();
+</script>

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Gig Tracker</title>
+    <link rel="stylesheet" href="styles.css?v=41">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Gig Tracker</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link active" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="shell">
+      <section class="summary-grid" aria-label="Gig summary">
+        <article>
+          <span id="upcomingCount">0</span>
+          <p>Upcoming</p>
+        </article>
+        <article>
+          <span id="pendingCount">0</span>
+          <p>TBC</p>
+        </article>
+        <article>
+          <span id="currentMonthTickets">0</span>
+          <p>Tickets this month</p>
+        </article>
+        <article>
+          <span id="lastMonthTickets">0</span>
+          <p>Tickets last month</p>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="control-panel" aria-label="Gig controls">
+          <form id="gigForm" autocomplete="off">
+            <input id="gigId" type="hidden">
+            <div class="panel-heading">
+              <p class="eyebrow">Show Details</p>
+              <h2 id="formTitle">Add a gig</h2>
+            </div>
+
+            <label>
+              Show name
+              <input id="title" name="title" required placeholder="e.g. Ella Crow at The Finsbury">
+            </label>
+
+            <div class="field-row">
+              <label>
+                Date
+                <input id="date" name="date" type="date" required>
+              </label>
+              <label>
+                Time
+                <input id="time" name="time" type="time">
+              </label>
+            </div>
+
+            <label>
+              Venue
+              <input id="venue" name="venue" placeholder="Venue name">
+            </label>
+
+            <label>
+              Location
+              <input id="location" name="location" placeholder="City / area">
+            </label>
+
+            <div class="field-row">
+              <label>
+                Status
+                <select id="status" name="status">
+                  <option value="booked">Booked</option>
+                  <option value="pending">TBC</option>
+                  <option value="complete">Complete</option>
+                </select>
+              </label>
+              <label>
+                Ticket sales
+                <input id="tickets" name="tickets" type="number" min="0" step="1" placeholder="0">
+              </label>
+            </div>
+
+            <label>
+              Gig cost
+              <input id="cost" name="cost" type="number" min="0" step="0.01" placeholder="0">
+            </label>
+
+            <label>
+              Contact / promoter
+              <input id="contact" name="contact" placeholder="Name, email, phone">
+            </label>
+
+            <label>
+              Notes
+              <textarea id="notes" name="notes" rows="4" placeholder="Load-in, set length, support act, follow-ups"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Save gig</button>
+              <button class="ghost-button" id="resetButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board" aria-label="All gigs">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Live Schedule</p>
+              <h2>All shows</h2>
+            </div>
+            <div class="filters" role="group" aria-label="Filter gigs">
+              <button class="filter active" data-filter="all" type="button">All</button>
+              <button class="filter" data-filter="booked" type="button">Booked</button>
+              <button class="filter" data-filter="pending" type="button">TBC</button>
+              <button class="filter" data-filter="complete" type="button">Complete</button>
+            </div>
+          </div>
+
+          <div class="calendar-sync-panel">
+            <span id="calendarSyncStatus">Google Calendar sync idle</span>
+            <button class="small-button" id="syncExistingGigsButton" type="button">Sync existing to Google</button>
+          </div>
+
+          <div class="gig-list" id="gigList"></div>
+          <p class="empty-state" id="emptyState">No gigs yet. Add the first one from the panel.</p>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=4"></script>
+    <script src="dashboard-command.js?v=2"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="google-calendar-sync.js?v=4"></script>
+    <script src="finance-source-sync.js?v=1"></script>
+    <script src="app.js?v=8"></script>
+  </body>
+</html>

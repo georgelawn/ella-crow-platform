@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Finance</title>
+    <link rel="stylesheet" href="styles.css?v=41">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Finance</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link active" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="shell">
+      <section class="finance-hero" aria-label="Finance summary">
+        <article class="finance-profit-card">
+          <p class="eyebrow">This month</p>
+          <span id="monthNet">£0</span>
+          <h2>Profit</h2>
+          <p id="monthProfitNote">No activity recorded yet.</p>
+        </article>
+        <div class="finance-stat-stack">
+          <article>
+            <span id="monthRevenue">£0</span>
+            <p>Revenue</p>
+          </article>
+          <article>
+            <span id="monthExpenses">£0</span>
+            <p>Costs</p>
+          </article>
+          <article>
+            <span id="lastMonthNet">£0</span>
+            <p>Last month profit</p>
+          </article>
+          <article>
+            <span id="allTimeNet">£0</span>
+            <p>All-time profit</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace finance-workspace">
+        <aside class="control-panel" aria-label="Add transaction">
+          <form id="financeForm" autocomplete="off">
+            <div class="panel-heading">
+              <p class="eyebrow">Profit ledger</p>
+              <h2>Add activity</h2>
+            </div>
+            <label>
+              Profit stream
+              <select id="transactionStream" required>
+                <option value="gigs">Gigs</option>
+                <option value="merch">Merch</option>
+                <option value="streaming">Streaming</option>
+              </select>
+            </label>
+            <label>
+              Type
+              <select id="transactionType">
+                <option value="revenue">Revenue</option>
+                <option value="expense">Expense</option>
+              </select>
+            </label>
+            <label class="conditional-field" id="invoiceStatusField">
+              Invoice status
+              <select id="invoiceStatus">
+                <option value="pending">Pending</option>
+                <option value="received">Received</option>
+              </select>
+            </label>
+            <label class="conditional-field" id="invoiceDueDateField">
+              Invoice due date
+              <input id="invoiceDueDate" type="date">
+            </label>
+            <label>
+              Date
+              <input id="transactionDate" type="date" required>
+            </label>
+            <label>
+              Amount
+              <input id="transactionAmount" type="number" min="0" step="0.01" required placeholder="0.00">
+            </label>
+            <label>
+              Category
+              <input id="transactionCategory" placeholder="Venue fee, stock, royalties">
+            </label>
+            <label>
+              Description
+              <textarea id="transactionDescription" rows="4" placeholder="What was this for?"></textarea>
+            </label>
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Add to ledger</button>
+              <button class="ghost-button" id="clearTransactionButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board finance-dashboard" aria-label="Finance records">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Where the money works</p>
+              <h2>Profit streams</h2>
+            </div>
+          </div>
+
+          <div class="profit-stream-grid" id="profitStreams"></div>
+
+          <section class="stream-inspector" id="streamInspector" aria-live="polite"></section>
+
+          <section class="current-ledger">
+            <div class="finance-section-heading">
+              <div>
+                <p class="eyebrow">Working ledger</p>
+                <h2>This month</h2>
+              </div>
+              <span id="monthActivityCount">0 entries</span>
+            </div>
+            <div class="compact-ledger" id="currentMonthLedger"></div>
+            <p class="empty-state" id="financeEmptyState">No activity this month yet.</p>
+          </section>
+
+          <section class="finance-archive">
+            <div class="finance-section-heading">
+              <div>
+                <p class="eyebrow">The long view</p>
+                <h2>Past performance</h2>
+              </div>
+              <span>Months, then years</span>
+            </div>
+            <div id="financeArchive"></div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=4"></script>
+    <script src="dashboard-command.js?v=2"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="finance-source-sync.js?v=1"></script>
+    <script src="finance.js?v=5"></script>
+  </body>
+</html>

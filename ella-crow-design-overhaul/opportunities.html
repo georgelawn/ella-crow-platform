@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Opportunities</title>
+    <link rel="stylesheet" href="styles.css?v=41">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Opportunities</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link active" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="shell">
+      <section class="summary-grid" aria-label="Opportunity summary">
+        <article>
+          <span id="openOpportunityCount">0</span>
+          <p>Open</p>
+        </article>
+        <article>
+          <span id="followUpCount">0</span>
+          <p>Follow ups</p>
+        </article>
+        <article>
+          <span id="dueOpportunityCount">0</span>
+          <p>Due</p>
+        </article>
+        <article>
+          <span id="closedOpportunityCount">0</span>
+          <p>Closed</p>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="control-panel" aria-label="Create opportunity">
+          <form id="opportunityForm" autocomplete="off">
+            <div class="panel-heading">
+              <p class="eyebrow">Manual Tracking</p>
+              <h2>Create opportunity</h2>
+            </div>
+
+            <label>
+              Opportunity
+              <input id="opportunityTitle" required placeholder="e.g. Support slot, festival, sync brief">
+            </label>
+
+            <label>
+              Contact / company
+              <input id="opportunityContact" placeholder="Name, company, promoter">
+            </label>
+
+            <div class="field-row">
+              <label>
+                Status
+                <select id="opportunityStatus">
+                  <option value="open">Open</option>
+                  <option value="pitched">Pitched</option>
+                  <option value="waiting">Waiting</option>
+                  <option value="won">Won</option>
+                  <option value="lost">Lost</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </label>
+              <label>
+                Follow-up date
+                <input id="opportunityFollowUp" type="date">
+              </label>
+            </div>
+
+            <label>
+              Source
+              <input id="opportunitySource" placeholder="Email, Instagram, contact, meeting">
+            </label>
+
+            <label>
+              Notes
+              <textarea id="opportunityNotes" rows="5" placeholder="Context, next action, links, detail"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" type="submit">Save opportunity</button>
+              <button class="ghost-button" id="clearOpportunityButton" type="button">Clear</button>
+            </div>
+          </form>
+        </aside>
+
+        <section class="gig-board" aria-label="Opportunity list">
+          <div class="board-toolbar">
+            <div>
+              <p class="eyebrow">Pipeline</p>
+              <h2>Opportunities</h2>
+            </div>
+            <div class="filters" role="group" aria-label="Filter opportunities">
+              <button class="filter active" data-filter="open" type="button">Open</button>
+              <button class="filter" data-filter="follow-up" type="button">Follow ups</button>
+              <button class="filter" data-filter="closed" type="button">Closed</button>
+              <button class="filter" data-filter="all" type="button">All</button>
+            </div>
+          </div>
+
+          <div class="opportunity-board">
+            <div class="opportunity-list" id="opportunityList"></div>
+            <p class="empty-state" id="opportunityEmptyState">No opportunities here yet.</p>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=4"></script>
+    <script src="dashboard-command.js?v=2"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="opportunities.js?v=1"></script>
+  </body>
+</html>

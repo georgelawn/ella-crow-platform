@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Social</title>
+    <link rel="stylesheet" href="styles.css?v=41">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Social</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link active" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="shell social-command">
+      <section class="social-command-head">
+        <div>
+          <p class="eyebrow" id="socialEyebrow">Audience intelligence</p>
+          <h2 id="socialTitle">Growth overview</h2>
+          <p id="socialDescription">A clear view of what is building Ella's audience, and what to do next.</p>
+        </div>
+        <div class="social-command-actions">
+          <span id="socialLastUpdated">Loading live data</span>
+          <button class="primary-button" id="refreshSocialButton" type="button">Refresh all</button>
+        </div>
+      </section>
+
+      <p class="social-command-message" id="socialMessage" role="status"></p>
+
+      <section id="socialOverview">
+        <section class="social-platform-grid" id="platformOverviewCards" aria-label="Platform overview"></section>
+
+        <section class="social-overview-grid social-measurement-grid">
+          <article class="social-premium-panel view-share-panel">
+            <div class="social-panel-heading">
+              <div>
+                <p class="eyebrow">Share of Views</p>
+                <h2>Where attention lives</h2>
+              </div>
+              <span id="viewSharePeriod">This month</span>
+            </div>
+            <div class="view-share-layout">
+              <div class="view-share-donut" id="viewShareDonut">
+                <div><strong id="totalPlatformViews">-</strong><span>Total views</span></div>
+              </div>
+              <div class="view-share-legend" id="viewShareLegend"></div>
+            </div>
+          </article>
+
+          <article class="social-premium-panel weekday-panel">
+            <div class="social-panel-heading">
+              <div>
+                <p class="eyebrow">Publishing Days</p>
+                <h2>Views by day and platform</h2>
+              </div>
+              <span>Recent content</span>
+            </div>
+            <p class="weekday-explanation">Views grouped by the weekday each measured post or video was published.</p>
+            <div class="weekday-performance" id="weekdayPerformance"></div>
+          </article>
+        </section>
+
+        <section class="social-premium-panel creative-match-panel">
+          <div class="social-panel-heading">
+            <div>
+              <p class="eyebrow">Cross-platform Videos</p>
+              <h2>Same creative, different uploads</h2>
+              <p>Top lifetime performers and recent videos, grouped by upload date/time, hashtags, duration and caption/title similarity.</p>
+            </div>
+            <span id="creativeMatchSummary">Building matches</span>
+          </div>
+          <div class="creative-section-heading">
+            <h3>Top 3 performers</h3>
+            <span>All available platform data</span>
+          </div>
+          <div class="creative-match-list creative-top-list" id="creativeTopMatches"></div>
+          <div class="creative-section-heading">
+            <h3>Recent videos</h3>
+            <span>Newest first</span>
+          </div>
+          <div class="creative-match-list" id="creativeMatches"></div>
+          <button class="small-button creative-show-more" id="creativeShowMore" type="button" hidden>Show 5 more</button>
+          <div class="social-empty-state" id="creativeMatchEmpty" hidden>
+            <strong>No matches yet</strong>
+            <p>Refresh the platforms after the same video has been posted in at least two places.</p>
+          </div>
+        </section>
+
+        <div class="creative-search-modal" id="creativeSearchPanel" hidden></div>
+
+        <section class="social-premium-panel bio-performance-panel">
+          <div class="social-panel-heading bio-panel-heading">
+            <div>
+              <p class="eyebrow">Bio Links</p>
+              <h2>Attention into action</h2>
+              <p>Visits to Ella's platform link pages and the destinations people choose next.</p>
+            </div>
+            <div class="bio-period-toggle" aria-label="Bio link reporting period">
+              <button class="active" data-bio-period="month" type="button">This month</button>
+              <button data-bio-period="30" type="button">30 days</button>
+              <button data-bio-period="90" type="button">90 days</button>
+            </div>
+          </div>
+          <div class="bio-summary-strip">
+            <div><span>Page visits</span><strong id="bioTotalViews">-</strong></div>
+            <div><span>Button clicks</span><strong id="bioTotalClicks">-</strong></div>
+            <div><span>Click actions per visit</span><strong id="bioClickRate">-</strong></div>
+            <div><span>Top destination</span><strong id="bioTopButton">-</strong></div>
+          </div>
+          <div class="bio-destination-table" id="bioDestinationTable"></div>
+          <div class="bio-source-summary">
+            <p class="eyebrow">Source totals</p>
+            <div class="bio-platform-list" id="bioPlatformList"></div>
+          </div>
+          <div class="social-empty-state" id="bioEmptyState" hidden>
+            <strong>Tracking is ready</strong>
+            <p>Bio-link visits and clicks will appear after the final Supabase reporting function is added.</p>
+          </div>
+        </section>
+      </section>
+
+      <section id="socialDrilldown" hidden>
+        <button class="social-back-button" id="socialBackButton" type="button">&larr; All platforms</button>
+        <section class="drilldown-hero" id="drilldownHero"></section>
+        <section class="drilldown-metrics" id="drilldownMetrics"></section>
+        <section class="drilldown-insight-grid" id="drilldownInsights"></section>
+        <section class="social-premium-panel drilldown-content-panel">
+          <div class="social-panel-heading">
+            <div>
+              <p class="eyebrow" id="contentEyebrow">Content performance</p>
+              <h2 id="contentTitle">Recent content</h2>
+            </div>
+            <span id="contentSummary"></span>
+          </div>
+          <div class="drilldown-content-list" id="drilldownContent"></div>
+          <div class="social-empty-state" id="drilldownEmpty" hidden></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="cloud-config.js?v=6"></script>
+    <script src="app-cloud.js?v=7"></script>
+    <script src="dashboard-command.js?v=2"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="social.js?v=16"></script>
+  </body>
+</html>
