@@ -14,6 +14,8 @@
     facebook: "Facebook",
     tiktok: "TikTok"
   };
+  const TIKTOK_AUTH_URL = config.tiktokAuthUrl ||
+    (config.supabaseUrl ? `${config.supabaseUrl}/functions/v1/tiktok-auth` : "");
   const state = {
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
@@ -1148,12 +1150,16 @@
       : data.comingSoon ? "Coming soon" : "Awaiting data";
 
     elements.drillHero.className = `drilldown-hero platform-${platform}`;
+    const tiktokConnectAction = platform === "tiktok" && TIKTOK_AUTH_URL
+      ? `<a class="small-button tiktok-connect-button" href="${TIKTOK_AUTH_URL}?account=second" target="_blank" rel="noreferrer">${data.accountCount > 1 ? "Reconnect second TikTok" : "Connect another TikTok"}</a>`
+      : "";
     elements.drillHero.innerHTML = `
       <div class="drilldown-platform-mark">${platformMark(platform)}</div>
       <div>
         <span>${data.comingSoon ? "Connection prepared" : data.connected ? "Live platform" : "Not connected"}</span>
         <strong>${data.connected ? compact(data.audience) : "-"}</strong>
         <p>${data.accountCount > 1 ? `${data.accountCount} connected accounts` : data.audienceLabel}</p>
+        ${tiktokConnectAction}
       </div>
       <div class="drilldown-hero-signal">
         <span>Current signal</span>
