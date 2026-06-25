@@ -23,6 +23,24 @@
     return `apps-script:${itemType}:${item.id}`;
   }
 
+  function progressMessage(action, label) {
+    if (action === "delete") return `Deleting ${label} from Google`;
+    if (action === "recreate") return `Re-pushing ${label} to Google`;
+    return `Syncing ${label}`;
+  }
+
+  function sentMessage(action, label) {
+    if (action === "delete") return `Google delete sent: ${label}`;
+    if (action === "recreate") return `Google re-push sent: ${label}`;
+    return `Google sync sent: ${label}`;
+  }
+
+  function syncedMessage(action, label) {
+    if (action === "delete") return `Google deleted: ${label}`;
+    if (action === "recreate") return `Google re-pushed: ${label}`;
+    return `Google synced: ${label}`;
+  }
+
   async function requestSync(action, itemType, item, previousItem = null) {
     if (!item?.id) return null;
     const label = item.title || item.name || "event";
@@ -32,7 +50,7 @@
       return null;
     }
 
-    report(`Syncing ${label}`, "syncing");
+    report(progressMessage(action, label), "syncing");
     const payload = { action, itemType, item, previousItem };
 
     try {
@@ -42,7 +60,7 @@
           mode: "no-cors",
           body: JSON.stringify(payload)
         });
-        report(`Google sync queued: ${label}`, "synced");
+        report(sentMessage(action, label), "synced", "Sent to Google Apps Script. Calendar changes may take a moment to appear.");
         return {
           eventId: item.googleCalendarEventId || syntheticEventId(itemType, item),
           htmlLink: item.googleCalendarHtmlLink || "",
@@ -64,7 +82,7 @@
       }
 
       const data = await response.json();
-      report(`Google synced: ${label}`, "synced");
+      report(syncedMessage(action, label), "synced");
       return data;
     } catch (error) {
       console.warn("Google Calendar sync unavailable", error);
