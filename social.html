@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=42">
+    <link rel="stylesheet" href="styles.css?v=43">
   </head>
   <body>
     <header class="topbar">
@@ -40,6 +40,11 @@
         </div>
         <div class="social-command-actions">
           <span id="socialLastUpdated">Loading live data</span>
+          <div class="social-period-toggle" aria-label="Social stats reporting period">
+            <button data-social-period="7" type="button">Last 7 days</button>
+            <button class="active" data-social-period="30" type="button">Last 30 days</button>
+            <button data-social-period="all" type="button">All time</button>
+          </div>
           <button class="primary-button" id="refreshSocialButton" type="button">Refresh all</button>
         </div>
       </section>
@@ -56,7 +61,7 @@
                 <p class="eyebrow">Share of Views</p>
                 <h2>Where attention lives</h2>
               </div>
-              <span id="viewSharePeriod">This month</span>
+              <span id="viewSharePeriod">Last 30 days</span>
             </div>
             <div class="view-share-layout">
               <div class="view-share-donut" id="viewShareDonut">
@@ -115,9 +120,9 @@
               <p>Visits to Ella's platform link pages and the destinations people choose next.</p>
             </div>
             <div class="bio-period-toggle" aria-label="Bio link reporting period">
-              <button class="active" data-bio-period="month" type="button">This month</button>
-              <button data-bio-period="30" type="button">30 days</button>
-              <button data-bio-period="90" type="button">90 days</button>
+              <button data-bio-period="7" type="button">Last 7 days</button>
+              <button class="active" data-bio-period="30" type="button">Last 30 days</button>
+              <button data-bio-period="all" type="button">All time</button>
             </div>
           </div>
           <div class="bio-summary-strip">
@@ -161,6 +166,6 @@
     <script src="app-cloud.js?v=7"></script>
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="social.js?v=17"></script>
+    <script src="social.js?v=18"></script>
   </body>
 </html>

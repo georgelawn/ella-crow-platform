@@ -14,6 +14,11 @@
     facebook: "Facebook",
     tiktok: "TikTok"
   };
+  const SOCIAL_PERIODS = {
+    "7": { days: 7, label: "Last 7 days", suffix: "last 7 days" },
+    "30": { days: 30, label: "Last 30 days", suffix: "last 30 days" },
+    all: { days: null, label: "All time", suffix: "all time" }
+  };
   const state = {
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
@@ -21,8 +26,8 @@
     manualCreativeMatches: readJson(LOCAL_CREATIVE_MATCHES_KEY) || {},
     creativeVisibleCount: 5,
     creativeSearch: null,
+    socialPeriod: "30",
     bio: null,
-    bioPeriod: "month",
     activePlatform: null,
     supabase: null,
     refreshing: false
@@ -37,6 +42,7 @@
     updated: document.querySelector("#socialLastUpdated"),
     message: document.querySelector("#socialMessage"),
     refresh: document.querySelector("#refreshSocialButton"),
+    viewSharePeriod: document.querySelector("#viewSharePeriod"),
     cards: document.querySelector("#platformOverviewCards"),
     viewShareDonut: document.querySelector("#viewShareDonut"),
     viewShareLegend: document.querySelector("#viewShareLegend"),
@@ -115,6 +121,40 @@
     return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + offset, 1));
   }
 
+  function selectedPeriod() {
+    return SOCIAL_PERIODS[state.socialPeriod] || SOCIAL_PERIODS["30"];
+  }
+
+  function periodSuffix() {
+    return selectedPeriod().suffix;
+  }
+
+  function periodLabel() {
+    return selectedPeriod().label;
+  }
+
+  function periodOutputLabel(noun) {
+    return selectedPeriod().days == null
+      ? `${noun} all time`
+      : `${noun} in ${periodSuffix()}`;
+  }
+
+  function periodCutoff(previous = false) {
+    const days = selectedPeriod().days;
+    if (days == null) return null;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days * (previous ? 2 : 1));
+    return cutoff;
+  }
+
+  function previousPeriodEnd() {
+    const days = selectedPeriod().days;
+    if (days == null) return null;
+    const end = new Date();
+    end.setDate(end.getDate() - days);
+    return end;
+  }
+
   function appendHistory(history, snapshot) {
     const next = Array.isArray(history) ? [...history] : [];
     const day = new Date(snapshot.checkedAt).toISOString().slice(0, 10);
@@ -161,8 +201,7 @@
     return videos.filter((video) => !isShort(video));
   }
 
-  function contentForMonth(platform, offset = 0) {
-    const comparison = shiftedMonth(offset);
+  function allPlatformContent(platform) {
     let content = [];
     if (platform === "youtube" || platform === "shorts") {
       content = youtubeContent(platform);
@@ -172,9 +211,20 @@
       content = (state.meta?.current?.facebook?.posts || []).filter(isFacebookVideoPost);
     }
     if (platform === "tiktok") content = state.tiktok?.current?.videos || [];
-    return content.filter((item) =>
-      item.publishedAt && sameMonth(item.publishedAt, comparison)
-    );
+    return content;
+  }
+
+  function contentForPeriod(platform, previous = false) {
+    const content = allPlatformContent(platform);
+    const days = selectedPeriod().days;
+    if (days == null) return content;
+    const start = periodCutoff(previous);
+    const end = previous ? previousPeriodEnd() : new Date();
+    return content.filter((item) => {
+      if (!item.publishedAt) return false;
+      const published = new Date(item.publishedAt);
+      return published >= start && published < end;
+    });
   }
 
   function totals(items, reachField = "views") {
@@ -202,26 +252,28 @@
   function platformData(platform) {
     if (platform === "youtube" || platform === "shorts") {
       const current = state.youtube?.current;
-      const content = contentForMonth(platform);
+      const content = contentForPeriod(platform);
       const total = totals(content);
       const rates = engagementRates(content);
-      const lastMonthContent = contentForMonth(platform, -1);
-      const lastMonthViews = totals(lastMonthContent).views;
+      const previousContent = contentForPeriod(platform, true);
+      const previousReach = totals(previousContent).views;
       return {
         connected: Boolean(current),
         reach: total.views,
-        reachLabel: "views this month",
-        lastMonthViews,
-        hasLastMonth: lastMonthContent.length > 0,
+        reachLabel: `views ${periodSuffix()}`,
+        previousReach,
+        hasPreviousPeriod: previousContent.length > 0,
         output: content.length,
-        outputLabel: platform === "shorts" ? "Shorts this month" : "videos this month",
+        outputLabel: platform === "shorts"
+          ? periodOutputLabel("Shorts")
+          : periodOutputLabel("videos"),
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
         audience: numberValue(current?.channel?.subscribers),
         audienceLabel: "subscribers",
         audienceDelta: null,
-        reachDelta: lastMonthContent.length ? total.views - lastMonthViews : null,
+        reachDelta: previousContent.length ? total.views - previousReach : null,
         content,
         checkedAt: current?.checkedAt
       };
@@ -229,7 +281,7 @@
 
     if (platform === "instagram") {
       const current = state.meta?.current;
-      const media = current?.media || [];
+      const media = contentForPeriod(platform);
       const measuredReach = totals(media, "reach").views;
       const rates = engagementRates(media, "reach");
       const base = baseline(state.meta, platform);
@@ -237,12 +289,12 @@
         connected: Boolean(current?.account),
         audience: numberValue(current?.account?.followers),
         audienceLabel: "followers",
-        reach: numberValue(current?.month?.reach) || measuredReach,
-        reachLabel: "views this month",
-        lastMonthViews: 0,
-        hasLastMonth: false,
-        output: numberValue(current?.month?.posts),
-        outputLabel: "posts and Reels",
+        reach: measuredReach,
+        reachLabel: `views ${periodSuffix()}`,
+        previousReach: 0,
+        hasPreviousPeriod: false,
+        output: media.length,
+        outputLabel: periodOutputLabel("posts and Reels"),
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
@@ -258,19 +310,19 @@
     if (platform === "facebook") {
       const current = state.meta?.current;
       const facebook = current?.facebook;
-      const posts = (facebook?.posts || []).filter(isFacebookVideoPost);
+      const posts = contentForPeriod(platform);
       const rates = engagementRates(posts);
       const base = baseline(state.meta, platform);
       return {
         connected: Boolean(facebook?.page),
         audience: numberValue(facebook?.page?.followers),
         audienceLabel: "page followers",
-        reach: numberValue(facebook?.month?.views) || totals(posts).views,
-        reachLabel: "views this month",
-        lastMonthViews: 0,
-        hasLastMonth: false,
-        output: numberValue(facebook?.month?.posts),
-        outputLabel: "posts this month",
+        reach: totals(posts).views,
+        reachLabel: `views ${periodSuffix()}`,
+        previousReach: 0,
+        hasPreviousPeriod: false,
+        output: posts.length,
+        outputLabel: periodOutputLabel("posts"),
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
@@ -289,11 +341,11 @@
       const current = state.tiktok?.current;
       const accountCount = numberValue(current?.accountCount) ||
         (Array.isArray(current?.accounts) ? current.accounts.length : 0);
-      const content = contentForMonth(platform);
+      const content = contentForPeriod(platform);
       const total = totals(content);
       const rates = engagementRates(content);
-      const lastMonthContent = contentForMonth(platform, -1);
-      const lastMonthViews = totals(lastMonthContent).views;
+      const previousContent = contentForPeriod(platform, true);
+      const previousReach = totals(previousContent).views;
       const base = baseline(state.tiktok, platform);
       return {
         connected: Boolean(current?.account),
@@ -302,11 +354,11 @@
         audience: numberValue(current?.account?.followers),
         audienceLabel: "followers",
         reach: total.views,
-        reachLabel: "views this month",
-        lastMonthViews,
-        hasLastMonth: lastMonthContent.length > 0,
+        reachLabel: `views ${periodSuffix()}`,
+        previousReach,
+        hasPreviousPeriod: previousContent.length > 0,
         output: content.length,
-        outputLabel: "TikToks this month",
+        outputLabel: periodOutputLabel("TikToks"),
         engagement: rates.engagement,
         likes: rates.likes,
         comments: rates.comments,
@@ -314,7 +366,7 @@
           ? numberValue(current.account.followers) -
             numberValue(base.account?.followers)
           : null,
-        reachDelta: lastMonthContent.length ? total.views - lastMonthViews : null,
+        reachDelta: previousContent.length ? total.views - previousReach : null,
         content,
         checkedAt: current?.checkedAt
       };
@@ -327,8 +379,8 @@
       audienceLabel: "followers",
       reach: 0,
       reachLabel: "video views",
-      lastMonthViews: 0,
-      hasLastMonth: false,
+      previousReach: 0,
+      hasPreviousPeriod: false,
       output: 0,
       outputLabel: "posts",
       engagement: 0,
@@ -353,7 +405,22 @@
   function metricDelta(value, noun) {
     if (value == null) return "Baseline building";
     if (value === 0) return `No ${noun} change yet`;
-    return `${value > 0 ? "+" : ""}${full(value)} this month`;
+    return `${value > 0 ? "+" : ""}${full(value)} change`;
+  }
+
+  function reachDeltaText(data) {
+    if (selectedPeriod().days == null) return "All available content";
+    if (!data.hasPreviousPeriod) return "Previous-period baseline unavailable";
+    return `${compact(data.previousReach)} previous period · ${data.reachDelta >= 0 ? "+" : ""}${compact(data.reachDelta)}`;
+  }
+
+  function syncPeriodButtons() {
+    document.querySelectorAll("[data-social-period]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.socialPeriod === state.socialPeriod)
+    );
+    document.querySelectorAll("[data-bio-period]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.bioPeriod === state.socialPeriod)
+    );
   }
 
   function renderPlatformCards() {
@@ -371,14 +438,12 @@
         </span>
         <strong>${PLATFORM_LABELS[platform]}</strong>
         <span class="platform-card-number">${data.connected ? compact(data.reach) : "-"}</span>
-        <small>views this month</small>
+        <small>${data.reachLabel}</small>
         <span class="platform-card-signal">${
           data.comingSoon
             ? "API connection prepared"
             : data.connected
-              ? data.hasLastMonth
-                ? `${data.accountCount > 1 ? `${data.accountCount} accounts · ` : ""}${compact(data.lastMonthViews)} last month · ${data.reachDelta >= 0 ? "+" : ""}${compact(data.reachDelta)}`
-                : "Last-month baseline unavailable"
+              ? `${data.accountCount > 1 ? `${data.accountCount} accounts · ` : ""}${reachDeltaText(data)}`
               : "Data unavailable"
         }</span>
         <b>Open insight &rarr;</b>`;
@@ -396,6 +461,7 @@
   };
 
   function renderViewShare() {
+    elements.viewSharePeriod.textContent = periodLabel();
     const entries = COMPARISON_PLATFORMS.map((platform) => ({
       platform,
       views: platformData(platform).connected
@@ -456,7 +522,7 @@
 
     ["shorts", "instagram", "facebook", "tiktok"].forEach((platform) => {
       const content = platform === "shorts"
-        ? youtubeContent("shorts")
+        ? contentForPeriod("shorts")
         : platformData(platform).content;
       content.forEach((item) => {
         if (!item.publishedAt) return;
@@ -1177,13 +1243,13 @@
       ).join("");
     elements.contentEyebrow.textContent = "Content performance";
     elements.contentTitle.textContent = platform === "instagram"
-        ? "Posts and Reels this month"
+        ? `Posts and Reels, ${periodSuffix()}`
         : platform === "facebook"
-          ? "Facebook this month"
+          ? `Facebook, ${periodSuffix()}`
           : platform === "tiktok"
             ? "TikTok content"
             : platform === "shorts"
-              ? "YouTube Shorts this month"
+              ? `YouTube Shorts, ${periodSuffix()}`
               : "Recent long-form videos";
     elements.contentSummary.textContent = data.connected
       ? `${data.content.length} items measured`
@@ -1293,7 +1359,7 @@
   async function loadBio() {
     const client = await ensureSupabase();
     if (!client) return;
-    const days = state.bioPeriod === "month" ? 0 : Number(state.bioPeriod);
+    const days = selectedPeriod().days == null ? 366 : selectedPeriod().days;
     const { data, error } = await client.rpc("get_bio_link_summary", { p_days: days });
     if (!error) state.bio = data;
   }
@@ -1375,7 +1441,20 @@
     elements.refresh.textContent = "Refresh all";
   }
 
+  async function setSocialPeriod(nextPeriod) {
+    if (!SOCIAL_PERIODS[nextPeriod] || state.socialPeriod === nextPeriod) return;
+    state.socialPeriod = nextPeriod;
+    syncPeriodButtons();
+    if (state.activePlatform) renderDrilldown(state.activePlatform);
+    else renderOverview();
+    await loadBio();
+    renderBio();
+  }
+
   elements.refresh.addEventListener("click", refreshAll);
+  document.querySelectorAll("[data-social-period]").forEach((button) => {
+    button.addEventListener("click", () => setSocialPeriod(button.dataset.socialPeriod || "30"));
+  });
   elements.back.addEventListener("click", closeDrilldown);
   elements.creativeShowMore.addEventListener("click", () => {
     state.creativeVisibleCount += 5;
@@ -1433,17 +1512,11 @@
     }
   });
   document.querySelectorAll("[data-bio-period]").forEach((button) => {
-    button.addEventListener("click", async () => {
-      document.querySelectorAll("[data-bio-period]").forEach((item) =>
-        item.classList.toggle("active", item === button)
-      );
-      state.bioPeriod = button.dataset.bioPeriod || "month";
-      await loadBio();
-      renderBio();
-    });
+    button.addEventListener("click", () => setSocialPeriod(button.dataset.bioPeriod || "30"));
   });
 
   async function initialise() {
+    syncPeriodButtons();
     renderOverview();
     await Promise.allSettled([loadCloudSnapshots(), loadBio()]);
     const requestedPlatform = location.hash.slice(1);

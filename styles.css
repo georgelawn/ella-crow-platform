@@ -507,11 +507,13 @@
   margin: 8px 0 0;
 }
 
-.bio-period-toggle {
+.bio-period-toggle,
+.social-period-toggle {
   display: flex;
 }
 
-.bio-period-toggle button {
+.bio-period-toggle button,
+.social-period-toggle button {
   background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
@@ -522,7 +524,8 @@
   text-transform: uppercase;
 }
 
-.bio-period-toggle button.active {
+.bio-period-toggle button.active,
+.social-period-toggle button.active {
   background: var(--brown);
   color: var(--cream);
 }
@@ -1426,7 +1429,8 @@
   .weekday-row > small {
     grid-column: 1 / -1;
   }
-  .bio-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .bio-period-toggle,
+  .social-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
   .bio-summary-strip > div { border-right: 0; }
   .bio-destination-table {
@@ -6373,7 +6377,8 @@ a:focus-visible {
 .ledger-edit,
 .social-back-button,
 .mobile-panel-toggle,
-.bio-period-toggle button {
+.bio-period-toggle button,
+.social-period-toggle button {
   border-radius: var(--radius-md);
   font-family: var(--font-interface);
   font-size: 0.88rem;
@@ -6434,6 +6439,7 @@ a:focus-visible {
 
 .filter.active,
 .bio-period-toggle button.active,
+.social-period-toggle button.active,
 .platform-tab.active {
   background: var(--accent-subtle);
   border-color: var(--accent-border);
