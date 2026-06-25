@@ -13,7 +13,9 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Shared state: browser `localStorage`, synchronized by `app-cloud.js`
 - Database: Supabase project `hmwnkhgsocdevehebjpq`
 - Social integrations: Supabase Edge Functions for YouTube, Instagram/Facebook,
-  and TikTok
+  and TikTok. TikTok supports multiple OAuth account slots through
+  `tiktok_tokens.account_key`; the stats function combines connected slots into
+  one dashboard snapshot.
 - Calendar integration: Google Apps Script web app
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat

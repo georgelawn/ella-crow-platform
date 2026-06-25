@@ -1,10 +1,14 @@
 create table if not exists public.tiktok_oauth_states (
   state text primary key,
+  account_key text not null default 'ella'
+    check (account_key ~ '^[a-z0-9_-]{1,32}$'),
   expires_at timestamptz not null
 );
 
 create table if not exists public.tiktok_tokens (
-  id smallint primary key default 1 check (id = 1),
+  id smallint default 1,
+  account_key text primary key default 'ella'
+    check (account_key ~ '^[a-z0-9_-]{1,32}$'),
   open_id text not null,
   access_token text not null,
   refresh_token text not null,

@@ -287,6 +287,8 @@
 
     if (platform === "tiktok") {
       const current = state.tiktok?.current;
+      const accountCount = numberValue(current?.accountCount) ||
+        (Array.isArray(current?.accounts) ? current.accounts.length : 0);
       const content = contentForMonth(platform);
       const total = totals(content);
       const rates = engagementRates(content);
@@ -296,6 +298,7 @@
       return {
         connected: Boolean(current?.account),
         comingSoon: false,
+        accountCount,
         audience: numberValue(current?.account?.followers),
         audienceLabel: "followers",
         reach: total.views,
@@ -374,7 +377,7 @@
             ? "API connection prepared"
             : data.connected
               ? data.hasLastMonth
-                ? `${compact(data.lastMonthViews)} last month · ${data.reachDelta >= 0 ? "+" : ""}${compact(data.reachDelta)}`
+                ? `${data.accountCount > 1 ? `${data.accountCount} accounts · ` : ""}${compact(data.lastMonthViews)} last month · ${data.reachDelta >= 0 ? "+" : ""}${compact(data.reachDelta)}`
                 : "Last-month baseline unavailable"
               : "Data unavailable"
         }</span>
@@ -599,7 +602,7 @@
     if (platform === "shorts") return "Short";
     if (platform === "youtube") return "Video";
     if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
-    if (platform === "tiktok") return "TikTok";
+    if (platform === "tiktok") return item.accountName ? `TikTok · ${item.accountName}` : "TikTok";
     return "Facebook post";
   }
 
@@ -1150,7 +1153,7 @@
       <div>
         <span>${data.comingSoon ? "Connection prepared" : data.connected ? "Live platform" : "Not connected"}</span>
         <strong>${data.connected ? compact(data.audience) : "-"}</strong>
-        <p>${data.audienceLabel}</p>
+        <p>${data.accountCount > 1 ? `${data.accountCount} connected accounts` : data.audienceLabel}</p>
       </div>
       <div class="drilldown-hero-signal">
         <span>Current signal</span>

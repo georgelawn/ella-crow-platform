@@ -5,6 +5,12 @@ const TOKEN_URL = "https://open.tiktokapis.com/v2/oauth/token/";
 const DASHBOARD_URL =
   "https://georgelawn.github.io/ella-crow-platform/social.html#tiktok";
 const SCOPES = "user.info.basic,user.info.stats,video.list";
+const DEFAULT_ACCOUNT_KEY = "ella";
+
+function accountKey(value: string | null) {
+  const key = String(value || DEFAULT_ACCOUNT_KEY).trim().toLowerCase();
+  return /^[a-z0-9_-]{1,32}$/.test(key) ? key : DEFAULT_ACCOUNT_KEY;
+}
 
 function html(message: string, status = 200) {
   return new Response(
@@ -68,9 +74,11 @@ export default {
       if (url.searchParams.get("setup") !== setupKey) {
         return html("This private setup link is not valid.", 403);
       }
+      const selectedAccount = accountKey(url.searchParams.get("account"));
       const oauthState = crypto.randomUUID().replaceAll("-", "");
       const { error } = await supabase.from("tiktok_oauth_states").insert({
         state: oauthState,
+        account_key: selectedAccount,
         expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
       });
       if (error) return html("Could not prepare the TikTok connection.", 500);
@@ -81,13 +89,14 @@ export default {
       authorize.searchParams.set("scope", SCOPES);
       authorize.searchParams.set("redirect_uri", redirectUri);
       authorize.searchParams.set("state", oauthState);
+      authorize.searchParams.set("disable_auto_auth", "1");
       return Response.redirect(authorize.toString(), 302);
     }
 
     if (!state) return html("The callback did not include a security state.", 400);
     const { data: storedState } = await supabase
       .from("tiktok_oauth_states")
-      .select("expires_at")
+      .select("account_key, expires_at")
       .eq("state", state)
       .maybeSingle();
     await supabase.from("tiktok_oauth_states").delete().eq("state", state);
@@ -105,7 +114,7 @@ export default {
       }));
       const now = Date.now();
       const { error } = await supabase.from("tiktok_tokens").upsert({
-        id: 1,
+        account_key: accountKey(String(storedState.account_key || "")),
         open_id: token.open_id,
         access_token: token.access_token,
         refresh_token: token.refresh_token,
@@ -115,7 +124,7 @@ export default {
           now + Number(token.refresh_expires_in) * 1000,
         ).toISOString(),
         updated_at: new Date().toISOString(),
-      });
+      }, { onConflict: "account_key" });
       if (error) throw error;
       return Response.redirect(DASHBOARD_URL, 302);
     } catch (error) {
