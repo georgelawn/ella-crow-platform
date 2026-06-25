@@ -67,6 +67,8 @@ async function syncGigToCalendar(gig, openId = "", previousGig = null) {
 async function repushGigToCalendar(id) {
   const gig = gigs.find((item) => item.id === id);
   if (!window.EllaCalendarSync?.repushGig || !gig?.title || !gig?.date) return;
+  const confirmed = window.confirm(`Push "${gig.title}" on ${formatDate(gig.date).long} to Google Calendar?`);
+  if (!confirmed) return;
   const result = await window.EllaCalendarSync.repushGig(gig);
   if (!result?.eventId) return;
 
@@ -388,7 +390,7 @@ function renderGigCard(gig, openGigId = "") {
         </label>
         <div class="card-actions">
           <span class="autosave-note">Saves automatically</span>
-          <button class="small-button" data-action="repush-calendar" data-id="${gig.id}" type="button">Push to Google Calendar</button>
+          <button class="small-button" data-action="repush-calendar" data-id="${gig.id}" type="button">Push this gig to Google Calendar</button>
           <button class="small-button danger" data-action="delete" data-id="${gig.id}" type="button">Delete</button>
         </div>
       </div>
@@ -588,7 +590,9 @@ list.addEventListener("click", (event) => {
   if (button.dataset.action === "delete") deleteGig(id);
   if (button.dataset.action === "add-player") addPlayer(id);
   if (button.dataset.action === "remove-player") removePlayer(id, Number(button.dataset.playerIndex));
-  if (button.dataset.action === "repush-calendar") repushGigToCalendar(id);
+  if (button.dataset.action === "repush-calendar") {
+    repushGigToCalendar(button.closest(".gig-details")?.dataset.id || id);
+  }
 });
 
 list.addEventListener("pointerdown", (event) => {

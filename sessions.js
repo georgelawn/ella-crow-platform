@@ -58,6 +58,8 @@ async function syncSessionToCalendar(session, openId = "", previousSession = nul
 async function repushSessionToCalendar(id) {
   const session = sessions.find((item) => item.id === id);
   if (!window.EllaCalendarSync?.repushSession || !session?.title || !session?.date) return;
+  const confirmed = window.confirm(`Push "${session.title}" on ${formatDate(session.date)} to Google Calendar?`);
+  if (!confirmed) return;
   const result = await window.EllaCalendarSync.repushSession(session);
   if (!result?.eventId) return;
 
@@ -325,7 +327,7 @@ function renderSession(session, openId = "") {
         </label>
         <div class="card-actions">
           <span class="autosave-note">Saves automatically</span>
-          <button class="small-button" data-action="repush-calendar" data-id="${session.id}" type="button">Push to Google Calendar</button>
+          <button class="small-button" data-action="repush-calendar" data-id="${session.id}" type="button">Push this session to Google Calendar</button>
           <button class="small-button danger" data-action="delete" data-id="${session.id}" type="button">Delete</button>
         </div>
       </div>
@@ -511,7 +513,9 @@ sessionList.addEventListener("click", (event) => {
   if (button.dataset.action === "delete") deleteSession(button.dataset.id);
   if (button.dataset.action === "add-musician") addSessionMusician(button.dataset.id);
   if (button.dataset.action === "remove-musician") removeSessionMusician(button.dataset.id, Number(button.dataset.index));
-  if (button.dataset.action === "repush-calendar") repushSessionToCalendar(button.dataset.id);
+  if (button.dataset.action === "repush-calendar") {
+    repushSessionToCalendar(button.closest(".gig-details")?.dataset.id || button.dataset.id);
+  }
 });
 
 document.querySelectorAll(".filter").forEach((button) => {

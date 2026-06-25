@@ -28,6 +28,11 @@ const EVENT_COLORS = {
 function doGet(event) {
   try {
     const action = String(event && event.parameter && event.parameter.action || "");
+    if (action === "calendar-sync") {
+      const payload = JSON.parse(String(event.parameter.payload || "{}"));
+      return jsonp_(handleCalendarPayload_(payload), event);
+    }
+
     if (action !== "youtube") {
       return jsonp_({ ok: false, error: "Unknown action" }, event);
     }
@@ -47,40 +52,44 @@ function doGet(event) {
 function doPost(event) {
   try {
     const payload = JSON.parse(event.postData.contents || "{}");
-    const action = payload.action || "upsert";
-    const itemType = payload.itemType;
-    const item = payload.item || {};
-    const previousItem = payload.previousItem || null;
+    return json_(handleCalendarPayload_(payload));
+  } catch (error) {
+    return json_({ ok: false, error: String(error && error.message ? error.message : error) });
+  }
+}
 
-    if (!itemType || !item.id) {
-      return json_({ ok: false, error: "Missing itemType or item.id" });
-    }
+function handleCalendarPayload_(payload) {
+  const action = payload.action || "upsert";
+  const itemType = payload.itemType;
+  const item = payload.item || {};
+  const previousItem = payload.previousItem || null;
 
-    if (action === "delete") {
-      deleteEvent_(itemType, item);
-      return json_({ ok: true, deleted: true });
-    }
+  if (!itemType || !item.id) {
+    return { ok: false, error: "Missing itemType or item.id" };
+  }
 
-    if (action === "recreate") {
-      const calendarEvent = recreateEvent_(itemType, item);
-      return json_({
-        ok: true,
-        eventId: calendarEvent.getId(),
-        htmlLink: "",
-        syncedAt: new Date().toISOString()
-      });
-    }
+  if (action === "delete") {
+    deleteEvent_(itemType, item);
+    return { ok: true, deleted: true };
+  }
 
-    const calendarEvent = upsertEvent_(itemType, item, previousItem);
-    return json_({
+  if (action === "recreate") {
+    const calendarEvent = recreateEvent_(itemType, item);
+    return {
       ok: true,
       eventId: calendarEvent.getId(),
       htmlLink: "",
       syncedAt: new Date().toISOString()
-    });
-  } catch (error) {
-    return json_({ ok: false, error: String(error && error.message ? error.message : error) });
+    };
   }
+
+  const calendarEvent = upsertEvent_(itemType, item, previousItem);
+  return {
+    ok: true,
+    eventId: calendarEvent.getId(),
+    htmlLink: "",
+    syncedAt: new Date().toISOString()
+  };
 }
 
 function youtubeSnapshot_() {

@@ -41,6 +41,35 @@
     return `Google synced: ${label}`;
   }
 
+  function jsonpRequest(url) {
+    return new Promise((resolve, reject) => {
+      const callbackName = `ellaCalendarSync_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const separator = url.includes("?") ? "&" : "?";
+      const script = document.createElement("script");
+      const cleanup = () => {
+        delete window[callbackName];
+        script.remove();
+      };
+
+      window[callbackName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      script.onerror = () => {
+        cleanup();
+        reject(new Error("Google Calendar sync response could not be loaded."));
+      };
+      script.src = `${url}${separator}callback=${encodeURIComponent(callbackName)}`;
+      document.head.appendChild(script);
+    });
+  }
+
+  async function requestReadableAppsScriptSync(payload) {
+    const url = `${endpoint}?action=calendar-sync&payload=${encodeURIComponent(JSON.stringify(payload))}`;
+    return jsonpRequest(url);
+  }
+
   async function requestSync(action, itemType, item, previousItem = null) {
     if (!item?.id) return null;
     const label = item.title || item.name || "event";
@@ -55,6 +84,18 @@
 
     try {
       if (endpoint.includes("script.google.com")) {
+        if (action === "recreate" || action === "delete") {
+          const data = await requestReadableAppsScriptSync(payload);
+          if (!data?.ok) {
+            const error = data?.error || "Unknown Google Calendar sync error";
+            console.warn("Google Calendar sync failed", error);
+            report(`Google sync failed: ${label}`, "error", error);
+            return { error };
+          }
+          report(syncedMessage(action, label), "synced");
+          return data;
+        }
+
         await fetch(endpoint, {
           method: "POST",
           mode: "no-cors",
