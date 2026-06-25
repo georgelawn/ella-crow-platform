@@ -994,15 +994,6 @@
   text-transform: uppercase;
 }
 
-.tiktok-connect-button {
-  border-color: var(--gold);
-  color: var(--gold);
-  display: inline-grid;
-  margin-top: 16px;
-  place-items: center;
-  text-decoration: none;
-}
-
 .drilldown-hero-signal {
   border-left: 1px solid rgba(217, 195, 120, 0.38);
   padding-left: 24px;
