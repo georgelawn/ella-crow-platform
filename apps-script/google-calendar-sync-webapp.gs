@@ -61,6 +61,16 @@ function doPost(event) {
       return json_({ ok: true, deleted: true });
     }
 
+    if (action === "recreate") {
+      const calendarEvent = recreateEvent_(itemType, item);
+      return json_({
+        ok: true,
+        eventId: calendarEvent.getId(),
+        htmlLink: "",
+        syncedAt: new Date().toISOString()
+      });
+    }
+
     const calendarEvent = upsertEvent_(itemType, item, previousItem);
     return json_({
       ok: true,
@@ -641,6 +651,28 @@ function upsertEvent_(itemType, item, previousItem) {
   props.setProperty(key, calendarEvent.getId());
   cleanupStaleEvents_(calendar, itemType, item, previousItem, calendarEvent.getId());
   return calendarEvent;
+}
+
+function recreateEvent_(itemType, item) {
+  const calendar = calendar_();
+  const key = eventKey_(itemType, item.id);
+  const props = PropertiesService.getScriptProperties();
+  const existingId = props.getProperty(key);
+  let calendarEvent = existingId ? calendar.getEventById(existingId) : null;
+
+  if (!calendarEvent) {
+    calendarEvent = findMarkedEvent_(calendar, key);
+  }
+
+  if (calendarEvent) {
+    calendarEvent.deleteEvent();
+  }
+
+  props.deleteProperty(key);
+  const freshEvent = createEvent_(calendar, itemType, item);
+  props.setProperty(key, freshEvent.getId());
+  cleanupStaleEvents_(calendar, itemType, item, null, freshEvent.getId());
+  return freshEvent;
 }
 
 function createEvent_(calendar, itemType, item) {

@@ -142,6 +142,10 @@
         const localValue = localStorage.getItem(key);
         const cloudRow = cloudRows.get(key);
 
+        if (pendingPushes.has(key)) {
+          return;
+        }
+
         if (cloudRow) {
           const cloudValue = stringifyCloudValue(cloudRow.value);
           if (localValue !== cloudValue) {
@@ -196,6 +200,10 @@
       if (!document.hidden) pullCloudData();
     });
   }
+
+  window.EllaCloudSync = {
+    flush: flushPushes
+  };
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", startCloudSync);

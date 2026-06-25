@@ -5,6 +5,7 @@ const newMusicianValue = "__new_musician__";
 let sessions = loadSessions();
 let musicians = loadMusicians();
 let activeFilter = "all";
+const closingCards = new WeakSet();
 
 const form = document.querySelector("#sessionForm");
 const sessionList = document.querySelector("#sessionList");
@@ -52,6 +53,21 @@ async function syncSessionToCalendar(session, openId = "", previousSession = nul
   saveSessions();
   if (openId) renderSessions(openId);
   return result;
+}
+
+async function repushSessionToCalendar(id) {
+  const session = sessions.find((item) => item.id === id);
+  if (!window.EllaCalendarSync?.repushSession || !session?.title || !session?.date) return;
+  const result = await window.EllaCalendarSync.repushSession(session);
+  if (!result?.eventId) return;
+
+  const freshSession = sessions.find((item) => item.id === id);
+  if (!freshSession) return;
+  freshSession.googleCalendarEventId = result.eventId;
+  freshSession.googleCalendarHtmlLink = result.htmlLink || "";
+  freshSession.googleCalendarSyncedAt = result.syncedAt || new Date().toISOString();
+  saveSessions();
+  renderSessions(id);
 }
 
 async function syncExistingSessionsToCalendar() {
@@ -309,6 +325,7 @@ function renderSession(session, openId = "") {
         </label>
         <div class="card-actions">
           <span class="autosave-note">Saves automatically</span>
+          <button class="small-button" data-action="repush-calendar" data-id="${session.id}" type="button">Push to Google Calendar</button>
           <button class="small-button danger" data-action="delete" data-id="${session.id}" type="button">Delete</button>
         </div>
       </div>
@@ -341,7 +358,7 @@ function resetForm() {
   formTitle.textContent = "Add session";
 }
 
-function deleteSession(id) {
+async function deleteSession(id) {
   const session = sessions.find((item) => item.id === id);
   if (!session) return;
   if (!window.confirm(`Delete "${session.title}"?`)) return;
@@ -350,6 +367,12 @@ function deleteSession(id) {
   sessions = sessions.filter((item) => item.id !== id);
   saveSessions();
   renderSessions();
+  await window.EllaCloudSync?.flush?.();
+}
+
+function shouldReopenCard(element) {
+  const card = element.closest("details.gig-card");
+  return Boolean(card?.open && !closingCards.has(card));
 }
 
 function saveSessionField(element) {
@@ -357,13 +380,19 @@ function saveSessionField(element) {
   const field = element.dataset.field;
   const session = sessions.find((item) => item.id === id);
   if (!session || !field) return;
+  if (session[field] === element.value) return;
   const previousSession = { ...session };
+  const openAfterSave = shouldReopenCard(element);
   session[field] = element.value;
   if (field === "status") session.manualStatus = true;
   saveSessions();
   window.EllaFinanceSync?.syncSource("session", session);
-  renderSessions(id);
+  renderSessions(openAfterSave ? id : "");
   syncSessionToCalendar(session, id, previousSession);
+}
+
+function finishSessionDateEdit(element) {
+  if (element.matches('.session-field[type="date"]')) saveSessionField(element);
 }
 
 function updateSessionMusician(element) {
@@ -454,8 +483,26 @@ newSessionButton?.addEventListener("click", () => {
 syncExistingSessionsButton?.addEventListener("click", syncExistingSessionsToCalendar);
 
 sessionList.addEventListener("change", (event) => {
+  if (event.target.matches('.session-field[type="date"]')) return;
   if (event.target.matches(".session-field")) saveSessionField(event.target);
   if (event.target.matches(".session-musician-field")) updateSessionMusician(event.target);
+});
+
+sessionList.addEventListener("pointerdown", (event) => {
+  const summary = event.target.closest("summary");
+  const card = summary?.closest("details.gig-card");
+  if (card?.open) closingCards.add(card);
+});
+
+sessionList.addEventListener("focusout", (event) => {
+  finishSessionDateEdit(event.target);
+});
+
+sessionList.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (!event.target.matches('.session-field[type="date"]')) return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 sessionList.addEventListener("click", (event) => {
@@ -464,6 +511,7 @@ sessionList.addEventListener("click", (event) => {
   if (button.dataset.action === "delete") deleteSession(button.dataset.id);
   if (button.dataset.action === "add-musician") addSessionMusician(button.dataset.id);
   if (button.dataset.action === "remove-musician") removeSessionMusician(button.dataset.id, Number(button.dataset.index));
+  if (button.dataset.action === "repush-calendar") repushSessionToCalendar(button.dataset.id);
 });
 
 document.querySelectorAll(".filter").forEach((button) => {

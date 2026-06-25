@@ -89,14 +89,35 @@
     }, previousSession);
   }
 
+  async function repushGig(gig) {
+    if (!gig?.title || !gig?.date) return null;
+    return requestSync("recreate", "gig", {
+      ...gig,
+      googleCalendarEventId: "",
+      googleCalendarHtmlLink: "",
+      statusLabel: statusText(gig.status)
+    });
+  }
+
+  async function repushSession(session) {
+    if (!session?.title || !session?.date) return null;
+    return requestSync("recreate", "session", {
+      ...session,
+      googleCalendarEventId: "",
+      googleCalendarHtmlLink: "",
+      statusLabel: statusText(session.status)
+    });
+  }
+
   async function deleteEvent(itemType, item) {
-    if (!item?.googleCalendarEventId) return null;
     return requestSync("delete", itemType, item);
   }
 
   window.EllaCalendarSync = {
     deleteEvent,
     report,
+    repushGig,
+    repushSession,
     syncGig,
     syncSession
   };

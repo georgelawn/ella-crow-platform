@@ -281,10 +281,16 @@ function updateProjectField(element) {
   const card = element.closest("[data-id]");
   const project = projects.find((item) => item.id === card?.dataset.id);
   if (!project) return;
-  project[element.dataset.field] = element.dataset.field === "revenue" ? Number(element.value || 0) : element.value;
+  const value = element.dataset.field === "revenue" ? Number(element.value || 0) : element.value;
+  if (project[element.dataset.field] === value) return;
+  project[element.dataset.field] = value;
   saveProjects();
   editingProjectId = project.id;
   renderProjects();
+}
+
+function finishProjectDateEdit(element) {
+  if (element.matches('.project-field[type="date"]')) updateProjectField(element);
 }
 
 form.addEventListener("submit", (event) => {
@@ -320,6 +326,7 @@ list.addEventListener("toggle", (event) => {
 }, true);
 
 list.addEventListener("change", (event) => {
+  if (event.target.matches('.project-field[type="date"]')) return;
   if (event.target.matches(".project-field")) {
     updateProjectField(event.target);
     return;
@@ -332,6 +339,17 @@ list.addEventListener("change", (event) => {
   openProjectIds.add(project.id);
   saveProjects();
   renderProjects();
+});
+
+list.addEventListener("focusout", (event) => {
+  finishProjectDateEdit(event.target);
+});
+
+list.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (!event.target.matches('.project-field[type="date"]')) return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 list.addEventListener("click", (event) => {

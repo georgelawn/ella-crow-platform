@@ -420,6 +420,7 @@ function saveFinanceField(element) {
   const item = transactions.find((transaction) => transaction.id === row?.dataset.id);
   const field = element.dataset.field;
   if (!item || !field) return;
+  if (item[field] === element.value) return;
   item[field] = element.value;
   if (field === "type" && item.type === "expense") {
     item.invoiceStatus = "";
@@ -429,6 +430,10 @@ function saveFinanceField(element) {
   saveTransactions();
   editingTransactionId = item.id;
   renderFinance();
+}
+
+function finishFinanceDateEdit(element) {
+  if (element.matches('.finance-field[type="date"]')) saveFinanceField(element);
 }
 
 form.addEventListener("submit", (event) => {
@@ -470,7 +475,19 @@ streamGrid.addEventListener("click", (event) => {
 });
 
 currentMonthLedger.addEventListener("change", (event) => {
+  if (event.target.matches('.finance-field[type="date"]')) return;
   if (event.target.matches(".finance-field")) saveFinanceField(event.target);
+});
+
+currentMonthLedger.addEventListener("focusout", (event) => {
+  finishFinanceDateEdit(event.target);
+});
+
+currentMonthLedger.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (!event.target.matches('.finance-field[type="date"]')) return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 currentMonthLedger.addEventListener("click", (event) => {

@@ -246,13 +246,19 @@ function saveOpportunityField(element) {
   const field = element.dataset.field;
   if (!item || !field) return;
 
-  item[field] = field === "status" ? normalizeStatus(element.value) : element.value;
+  const value = field === "status" ? normalizeStatus(element.value) : element.value;
+  if (item[field] === value) return;
+  item[field] = value;
   if (field === "followUpDate") {
     item.followUpDone = false;
   }
   saveOpportunities();
   editingOpportunityId = item.id;
   renderOpportunities();
+}
+
+function finishOpportunityDateEdit(element) {
+  if (element.matches('.opportunity-field[type="date"]')) saveOpportunityField(element);
 }
 
 form.addEventListener("submit", (event) => {
@@ -280,7 +286,19 @@ form.addEventListener("submit", (event) => {
 clearButton.addEventListener("click", () => form.reset());
 
 list.addEventListener("change", (event) => {
+  if (event.target.matches('.opportunity-field[type="date"]')) return;
   if (event.target.matches(".opportunity-field")) saveOpportunityField(event.target);
+});
+
+list.addEventListener("focusout", (event) => {
+  finishOpportunityDateEdit(event.target);
+});
+
+list.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (!event.target.matches('.opportunity-field[type="date"]')) return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 list.addEventListener("click", (event) => {

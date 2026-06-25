@@ -8,6 +8,7 @@ const newPlayerValue = "__new_player__";
 let gigs = loadGigs();
 let roster = loadRoster();
 let activeFilter = "all";
+const closingCards = new WeakSet();
 
 const form = document.querySelector("#gigForm");
 const list = document.querySelector("#gigList");
@@ -61,6 +62,21 @@ async function syncGigToCalendar(gig, openId = "", previousGig = null) {
   saveGigs();
   if (openId) renderGigs(openId);
   return result;
+}
+
+async function repushGigToCalendar(id) {
+  const gig = gigs.find((item) => item.id === id);
+  if (!window.EllaCalendarSync?.repushGig || !gig?.title || !gig?.date) return;
+  const result = await window.EllaCalendarSync.repushGig(gig);
+  if (!result?.eventId) return;
+
+  const freshGig = gigs.find((item) => item.id === id);
+  if (!freshGig) return;
+  freshGig.googleCalendarEventId = result.eventId;
+  freshGig.googleCalendarHtmlLink = result.htmlLink || "";
+  freshGig.googleCalendarSyncedAt = result.syncedAt || new Date().toISOString();
+  saveGigs();
+  renderGigs(id);
 }
 
 async function syncExistingGigsToCalendar() {
@@ -372,6 +388,7 @@ function renderGigCard(gig, openGigId = "") {
         </label>
         <div class="card-actions">
           <span class="autosave-note">Saves automatically</span>
+          <button class="small-button" data-action="repush-calendar" data-id="${gig.id}" type="button">Push to Google Calendar</button>
           <button class="small-button danger" data-action="delete" data-id="${gig.id}" type="button">Delete</button>
         </div>
       </div>
@@ -428,7 +445,7 @@ function readForm() {
   };
 }
 
-function deleteGig(id) {
+async function deleteGig(id) {
   const gig = gigs.find((item) => item.id === id);
   if (!gig) return;
   const confirmed = window.confirm(`Delete "${gig.title}"?`);
@@ -440,6 +457,12 @@ function deleteGig(id) {
   saveGigs();
   renderGigs();
   resetForm();
+  await window.EllaCloudSync?.flush?.();
+}
+
+function shouldReopenCard(element) {
+  const card = element.closest("details.gig-card");
+  return Boolean(card?.open && !closingCards.has(card));
 }
 
 function saveInlineField(element) {
@@ -448,7 +471,9 @@ function saveInlineField(element) {
   const field = element.dataset.field;
   const gig = gigs.find((item) => item.id === id);
   if (!gig || !field) return;
+  if (gig[field] === element.value) return;
   const previousGig = { ...gig };
+  const openAfterSave = shouldReopenCard(element);
 
   gig[field] = element.value;
   if (field === "status") {
@@ -456,8 +481,12 @@ function saveInlineField(element) {
   }
   saveGigs();
   window.EllaFinanceSync?.syncSource("gig", gig);
-  renderGigs(id);
+  renderGigs(openAfterSave ? id : "");
   syncGigToCalendar(gig, id, previousGig);
+}
+
+function finishInlineDateEdit(element) {
+  if (element.matches('.inline-field[type="date"]')) saveInlineField(element);
 }
 
 function updatePlayerField(element) {
@@ -559,11 +588,30 @@ list.addEventListener("click", (event) => {
   if (button.dataset.action === "delete") deleteGig(id);
   if (button.dataset.action === "add-player") addPlayer(id);
   if (button.dataset.action === "remove-player") removePlayer(id, Number(button.dataset.playerIndex));
+  if (button.dataset.action === "repush-calendar") repushGigToCalendar(id);
+});
+
+list.addEventListener("pointerdown", (event) => {
+  const summary = event.target.closest("summary");
+  const card = summary?.closest("details.gig-card");
+  if (card?.open) closingCards.add(card);
 });
 
 list.addEventListener("change", (event) => {
+  if (event.target.matches('.inline-field[type="date"]')) return;
   if (event.target.matches(".inline-field")) saveInlineField(event.target);
   if (event.target.matches(".player-field")) updatePlayerField(event.target);
+});
+
+list.addEventListener("focusout", (event) => {
+  finishInlineDateEdit(event.target);
+});
+
+list.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  if (!event.target.matches('.inline-field[type="date"]')) return;
+  event.preventDefault();
+  event.target.blur();
 });
 
 document.querySelectorAll(".filter").forEach((button) => {
