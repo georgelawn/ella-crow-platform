@@ -2161,6 +2161,66 @@
   gap: 7px;
 }
 
+.pending-invoice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pending-invoice-row {
+  align-items: center;
+  background: var(--paper-soft);
+  border: 1px solid rgba(82, 62, 38, 0.26);
+  border-left: 3px solid var(--pending);
+  display: grid;
+  gap: 13px;
+  grid-template-columns: 64px minmax(0, 1fr) 96px 130px auto;
+  padding: 10px 12px;
+}
+
+.pending-invoice-date,
+.pending-invoice-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pending-invoice-date small,
+.pending-invoice-copy small,
+.pending-invoice-row label span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pending-invoice-copy strong {
+  overflow-wrap: anywhere;
+}
+
+.pending-invoice-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-invoice-amount {
+  font-family: Arial, Helvetica, sans-serif;
+  min-width: 0;
+  text-align: right;
+}
+
+.pending-invoice-row label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.pending-invoice-row input {
+  min-width: 0;
+  padding: 8px;
+}
+
 .ledger-row {
   align-items: center;
   background: var(--paper-soft);
@@ -2480,6 +2540,10 @@
     grid-template-columns: 58px 92px minmax(0, 1fr) 92px 38px;
   }
 
+  .pending-invoice-row {
+    grid-template-columns: 64px minmax(0, 1fr) 92px 145px auto;
+  }
+
   .ledger-type {
     display: none;
   }
@@ -2518,6 +2582,16 @@
   .ledger-edit {
     grid-column: 4;
     grid-row: 1 / 3;
+  }
+
+  .pending-invoice-row {
+    align-items: start;
+    grid-template-columns: 58px minmax(0, 1fr) 88px;
+  }
+
+  .pending-invoice-row label,
+  .pending-invoice-row button {
+    grid-column: 2 / -1;
   }
 }
 
@@ -2582,6 +2656,11 @@
   .ledger-row {
     gap: 8px;
     grid-template-columns: 48px minmax(0, 1fr) 82px 30px;
+  }
+
+  .pending-invoice-row {
+    gap: 8px;
+    grid-template-columns: 48px minmax(0, 1fr) 82px;
   }
 
   .ledger-description small {

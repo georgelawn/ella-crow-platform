@@ -15,6 +15,8 @@ const form = document.querySelector("#financeForm");
 const streamGrid = document.querySelector("#profitStreams");
 const streamInspector = document.querySelector("#streamInspector");
 const currentMonthLedger = document.querySelector("#currentMonthLedger");
+const pendingInvoiceList = document.querySelector("#pendingInvoiceList");
+const pendingInvoiceEmptyState = document.querySelector("#pendingInvoiceEmptyState");
 const archive = document.querySelector("#financeArchive");
 const emptyState = document.querySelector("#financeEmptyState");
 const clearButton = document.querySelector("#clearTransactionButton");
@@ -114,9 +116,19 @@ function shortDate(dateString) {
 }
 
 function totalsFor(items) {
-  const revenue = items.filter((item) => item.type === "revenue").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const revenue = items
+    .filter((item) => item.type === "revenue" && item.invoiceStatus !== "pending")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const expenses = items.filter((item) => item.type === "expense").reduce((sum, item) => sum + Number(item.amount || 0), 0);
   return { revenue, expenses, net: revenue - expenses };
+}
+
+function pendingInvoices() {
+  return transactions.filter((item) => item.type === "revenue" && item.invoiceStatus === "pending");
+}
+
+function ledgerTransactions() {
+  return transactions.filter((item) => item.type !== "revenue" || item.invoiceStatus !== "pending");
 }
 
 function itemsForMonth(key, items = transactions) {
@@ -236,7 +248,7 @@ function renderStreamInspector() {
 }
 
 function renderCurrentLedger() {
-  const items = transactions
+  const items = ledgerTransactions()
     .filter((item) => monthKey(item.date) === currentMonthKey() || !monthKey(item.date))
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
@@ -259,6 +271,38 @@ function renderLedgerRow(item) {
       <span class="ledger-type">${item.type === "revenue" ? "Money in" : "Cost"}</span>
       <strong class="ledger-amount ${item.type === "expense" ? "negative" : "positive"}">${item.type === "expense" ? "−" : "+"}${money(item.amount)}</strong>
       <button class="ledger-edit" data-action="edit" type="button">Edit</button>
+    </article>
+  `;
+}
+
+function renderPendingInvoices() {
+  const items = pendingInvoices().sort((a, b) => (a.invoiceDueDate || a.date || "").localeCompare(b.invoiceDueDate || b.date || ""));
+  const total = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  document.querySelector("#pendingInvoiceCount").textContent = items.length
+    ? `${money(total)} waiting`
+    : "0 unpaid";
+  pendingInvoiceEmptyState.classList.toggle("visible", items.length === 0);
+  pendingInvoiceList.innerHTML = items.map(renderPendingInvoiceRow).join("");
+}
+
+function renderPendingInvoiceRow(item) {
+  const stream = streamDefinitions[item.stream] || streamDefinitions.gigs;
+  return `
+    <article class="pending-invoice-row" data-id="${escapeHtml(item.id)}">
+      <span class="pending-invoice-date">
+        <small>Due</small>
+        <strong>${shortDate(item.invoiceDueDate || item.date)}</strong>
+      </span>
+      <span class="pending-invoice-copy">
+        <strong>${escapeHtml(item.category || "Invoice")}</strong>
+        <small>${escapeHtml(stream.label)}${item.description ? ` · ${escapeHtml(item.description)}` : ""}</small>
+      </span>
+      <strong class="pending-invoice-amount">${money(item.amount)}</strong>
+      <label>
+        <span>Paid date</span>
+        <input class="pending-paid-date" type="date" value="${escapeHtml(localDateKey())}">
+      </label>
+      <button class="small-button" data-action="mark-paid" type="button">Paid</button>
     </article>
   `;
 }
@@ -379,9 +423,10 @@ function renderArchiveTransactions(items) {
 }
 
 function renderArchive() {
-  const months = monthlyArchiveRows(transactions);
-  const years = yearlyArchiveRows(transactions);
-  const undated = transactions.filter((item) => !monthKey(item.date));
+  const archivedTransactions = ledgerTransactions();
+  const months = monthlyArchiveRows(archivedTransactions);
+  const years = yearlyArchiveRows(archivedTransactions);
+  const undated = archivedTransactions.filter((item) => !monthKey(item.date));
   const undatedTotals = totalsFor(undated);
   const undatedRow = undated.length ? `
     <div class="archive-row warning">
@@ -401,6 +446,7 @@ function renderFinance() {
   renderSummary();
   renderProfitStreams();
   renderStreamInspector();
+  renderPendingInvoices();
   renderCurrentLedger();
   renderArchive();
 }
@@ -508,6 +554,19 @@ currentMonthLedger.addEventListener("click", (event) => {
     editingTransactionId = "";
     renderFinance();
   }
+});
+
+pendingInvoiceList.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action='mark-paid']");
+  const row = button?.closest(".pending-invoice-row");
+  if (!button || !row) return;
+  const item = transactions.find((transaction) => transaction.id === row.dataset.id);
+  const paidDate = row.querySelector(".pending-paid-date")?.value;
+  if (!item || !validDate(paidDate)) return;
+  item.invoiceStatus = "received";
+  item.date = paidDate;
+  saveTransactions();
+  renderFinance();
 });
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
