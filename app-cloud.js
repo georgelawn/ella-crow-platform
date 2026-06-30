@@ -28,11 +28,13 @@
   let pulling = false;
   let pushTimer = null;
   let deferredCloudUpdateTimer = null;
+  let deferredUiRefreshTimer = null;
   let lastEditableInteractionAt = 0;
   const deferredCloudUpdateKeys = new Set();
+  const deferredUiRefreshCallbacks = [];
   const pendingPushes = new Map();
   const editableSelector = "input, select, textarea, [contenteditable='true']";
-  const editableQuietPeriodMs = 4000;
+  const editableQuietPeriodMs = 30000;
 
   function activeElementIsEditable() {
     const element = document.activeElement;
@@ -81,6 +83,37 @@
   function scheduleDeferredCloudDataUpdated(delay = 120) {
     clearTimeout(deferredCloudUpdateTimer);
     deferredCloudUpdateTimer = setTimeout(flushDeferredCloudDataUpdated, delay);
+  }
+
+  function flushDeferredUiRefreshCallbacks() {
+    clearTimeout(deferredUiRefreshTimer);
+    deferredUiRefreshTimer = null;
+
+    if (!deferredUiRefreshCallbacks.length) return;
+
+    const quietDelay = millisecondsUntilEditableQuiet();
+    if (quietDelay > 0) {
+      scheduleDeferredUiRefresh(quietDelay + 120);
+      return;
+    }
+
+    const callbacks = deferredUiRefreshCallbacks.splice(0);
+    callbacks.forEach((callback) => callback());
+  }
+
+  function scheduleDeferredUiRefresh(delay = 120) {
+    clearTimeout(deferredUiRefreshTimer);
+    deferredUiRefreshTimer = setTimeout(flushDeferredUiRefreshCallbacks, delay);
+  }
+
+  function deferUiRefresh(callback) {
+    if (typeof callback !== "function") return;
+    if (!userIsEditing()) {
+      callback();
+      return;
+    }
+    deferredUiRefreshCallbacks.push(callback);
+    scheduleDeferredUiRefresh();
   }
 
   function showSyncStatus(text, state = "local") {
@@ -259,11 +292,16 @@
     ["focusin", "input", "keydown", "pointerdown", "change"].forEach((eventName) => {
       document.addEventListener(eventName, noteEditableInteraction, true);
     });
-    document.addEventListener("focusout", () => scheduleDeferredCloudDataUpdated());
+    document.addEventListener("focusout", () => {
+      scheduleDeferredCloudDataUpdated();
+      scheduleDeferredUiRefresh();
+    });
   }
 
   window.EllaCloudSync = {
-    flush: flushPushes
+    flush: flushPushes,
+    deferUiRefresh,
+    isUiBusy: userIsEditing
   };
 
   if (document.readyState === "loading") {

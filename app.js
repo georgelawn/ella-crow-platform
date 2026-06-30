@@ -49,6 +49,15 @@ function saveGigs() {
   localStorage.setItem(storageKey, JSON.stringify(gigs));
 }
 
+function renderGigsWhenUiIdle(openGigId = "") {
+  const render = () => renderGigs(openGigId);
+  if (window.EllaCloudSync?.deferUiRefresh) {
+    window.EllaCloudSync.deferUiRefresh(render);
+    return;
+  }
+  render();
+}
+
 async function syncGigToCalendar(gig, openId = "", previousGig = null) {
   if (!window.EllaCalendarSync?.syncGig || !gig?.title || !gig?.date) return;
   const result = await window.EllaCalendarSync.syncGig(gig, previousGig);
@@ -60,7 +69,7 @@ async function syncGigToCalendar(gig, openId = "", previousGig = null) {
   freshGig.googleCalendarHtmlLink = result.htmlLink || "";
   freshGig.googleCalendarSyncedAt = result.syncedAt || new Date().toISOString();
   saveGigs();
-  if (openId) renderGigs(openId);
+  if (openId) renderGigsWhenUiIdle(openId);
   return result;
 }
 
@@ -95,7 +104,7 @@ async function syncExistingGigsToCalendar() {
       failedCount += 1;
     }
   }
-  if (syncableGigs.length) renderGigs();
+  if (syncableGigs.length) renderGigsWhenUiIdle();
   window.EllaCalendarSync.report?.(
     failedCount ? `Google sync: ${syncedCount} synced, ${failedCount} failed` : `Google sync: ${syncedCount} synced`,
     failedCount ? "error" : "synced"
@@ -650,7 +659,7 @@ window.addEventListener("ella-cloud-data-updated", (event) => {
   const openGigId = currentOpenGigId();
   window.setTimeout(() => {
     gigs = loadGigs();
-    renderGigs(openGigId);
+    renderGigsWhenUiIdle(openGigId);
     window.EllaFinanceSync?.backfill("gig");
   }, 0);
 });

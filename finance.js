@@ -451,6 +451,18 @@ function renderFinance() {
   renderArchive();
 }
 
+function renderFinanceWhenUiIdle(callback = null) {
+  const render = () => {
+    callback?.();
+    renderFinance();
+  };
+  if (window.EllaCloudSync?.deferUiRefresh) {
+    window.EllaCloudSync.deferUiRefresh(render);
+    return;
+  }
+  render();
+}
+
 function syncInvoiceFields() {
   const showInvoice = fields.type.value === "revenue";
   fields.invoiceStatusField.hidden = !showInvoice;
@@ -572,9 +584,10 @@ pendingInvoiceList.addEventListener("click", (event) => {
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
   if (keys.includes(financeStorageKey)) {
-    transactions = loadTransactions();
-    editingTransactionId = "";
-    renderFinance();
+    renderFinanceWhenUiIdle(() => {
+      transactions = loadTransactions();
+      editingTransactionId = "";
+    });
   }
   if (keys.some((key) => [gigStorageKey, sessionStorageKey].includes(key))) {
     window.setTimeout(backfillSourceExpenses, 0);
@@ -582,11 +595,12 @@ window.addEventListener("ella-cloud-data-updated", (event) => {
 });
 
 function backfillSourceExpenses() {
-  window.EllaFinanceSync?.backfill("gig");
-  window.EllaFinanceSync?.backfill("session");
-  transactions = loadTransactions();
-  editingTransactionId = "";
-  renderFinance();
+  renderFinanceWhenUiIdle(() => {
+    window.EllaFinanceSync?.backfill("gig");
+    window.EllaFinanceSync?.backfill("session");
+    transactions = loadTransactions();
+    editingTransactionId = "";
+  });
 }
 
 fields.date.value = localDateKey();
