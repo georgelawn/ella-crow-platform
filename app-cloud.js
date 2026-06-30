@@ -27,7 +27,42 @@
   let ready = false;
   let pulling = false;
   let pushTimer = null;
+  let deferredCloudUpdateTimer = null;
+  const deferredCloudUpdateKeys = new Set();
   const pendingPushes = new Map();
+
+  function activeElementIsEditable() {
+    const element = document.activeElement;
+    if (!element || element === document.body || element === document.documentElement) return false;
+    return Boolean(element.closest("input, select, textarea, [contenteditable='true']"));
+  }
+
+  function dispatchCloudDataUpdated(keys) {
+    window.dispatchEvent(new CustomEvent("ella-cloud-data-updated", {
+      detail: { keys }
+    }));
+  }
+
+  function flushDeferredCloudDataUpdated() {
+    clearTimeout(deferredCloudUpdateTimer);
+    deferredCloudUpdateTimer = null;
+
+    if (!deferredCloudUpdateKeys.size) return;
+
+    if (activeElementIsEditable()) {
+      scheduleDeferredCloudDataUpdated();
+      return;
+    }
+
+    const keys = [...deferredCloudUpdateKeys];
+    deferredCloudUpdateKeys.clear();
+    dispatchCloudDataUpdated(keys);
+  }
+
+  function scheduleDeferredCloudDataUpdated() {
+    clearTimeout(deferredCloudUpdateTimer);
+    deferredCloudUpdateTimer = setTimeout(flushDeferredCloudDataUpdated, 120);
+  }
 
   function showSyncStatus(text, state = "local") {
     let badge = document.querySelector("#cloudSyncStatus");
@@ -122,9 +157,12 @@
 
   function announceCloudDataUpdated(keys) {
     if (!keys.length) return;
-    window.dispatchEvent(new CustomEvent("ella-cloud-data-updated", {
-      detail: { keys }
-    }));
+    if (activeElementIsEditable()) {
+      keys.forEach((key) => deferredCloudUpdateKeys.add(key));
+      scheduleDeferredCloudDataUpdated();
+      return;
+    }
+    dispatchCloudDataUpdated(keys);
   }
 
   async function pullCloudData() {
@@ -199,6 +237,7 @@
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) pullCloudData();
     });
+    document.addEventListener("focusout", scheduleDeferredCloudDataUpdated);
   }
 
   window.EllaCloudSync = {

@@ -377,6 +377,10 @@ function shouldReopenCard(element) {
   return Boolean(card?.open && !closingCards.has(card));
 }
 
+function currentOpenSessionId() {
+  return sessionList.querySelector("details.gig-card[open] .gig-details")?.dataset.id || "";
+}
+
 function saveSessionField(element) {
   const id = element.closest(".gig-details")?.dataset.id;
   const field = element.dataset.field;
@@ -535,9 +539,10 @@ window.addEventListener("load", () => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   if (!event.detail?.keys?.includes(sessionStorageKey)) return;
+  const openSessionId = currentOpenSessionId();
   window.setTimeout(() => {
     sessions = loadSessions();
-    renderSessions();
+    renderSessions(openSessionId);
     window.EllaFinanceSync?.backfill("session");
   }, 0);
 });
