@@ -28,13 +28,31 @@
   let pulling = false;
   let pushTimer = null;
   let deferredCloudUpdateTimer = null;
+  let lastEditableInteractionAt = 0;
   const deferredCloudUpdateKeys = new Set();
   const pendingPushes = new Map();
+  const editableSelector = "input, select, textarea, [contenteditable='true']";
+  const editableQuietPeriodMs = 4000;
 
   function activeElementIsEditable() {
     const element = document.activeElement;
     if (!element || element === document.body || element === document.documentElement) return false;
-    return Boolean(element.closest("input, select, textarea, [contenteditable='true']"));
+    return Boolean(element.closest(editableSelector));
+  }
+
+  function noteEditableInteraction(event) {
+    if (!event.target?.closest?.(editableSelector)) return;
+    lastEditableInteractionAt = Date.now();
+  }
+
+  function millisecondsUntilEditableQuiet() {
+    if (activeElementIsEditable()) return editableQuietPeriodMs;
+    const elapsed = Date.now() - lastEditableInteractionAt;
+    return Math.max(0, editableQuietPeriodMs - elapsed);
+  }
+
+  function userIsEditing() {
+    return activeElementIsEditable() || millisecondsUntilEditableQuiet() > 0;
   }
 
   function dispatchCloudDataUpdated(keys) {
@@ -49,8 +67,9 @@
 
     if (!deferredCloudUpdateKeys.size) return;
 
-    if (activeElementIsEditable()) {
-      scheduleDeferredCloudDataUpdated();
+    const quietDelay = millisecondsUntilEditableQuiet();
+    if (quietDelay > 0) {
+      scheduleDeferredCloudDataUpdated(quietDelay + 120);
       return;
     }
 
@@ -59,9 +78,9 @@
     dispatchCloudDataUpdated(keys);
   }
 
-  function scheduleDeferredCloudDataUpdated() {
+  function scheduleDeferredCloudDataUpdated(delay = 120) {
     clearTimeout(deferredCloudUpdateTimer);
-    deferredCloudUpdateTimer = setTimeout(flushDeferredCloudDataUpdated, 120);
+    deferredCloudUpdateTimer = setTimeout(flushDeferredCloudDataUpdated, delay);
   }
 
   function showSyncStatus(text, state = "local") {
@@ -157,7 +176,7 @@
 
   function announceCloudDataUpdated(keys) {
     if (!keys.length) return;
-    if (activeElementIsEditable()) {
+    if (userIsEditing()) {
       keys.forEach((key) => deferredCloudUpdateKeys.add(key));
       scheduleDeferredCloudDataUpdated();
       return;
@@ -237,7 +256,10 @@
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) pullCloudData();
     });
-    document.addEventListener("focusout", scheduleDeferredCloudDataUpdated);
+    ["focusin", "input", "keydown", "pointerdown", "change"].forEach((eventName) => {
+      document.addEventListener(eventName, noteEditableInteraction, true);
+    });
+    document.addEventListener("focusout", () => scheduleDeferredCloudDataUpdated());
   }
 
   window.EllaCloudSync = {
