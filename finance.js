@@ -10,16 +10,26 @@ const streamDefinitions = {
 let transactions = loadTransactions();
 let editingTransactionId = "";
 let activeStream = "gigs";
+let activeCategory = "";
+let ledgerPeriod = currentMonthKey();
+let ledgerStreamFilter = "all";
 
 const form = document.querySelector("#financeForm");
 const streamGrid = document.querySelector("#profitStreams");
 const streamInspector = document.querySelector("#streamInspector");
 const currentMonthLedger = document.querySelector("#currentMonthLedger");
+const ledgerPeriodFilter = document.querySelector("#ledgerPeriodFilter");
+const ledgerStreamFilterField = document.querySelector("#ledgerStreamFilter");
+const ledgerCategoryFilter = document.querySelector("#ledgerCategoryFilter");
+const ledgerCategoryOptions = document.querySelector("#financeCategoryOptions");
+const ledgerClearFilters = document.querySelector("#ledgerClearFilters");
+const ledgerTitle = document.querySelector("#ledgerTitle");
 const pendingInvoiceList = document.querySelector("#pendingInvoiceList");
 const pendingInvoiceEmptyState = document.querySelector("#pendingInvoiceEmptyState");
 const archive = document.querySelector("#financeArchive");
 const emptyState = document.querySelector("#financeEmptyState");
 const clearButton = document.querySelector("#clearTransactionButton");
+const financeDashboard = document.querySelector(".finance-dashboard");
 
 const fields = {
   stream: document.querySelector("#transactionStream"),
@@ -135,6 +145,20 @@ function itemsForMonth(key, items = transactions) {
   return items.filter((item) => monthKey(item.date) === key);
 }
 
+function categoryName(item) {
+  return (item.category || (item.type === "revenue" ? "Revenue" : "Cost")).trim();
+}
+
+function categoryKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function categoryMatches(item, value) {
+  const filter = categoryKey(value);
+  if (!filter) return true;
+  return categoryKey(categoryName(item)).includes(filter);
+}
+
 function marginFor(totals) {
   if (!totals.revenue) return null;
   return (totals.net / totals.revenue) * 100;
@@ -195,6 +219,65 @@ function renderProfitStreams() {
   }).join("");
 }
 
+function ledgerPeriodOptions() {
+  const keys = [...new Set(ledgerTransactions().map((item) => monthKey(item.date)).filter(Boolean))]
+    .sort()
+    .reverse();
+  if (!keys.includes(currentMonthKey())) keys.unshift(currentMonthKey());
+  if (!keys.includes(offsetMonthKey(-1))) keys.push(offsetMonthKey(-1));
+  const monthOptions = [...new Set(keys)].map((key) => {
+    const label = key === currentMonthKey()
+      ? "This month"
+      : key === offsetMonthKey(-1)
+        ? "Last month"
+        : monthLabel(key);
+    return `<option value="${key}"${ledgerPeriod === key ? " selected" : ""}>${label}</option>`;
+  }).join("");
+  return `
+    <option value="all"${ledgerPeriod === "all" ? " selected" : ""}>All time</option>
+    ${monthOptions}
+    <option value="undated"${ledgerPeriod === "undated" ? " selected" : ""}>Date needed</option>
+  `;
+}
+
+function renderLedgerControls() {
+  const categoryValues = [...new Set(ledgerTransactions().map(categoryName).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+  ledgerPeriodFilter.innerHTML = ledgerPeriodOptions();
+  ledgerStreamFilterField.value = ledgerStreamFilter;
+  ledgerCategoryFilter.value = activeCategory;
+  ledgerCategoryOptions.innerHTML = categoryValues
+    .map((category) => `<option value="${escapeHtml(category)}"></option>`)
+    .join("");
+}
+
+function applyLedgerFilters(items = ledgerTransactions()) {
+  return items.filter((item) => {
+    const periodMatch = ledgerPeriod === "all"
+      || (ledgerPeriod === "undated" ? !monthKey(item.date) : monthKey(item.date) === ledgerPeriod);
+    const streamMatch = ledgerStreamFilter === "all" || item.stream === ledgerStreamFilter;
+    return periodMatch && streamMatch && categoryMatches(item, activeCategory);
+  });
+}
+
+function ledgerPeriodLabel() {
+  if (ledgerPeriod === "all") return "All ledger activity";
+  if (ledgerPeriod === "undated") return "Date needed";
+  if (ledgerPeriod === currentMonthKey()) return "This month";
+  if (ledgerPeriod === offsetMonthKey(-1)) return "Last month";
+  return monthLabel(ledgerPeriod);
+}
+
+function selectCategory(category, stream = activeStream) {
+  activeCategory = category || "";
+  activeStream = stream;
+  ledgerStreamFilter = stream || "all";
+  ledgerPeriod = "all";
+  editingTransactionId = "";
+  renderFinance();
+  document.querySelector(".current-ledger")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function streamMonthKeys(items) {
   const keys = [...new Set(items.map((item) => monthKey(item.date)).filter(Boolean))].sort().reverse();
   if (!keys.includes(currentMonthKey())) keys.unshift(currentMonthKey());
@@ -228,6 +311,56 @@ function renderStreamInspector() {
     `;
   }).join("");
 
+  const categoryGroups = new Map();
+  streamItems.forEach((item) => {
+    const key = categoryName(item);
+    categoryGroups.set(key, [...(categoryGroups.get(key) || []), item]);
+  });
+  const categoryRows = [...categoryGroups.entries()]
+    .sort(([, aItems], [, bItems]) => Math.abs(totalsFor(bItems).net) - Math.abs(totalsFor(aItems).net))
+    .slice(0, 8)
+    .map(([category, categoryItems]) => {
+      const categoryTotals = totalsFor(categoryItems);
+      const pending = categoryItems
+        .filter((item) => item.type === "revenue" && item.invoiceStatus === "pending")
+        .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+      return `
+        <button class="category-stat-card${categoryKey(activeCategory) === categoryKey(category) && ledgerStreamFilter === activeStream ? " active" : ""}" data-category="${escapeHtml(category)}" data-stream="${activeStream}" type="button">
+          <span>
+            <strong>${escapeHtml(category)}</strong>
+            <small>${categoryItems.length} ${categoryItems.length === 1 ? "entry" : "entries"}${pending ? ` · ${money(pending)} pending` : ""}</small>
+          </span>
+          <strong class="${categoryTotals.net < 0 ? "negative" : "positive"}">${money(categoryTotals.net)}</strong>
+        </button>
+      `;
+    }).join("");
+
+  const activeCategoryItems = activeCategory
+    ? streamItems.filter((item) => categoryMatches(item, activeCategory))
+    : [];
+  const activeCategoryTotals = totalsFor(activeCategoryItems);
+  const activeCategoryAverage = activeCategoryItems.length
+    ? activeCategoryItems.reduce((sum, item) => sum + Number(item.amount || 0), 0) / activeCategoryItems.length
+    : 0;
+  const activeCategoryPending = activeCategoryItems
+    .filter((item) => item.type === "revenue" && item.invoiceStatus === "pending")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const categoryDetail = activeCategory && activeCategoryItems.length ? `
+    <div class="category-detail-panel">
+      <div>
+        <p class="eyebrow">Category view</p>
+        <h3>${escapeHtml(activeCategory)}</h3>
+      </div>
+      <div class="category-detail-stats">
+        <span><strong>${money(activeCategoryTotals.revenue)}</strong> earned</span>
+        <span><strong>${money(activeCategoryTotals.expenses)}</strong> spent</span>
+        <span><strong>${money(activeCategoryTotals.net)}</strong> net</span>
+        <span><strong>${money(activeCategoryAverage)}</strong> average entry</span>
+        <span><strong>${activeCategoryPending ? money(activeCategoryPending) : "None"}</strong> pending</span>
+      </div>
+    </div>
+  ` : "";
+
   streamInspector.innerHTML = `
     <div class="stream-inspector-heading">
       <div>
@@ -244,15 +377,29 @@ function renderStreamInspector() {
       <span>Month</span><span>Revenue / costs</span><span>In</span><span>Out</span><span>Profit</span>
     </div>
     <div class="stream-months">${rows}</div>
+    <div class="category-insights">
+      <div class="finance-section-heading">
+        <div>
+          <p class="eyebrow">Category totals</p>
+          <h3>Click a category to inspect and edit it</h3>
+        </div>
+        <span>${categoryGroups.size} categories</span>
+      </div>
+      <div class="category-stat-grid">${categoryRows || `<p class="archive-empty">No category activity for this stream yet.</p>`}</div>
+      ${categoryDetail}
+    </div>
   `;
 }
 
 function renderCurrentLedger() {
-  const items = ledgerTransactions()
-    .filter((item) => monthKey(item.date) === currentMonthKey() || !monthKey(item.date))
+  renderLedgerControls();
+  const items = applyLedgerFilters()
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
+  const totals = totalsFor(items);
+  ledgerTitle.textContent = ledgerPeriodLabel();
   document.querySelector("#monthActivityCount").textContent = `${items.length} ${items.length === 1 ? "entry" : "entries"}`;
+  document.querySelector("#monthActivityCount").title = `${money(totals.revenue)} in, ${money(totals.expenses)} out, ${money(totals.net)} net`;
   emptyState.classList.toggle("visible", items.length === 0);
   currentMonthLedger.innerHTML = items.map(renderLedgerRow).join("");
 }
@@ -324,6 +471,12 @@ function renderEditableLedgerRow(item) {
         <option value="expense"${item.type === "expense" ? " selected" : ""}>Expense</option>
       </select></label>
       <label><span>Amount</span><input class="finance-field" data-field="amount" type="number" min="0" step="0.01" value="${escapeHtml(item.amount)}"></label>
+      <label><span>Invoice</span><select class="finance-field" data-field="invoiceStatus"${item.type === "expense" ? " disabled" : ""}>
+        <option value="received"${item.invoiceStatus !== "pending" ? " selected" : ""}>Received</option>
+        <option value="pending"${item.invoiceStatus === "pending" ? " selected" : ""}>Pending</option>
+      </select></label>
+      <label><span>Due date</span><input class="finance-field" data-field="invoiceDueDate" type="date" value="${escapeHtml(item.invoiceDueDate || "")}"${item.type === "expense" ? " disabled" : ""}></label>
+      <label class="ledger-edit-note"><span>Description</span><input class="finance-field" data-field="description" value="${escapeHtml(item.description || "")}"></label>
       <div class="ledger-edit-actions">
         <button class="small-button" data-action="done" type="button">Done</button>
         <button class="small-button danger" data-action="delete" type="button">Delete</button>
@@ -408,14 +561,16 @@ function renderArchiveTransactions(items) {
   return [...items]
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
     .map((item) => {
+      if (editingTransactionId === item.id) return renderEditableLedgerRow(item);
       const stream = streamDefinitions[item.stream] || streamDefinitions.gigs;
       return `
-        <div class="archive-transaction">
+        <div class="archive-transaction" data-id="${escapeHtml(item.id)}">
           <span>${shortDate(item.date)}</span>
           <strong>${stream.label}</strong>
           <span>${escapeHtml(item.category || (item.type === "revenue" ? "Revenue" : "Cost"))}</span>
           <span>${item.type === "revenue" ? "Revenue" : "Cost"}</span>
           <strong class="${item.type === "expense" ? "negative" : "positive"}">${item.type === "expense" ? "−" : "+"}${money(item.amount)}</strong>
+          <button class="ledger-edit" data-action="edit" type="button">Edit</button>
         </div>
       `;
     })
@@ -474,7 +629,7 @@ function syncInvoiceFields() {
 }
 
 function saveFinanceField(element) {
-  const row = element.closest(".ledger-row");
+  const row = element.closest(".ledger-row, .archive-transaction");
   const item = transactions.find((transaction) => transaction.id === row?.dataset.id);
   const field = element.dataset.field;
   if (!item || !field) return;
@@ -532,29 +687,62 @@ streamGrid.addEventListener("click", (event) => {
   renderStreamInspector();
 });
 
-currentMonthLedger.addEventListener("change", (event) => {
+streamInspector.addEventListener("click", (event) => {
+  const card = event.target.closest(".category-stat-card");
+  if (!card) return;
+  selectCategory(card.dataset.category || "", card.dataset.stream || activeStream);
+});
+
+ledgerPeriodFilter.addEventListener("change", () => {
+  ledgerPeriod = ledgerPeriodFilter.value;
+  editingTransactionId = "";
+  renderFinance();
+});
+
+ledgerStreamFilterField.addEventListener("change", () => {
+  ledgerStreamFilter = ledgerStreamFilterField.value;
+  if (ledgerStreamFilter !== "all") activeStream = ledgerStreamFilter;
+  editingTransactionId = "";
+  renderFinance();
+});
+
+ledgerCategoryFilter.addEventListener("change", () => {
+  activeCategory = ledgerCategoryFilter.value.trim();
+  editingTransactionId = "";
+  renderFinance();
+});
+
+ledgerClearFilters.addEventListener("click", () => {
+  ledgerPeriod = currentMonthKey();
+  ledgerStreamFilter = "all";
+  activeCategory = "";
+  editingTransactionId = "";
+  renderFinance();
+});
+
+financeDashboard.addEventListener("change", (event) => {
   if (event.target.matches('.finance-field[type="date"]')) return;
   if (event.target.matches(".finance-field")) saveFinanceField(event.target);
 });
 
-currentMonthLedger.addEventListener("focusout", (event) => {
+financeDashboard.addEventListener("focusout", (event) => {
   finishFinanceDateEdit(event.target);
 });
 
-currentMonthLedger.addEventListener("keydown", (event) => {
+financeDashboard.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
   if (!event.target.matches('.finance-field[type="date"]')) return;
   event.preventDefault();
   event.target.blur();
 });
 
-currentMonthLedger.addEventListener("click", (event) => {
+financeDashboard.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
-  const row = button?.closest(".ledger-row");
+  const row = button?.closest(".ledger-row, .archive-transaction");
   if (!button || !row) return;
   if (button.dataset.action === "edit") {
     editingTransactionId = row.dataset.id;
-    renderCurrentLedger();
+    renderFinance();
   }
   if (button.dataset.action === "done") {
     editingTransactionId = "";

@@ -142,13 +142,34 @@
           <section class="current-ledger">
             <div class="finance-section-heading">
               <div>
-                <p class="eyebrow">Working ledger</p>
-                <h2>This month</h2>
+                <p class="eyebrow">Editable ledger</p>
+                <h2 id="ledgerTitle">This month</h2>
               </div>
               <span id="monthActivityCount">0 entries</span>
             </div>
+            <div class="ledger-filter-bar" aria-label="Finance ledger filters">
+              <label>
+                Period
+                <select id="ledgerPeriodFilter"></select>
+              </label>
+              <label>
+                Stream
+                <select id="ledgerStreamFilter">
+                  <option value="all">All streams</option>
+                  <option value="gigs">Gigs</option>
+                  <option value="merch">Merch</option>
+                  <option value="streaming">Streaming</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <input id="ledgerCategoryFilter" list="financeCategoryOptions" placeholder="All categories">
+                <datalist id="financeCategoryOptions"></datalist>
+              </label>
+              <button class="ghost-button" id="ledgerClearFilters" type="button">Clear filters</button>
+            </div>
             <div class="compact-ledger" id="currentMonthLedger"></div>
-            <p class="empty-state" id="financeEmptyState">No activity this month yet.</p>
+            <p class="empty-state" id="financeEmptyState">No ledger activity matches those filters.</p>
           </section>
 
           <section class="finance-archive">
@@ -170,6 +191,6 @@
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
     <script src="finance-source-sync.js?v=1"></script>
-    <script src="finance.js?v=8"></script>
+    <script src="finance.js?v=9"></script>
   </body>
 </html>
