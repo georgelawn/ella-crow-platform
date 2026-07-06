@@ -1,22 +1,33 @@
 const financeStorageKey = "ella-crow-finance-v1";
+const financeCloseStorageKey = "ella-crow-finance-closes-v1";
 const gigStorageKey = "ella-crow-gigs-v2";
 const sessionStorageKey = "ella-crow-sessions-v1";
+const tradingAllowance = 12570;
 const streamDefinitions = {
   gigs: { label: "Gigs", mark: "G", description: "Shows, rehearsals, travel and live fees" },
   merch: { label: "Merch", mark: "M", description: "Stock, production and merchandise sales" },
   streaming: { label: "Streaming", mark: "S", description: "Royalties, distribution and digital income" }
 };
+const moneySourceDefinitions = {
+  monzo: "Monzo",
+  george: "George",
+  ella: "Ella"
+};
 
 let transactions = loadTransactions();
+let monthlyCloses = loadMonthlyCloses();
 let editingTransactionId = "";
 let activeStream = "gigs";
 let activeCategory = "";
 let ledgerPeriod = currentMonthKey();
 let ledgerStreamFilter = "all";
+let activeCloseMonth = offsetMonthKey(-1);
 
 const form = document.querySelector("#financeForm");
 const streamGrid = document.querySelector("#profitStreams");
 const streamInspector = document.querySelector("#streamInspector");
+const monthlyClosePanel = document.querySelector("#monthlyClosePanel");
+const taxYearPanel = document.querySelector("#taxYearPanel");
 const currentMonthLedger = document.querySelector("#currentMonthLedger");
 const ledgerPeriodFilter = document.querySelector("#ledgerPeriodFilter");
 const ledgerStreamFilterField = document.querySelector("#ledgerStreamFilter");
@@ -40,6 +51,7 @@ const fields = {
   invoiceDueDateField: document.querySelector("#invoiceDueDateField"),
   date: document.querySelector("#transactionDate"),
   amount: document.querySelector("#transactionAmount"),
+  paidFrom: document.querySelector("#transactionPaidFrom"),
   category: document.querySelector("#transactionCategory"),
   description: document.querySelector("#transactionDescription")
 };
@@ -56,7 +68,30 @@ function loadTransactions() {
   try {
     const parsed = JSON.parse(localStorage.getItem(financeStorageKey) || "[]");
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((item) => ({ ...item, stream: inferStream(item) }));
+    return parsed.map(normalizeTransaction);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeTransaction(item) {
+  const type = item.type === "expense" ? "expense" : "revenue";
+  const paidFrom = type === "revenue"
+    ? "monzo"
+    : (moneySourceDefinitions[item.paidFrom] ? item.paidFrom : "monzo");
+  return {
+    ...item,
+    type,
+    stream: inferStream(item),
+    paidFrom,
+    taxIncluded: item.taxIncluded === false ? false : true
+  };
+}
+
+function loadMonthlyCloses() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(financeCloseStorageKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -64,6 +99,10 @@ function loadTransactions() {
 
 function saveTransactions() {
   localStorage.setItem(financeStorageKey, JSON.stringify(transactions));
+}
+
+function saveMonthlyCloses() {
+  localStorage.setItem(financeCloseStorageKey, JSON.stringify(monthlyCloses));
 }
 
 function money(value, compact = false) {
@@ -111,6 +150,13 @@ function offsetMonthKey(offset) {
   return monthKey(localDateKey(date));
 }
 
+function previousMonthKey(key) {
+  const date = validDate(`${key}-01`);
+  if (!date) return "";
+  date.setMonth(date.getMonth() - 1);
+  return monthKey(localDateKey(date));
+}
+
 function monthLabel(key, includeYear = true) {
   if (!key) return "Date needed";
   return new Intl.DateTimeFormat("en-GB", {
@@ -125,12 +171,33 @@ function shortDate(dateString) {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(date);
 }
 
+function numericAmount(value) {
+  const amount = Number(value || 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
 function totalsFor(items) {
   const revenue = items
     .filter((item) => item.type === "revenue" && item.invoiceStatus !== "pending")
-    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const expenses = items.filter((item) => item.type === "expense").reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    .reduce((sum, item) => sum + numericAmount(item.amount), 0);
+  const expenses = items.filter((item) => item.type === "expense").reduce((sum, item) => sum + numericAmount(item.amount), 0);
   return { revenue, expenses, net: revenue - expenses };
+}
+
+function monzoMovementFor(items) {
+  const revenue = items
+    .filter((item) => item.type === "revenue" && item.invoiceStatus !== "pending")
+    .reduce((sum, item) => sum + numericAmount(item.amount), 0);
+  const expenses = items
+    .filter((item) => item.type === "expense" && (item.paidFrom || "monzo") === "monzo")
+    .reduce((sum, item) => sum + numericAmount(item.amount), 0);
+  return { revenue, expenses, net: revenue - expenses };
+}
+
+function personalSpendFor(items, person) {
+  return items
+    .filter((item) => item.type === "expense" && item.paidFrom === person)
+    .reduce((sum, item) => sum + numericAmount(item.amount), 0);
 }
 
 function pendingInvoices() {
@@ -159,9 +226,150 @@ function categoryMatches(item, value) {
   return categoryKey(categoryName(item)).includes(filter);
 }
 
+function closeId(key) {
+  return `finance-close:${key}`;
+}
+
+function monthEndDate(key) {
+  const date = validDate(`${key}-01`);
+  if (!date) return "";
+  date.setMonth(date.getMonth() + 1);
+  date.setDate(0);
+  return localDateKey(date);
+}
+
+function closeForMonth(key) {
+  return monthlyCloses.find((close) => close.monthKey === key);
+}
+
+function monthIsLocked(key) {
+  return closeForMonth(key)?.status === "closed";
+}
+
+function transactionIsLocked(item) {
+  const key = monthKey(item.date);
+  return Boolean(key && monthIsLocked(key));
+}
+
+function previousCloseForMonth(key) {
+  const previousKey = previousMonthKey(key);
+  return previousKey ? closeForMonth(previousKey) : null;
+}
+
+function openingBalanceForMonth(key) {
+  const close = closeForMonth(key);
+  if (close && close.openingBalance !== "" && close.openingBalance !== undefined) return numericAmount(close.openingBalance);
+  const previousClose = previousCloseForMonth(key);
+  if (previousClose && previousClose.actualBalance !== "" && previousClose.actualBalance !== undefined) return numericAmount(previousClose.actualBalance);
+  return 0;
+}
+
+function itemsForTaxYear(yearStart) {
+  const start = `${yearStart}-04-06`;
+  const end = `${yearStart + 1}-04-05`;
+  return ledgerTransactions().filter((item) => item.taxIncluded !== false && item.date >= start && item.date <= end);
+}
+
+function currentTaxYearStart() {
+  const today = new Date();
+  const boundary = new Date(`${today.getFullYear()}-04-06T00:00:00`);
+  return today >= boundary ? today.getFullYear() : today.getFullYear() - 1;
+}
+
+function ensureMonthlyClose(key = offsetMonthKey(-1)) {
+  if (!key || closeForMonth(key)) return;
+  monthlyCloses.push({
+    id: closeId(key),
+    monthKey: key,
+    status: "open",
+    openingBalance: "",
+    actualBalance: "",
+    payoutMode: "ask",
+    customSettlement: "",
+    agreementNote: "",
+    createdAt: new Date().toISOString(),
+    reviewedAt: "",
+    reopenedAt: ""
+  });
+  saveMonthlyCloses();
+}
+
+function ensureMonthlyCloseWorkflow() {
+  const day = new Date().getDate();
+  if (day < 1) return;
+  const key = offsetMonthKey(-1);
+  ensureMonthlyClose(key);
+  if (!activeCloseMonth) activeCloseMonth = key;
+}
+
 function marginFor(totals) {
   if (!totals.revenue) return null;
   return (totals.net / totals.revenue) * 100;
+}
+
+function projectionForMonth(key) {
+  const items = itemsForMonth(key, ledgerTransactions());
+  const totals = totalsFor(items);
+  const monzo = monzoMovementFor(items);
+  const georgePaid = personalSpendFor(items, "george");
+  const ellaPaid = personalSpendFor(items, "ella");
+  const openingBalance = openingBalanceForMonth(key);
+  const expectedClosing = openingBalance + monzo.net;
+  return { items, totals, monzo, georgePaid, ellaPaid, openingBalance, expectedClosing };
+}
+
+function settlementForMonth(key, payoutMode = "ask") {
+  const projection = projectionForMonth(key);
+  const { totals, georgePaid, ellaPaid } = projection;
+  const personDifference = Math.abs(georgePaid - ellaPaid) / 2;
+  const higherPayer = georgePaid > ellaPaid ? "George" : ellaPaid > georgePaid ? "Ella" : "";
+  const lowerPayer = georgePaid > ellaPaid ? "Ella" : ellaPaid > georgePaid ? "George" : "";
+
+  if (totals.net < 0) {
+    return {
+      label: personDifference ? `${lowerPayer} owes ${higherPayer} ${money(personDifference)}` : "No settlement",
+      detail: personDifference
+        ? `${higherPayer} personally covered more of a loss-making month.`
+        : "Personal spending is already balanced.",
+      georgePayout: 0,
+      ellaPayout: 0,
+      personToPerson: personDifference
+    };
+  }
+
+  const georgeReimbursement = georgePaid;
+  const ellaReimbursement = ellaPaid;
+  const profitShare = payoutMode === "payout" ? totals.net / 2 : 0;
+  const georgePayout = georgeReimbursement + profitShare;
+  const ellaPayout = ellaReimbursement + profitShare;
+
+  if (payoutMode === "retain") {
+    return {
+      label: georgePayout || ellaPayout ? `${money(georgePayout + ellaPayout)} reimbursements` : "Retain in Monzo",
+      detail: "Profit retained; only personal costs are suggested for reimbursement.",
+      georgePayout,
+      ellaPayout,
+      personToPerson: 0
+    };
+  }
+
+  if (payoutMode === "payout") {
+    return {
+      label: `${money(georgePayout)} George / ${money(ellaPayout)} Ella`,
+      detail: "Profit split 50/50 after personal cost reimbursement.",
+      georgePayout,
+      ellaPayout,
+      personToPerson: 0
+    };
+  }
+
+  return {
+    label: "Decision needed",
+    detail: "Choose whether to retain profit, pay out 50/50, or record a custom settlement.",
+    georgePayout,
+    ellaPayout,
+    personToPerson: 0
+  };
 }
 
 function trendFor(stream) {
@@ -178,18 +386,19 @@ function trendFor(stream) {
 function renderSummary() {
   const monthTotals = totalsFor(itemsForMonth(currentMonthKey()));
   const lastMonthTotals = totalsFor(itemsForMonth(offsetMonthKey(-1)));
-  const allTotals = totalsFor(transactions);
-  const margin = marginFor(monthTotals);
+  const currentProjection = projectionForMonth(currentMonthKey());
+  const currentSettlement = settlementForMonth(activeCloseMonth, closeForMonth(activeCloseMonth)?.payoutMode || "ask");
+  const pendingTotal = pendingInvoices().reduce((sum, item) => sum + numericAmount(item.amount), 0);
+  const change = monthTotals.net - lastMonthTotals.net;
 
-  document.querySelector("#monthRevenue").textContent = money(monthTotals.revenue);
-  document.querySelector("#monthExpenses").textContent = money(monthTotals.expenses);
+  document.querySelector("#expectedBalance").textContent = money(currentProjection.expectedClosing);
+  document.querySelector("#balanceNote").textContent = `${money(currentProjection.monzo.revenue)} received, ${money(currentProjection.monzo.expenses)} paid from Monzo this month.`;
   document.querySelector("#monthNet").textContent = money(monthTotals.net);
   document.querySelector("#monthNet").className = monthTotals.net < 0 ? "negative" : "positive";
-  document.querySelector("#lastMonthNet").textContent = money(lastMonthTotals.net);
-  document.querySelector("#allTimeNet").textContent = money(allTotals.net);
-  document.querySelector("#monthProfitNote").textContent = margin === null
-    ? (monthTotals.expenses ? "Investment is ahead of revenue this month." : "No activity recorded yet.")
-    : `${Math.round(margin)}% of revenue is becoming profit.`;
+  document.querySelector("#monthChange").textContent = `${change >= 0 ? "+" : ""}${money(change)}`;
+  document.querySelector("#monthChange").className = change < 0 ? "negative" : "positive";
+  document.querySelector("#pendingIncomeTotal").textContent = money(pendingTotal);
+  document.querySelector("#settlementDue").textContent = currentSettlement.label;
 }
 
 function renderProfitStreams() {
@@ -217,6 +426,137 @@ function renderProfitStreams() {
       </button>
     `;
   }).join("");
+}
+
+function closeMonthOptions() {
+  const keys = [...new Set([
+    offsetMonthKey(-1),
+    currentMonthKey(),
+    ...monthlyCloses.map((close) => close.monthKey),
+    ...ledgerTransactions().map((item) => monthKey(item.date)).filter(Boolean)
+  ])].sort().reverse();
+  return keys.map((key) => `<option value="${key}"${activeCloseMonth === key ? " selected" : ""}>${monthLabel(key)}</option>`).join("");
+}
+
+function renderMonthlyClose() {
+  ensureMonthlyClose(activeCloseMonth);
+  const close = closeForMonth(activeCloseMonth);
+  const projection = projectionForMonth(activeCloseMonth);
+  const settlement = settlementForMonth(activeCloseMonth, close.payoutMode);
+  const discrepancy = close.actualBalance === "" || close.actualBalance === undefined
+    ? null
+    : numericAmount(close.actualBalance) - projection.expectedClosing;
+  const isClosed = close.status === "closed";
+
+  monthlyClosePanel.innerHTML = `
+    <div class="finance-section-heading">
+      <div>
+        <p class="eyebrow">Monthly close</p>
+        <h2>Monzo sanity check</h2>
+      </div>
+      <span>${isClosed ? "Locked" : "Open review"}</span>
+    </div>
+    <div class="close-command-row">
+      <label>
+        Close month
+        <select class="close-field" data-field="activeCloseMonth">${closeMonthOptions()}</select>
+      </label>
+      <button class="ghost-button" data-action="${isClosed ? "reopen-close" : "close-month"}" type="button">${isClosed ? "Reopen month" : "Lock month"}</button>
+    </div>
+    <div class="close-summary-grid">
+      <article><span>${money(projection.openingBalance)}</span><p>Expected opening</p></article>
+      <article><span>${money(projection.monzo.revenue)}</span><p>Received into Monzo</p></article>
+      <article><span>${money(projection.monzo.expenses)}</span><p>Paid from Monzo</p></article>
+      <article><span>${money(projection.expectedClosing)}</span><p>Expected closing</p></article>
+      <article><span>${money(projection.totals.net)}</span><p>Business profit/loss</p></article>
+      <article><span>${money(projection.georgePaid)}</span><p>George paid personally</p></article>
+      <article><span>${money(projection.ellaPaid)}</span><p>Ella paid personally</p></article>
+      <article><span>${discrepancy === null ? "Needed" : money(discrepancy)}</span><p>Monzo discrepancy</p></article>
+    </div>
+    <div class="close-review-grid">
+      <label>
+        Actual Monzo balance
+        <input class="close-field" data-field="actualBalance" type="number" min="0" step="0.01" value="${escapeHtml(close.actualBalance || "")}" ${isClosed ? "disabled" : ""}>
+      </label>
+      <label>
+        Opening balance override
+        <input class="close-field" data-field="openingBalance" type="number" min="0" step="0.01" value="${escapeHtml(close.openingBalance || "")}" ${isClosed ? "disabled" : ""}>
+      </label>
+      <label>
+        Month decision
+        <select class="close-field" data-field="payoutMode" ${isClosed ? "disabled" : ""}>
+          <option value="ask"${close.payoutMode === "ask" ? " selected" : ""}>Decide this month</option>
+          <option value="retain"${close.payoutMode === "retain" ? " selected" : ""}>Keep profit in Monzo</option>
+          <option value="payout"${close.payoutMode === "payout" ? " selected" : ""}>Pay out 50/50</option>
+          <option value="custom"${close.payoutMode === "custom" ? " selected" : ""}>Custom settlement</option>
+        </select>
+      </label>
+      <label>
+        Custom settlement
+        <input class="close-field" data-field="customSettlement" value="${escapeHtml(close.customSettlement || "")}" placeholder="Optional" ${isClosed ? "disabled" : ""}>
+      </label>
+      <label class="close-note-field">
+        Agreement note
+        <textarea class="close-field" data-field="agreementNote" rows="3" placeholder="Why did you retain, pay out, or adjust this month?" ${isClosed ? "disabled" : ""}>${escapeHtml(close.agreementNote || "")}</textarea>
+      </label>
+    </div>
+    <div class="settlement-strip">
+      <div>
+        <p class="eyebrow">Suggested settlement</p>
+        <strong>${close.payoutMode === "custom" && close.customSettlement ? escapeHtml(close.customSettlement) : escapeHtml(settlement.label)}</strong>
+        <span>${escapeHtml(settlement.detail)}</span>
+      </div>
+      <div>
+        <span>George</span>
+        <strong>${money(settlement.georgePayout)}</strong>
+      </div>
+      <div>
+        <span>Ella</span>
+        <strong>${money(settlement.ellaPayout)}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function renderTaxYearPanel() {
+  const yearStart = currentTaxYearStart();
+  const items = itemsForTaxYear(yearStart);
+  const totals = totalsFor(items);
+  const taxableAboveAllowance = Math.max(0, totals.net - tradingAllowance);
+  const remainingAllowance = Math.max(0, tradingAllowance - totals.net);
+  const expenseItems = items.filter((item) => item.type === "expense");
+  const revenueItems = items.filter((item) => item.type === "revenue");
+
+  taxYearPanel.innerHTML = `
+    <details>
+      <summary class="tax-summary-row">
+        <span>
+          <small>Tax-Year Profit</small>
+          <strong>${money(totals.net)}</strong>
+        </span>
+        <span>${yearStart}/${String(yearStart + 1).slice(2)}</span>
+        <span>${remainingAllowance ? `${money(remainingAllowance)} before allowance marker` : `${money(taxableAboveAllowance)} above allowance marker`}</span>
+      </summary>
+      <div class="tax-detail-grid">
+        <article><span>${money(totals.revenue)}</span><p>Included revenue</p></article>
+        <article><span>${money(totals.expenses)}</span><p>Allowable costs tracked</p></article>
+        <article><span>${revenueItems.length}</span><p>Revenue entries</p></article>
+        <article><span>${expenseItems.length}</span><p>Expense entries</p></article>
+      </div>
+      <p class="tax-note">This tracks Ella Crow trading profit only. It does not treat George's informal 50/50 payout as tax-deductible and does not include Ella's other income.</p>
+      <div class="tax-audit-list">
+        ${items.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "")).map((item) => `
+          <div class="tax-audit-row">
+            <span>${shortDate(item.date)}</span>
+            <strong>${escapeHtml(categoryName(item))}</strong>
+            <span>${item.type === "revenue" ? "Revenue" : "Cost"}</span>
+            <span>${escapeHtml(moneySourceDefinitions[item.paidFrom] || "Monzo")}</span>
+            <strong class="${item.type === "expense" ? "negative" : "positive"}">${item.type === "expense" ? "-" : "+"}${money(item.amount)}</strong>
+          </div>
+        `).join("") || `<p class="archive-empty">No tax-year entries yet.</p>`}
+      </div>
+    </details>
+  `;
 }
 
 function ledgerPeriodOptions() {
@@ -407,17 +747,19 @@ function renderCurrentLedger() {
 function renderLedgerRow(item) {
   if (editingTransactionId === item.id) return renderEditableLedgerRow(item);
   const stream = streamDefinitions[item.stream] || streamDefinitions.gigs;
+  const paidFrom = moneySourceDefinitions[item.paidFrom] || "Monzo";
+  const locked = transactionIsLocked(item);
   return `
     <article class="ledger-row ${item.type}" data-id="${escapeHtml(item.id)}">
       <span class="ledger-date">${shortDate(item.date)}</span>
       <span class="ledger-stream">${stream.label}</span>
       <span class="ledger-description">
         <strong>${escapeHtml(item.category || (item.type === "revenue" ? "Revenue" : "Cost"))}</strong>
-        <small>${escapeHtml(item.description || "No note")}</small>
+        <small>${escapeHtml(item.description || "No note")} · ${item.type === "revenue" ? "Received into" : "Paid from"} ${escapeHtml(paidFrom)}</small>
       </span>
       <span class="ledger-type">${item.type === "revenue" ? "Money in" : "Cost"}</span>
       <strong class="ledger-amount ${item.type === "expense" ? "negative" : "positive"}">${item.type === "expense" ? "−" : "+"}${money(item.amount)}</strong>
-      <button class="ledger-edit" data-action="edit" type="button">Edit</button>
+      <button class="ledger-edit" data-action="edit" type="button" ${locked ? "disabled" : ""}>${locked ? "Locked" : "Edit"}</button>
     </article>
   `;
 }
@@ -460,26 +802,35 @@ function streamOptions(selected) {
     .join("");
 }
 
+function moneySourceOptions(selected, type = "expense") {
+  return Object.entries(moneySourceDefinitions)
+    .filter(([key]) => type === "expense" || key === "monzo")
+    .map(([key, label]) => `<option value="${key}"${selected === key ? " selected" : ""}>${label}</option>`)
+    .join("");
+}
+
 function renderEditableLedgerRow(item) {
+  const locked = transactionIsLocked(item);
   return `
     <article class="ledger-row ledger-editing" data-id="${escapeHtml(item.id)}">
-      <label><span>Date</span><input class="finance-field" data-field="date" type="date" value="${escapeHtml(item.date)}"></label>
-      <label><span>Stream</span><select class="finance-field" data-field="stream">${streamOptions(item.stream)}</select></label>
-      <label><span>Category</span><input class="finance-field" data-field="category" value="${escapeHtml(item.category || "")}"></label>
-      <label><span>Type</span><select class="finance-field" data-field="type">
+      <label><span>Date</span><input class="finance-field" data-field="date" type="date" value="${escapeHtml(item.date)}" ${locked ? "disabled" : ""}></label>
+      <label><span>Stream</span><select class="finance-field" data-field="stream" ${locked ? "disabled" : ""}>${streamOptions(item.stream)}</select></label>
+      <label><span>Category</span><input class="finance-field" data-field="category" value="${escapeHtml(item.category || "")}" ${locked ? "disabled" : ""}></label>
+      <label><span>Type</span><select class="finance-field" data-field="type" ${locked ? "disabled" : ""}>
         <option value="revenue"${item.type === "revenue" ? " selected" : ""}>Revenue</option>
         <option value="expense"${item.type === "expense" ? " selected" : ""}>Expense</option>
       </select></label>
-      <label><span>Amount</span><input class="finance-field" data-field="amount" type="number" min="0" step="0.01" value="${escapeHtml(item.amount)}"></label>
-      <label><span>Invoice</span><select class="finance-field" data-field="invoiceStatus"${item.type === "expense" ? " disabled" : ""}>
+      <label><span>Amount</span><input class="finance-field" data-field="amount" type="number" min="0" step="0.01" value="${escapeHtml(item.amount)}" ${locked ? "disabled" : ""}></label>
+      <label><span>Paid from</span><select class="finance-field" data-field="paidFrom"${item.type === "revenue" || locked ? " disabled" : ""}>${moneySourceOptions(item.paidFrom, item.type)}</select></label>
+      <label><span>Invoice</span><select class="finance-field" data-field="invoiceStatus"${item.type === "expense" || locked ? " disabled" : ""}>
         <option value="received"${item.invoiceStatus !== "pending" ? " selected" : ""}>Received</option>
         <option value="pending"${item.invoiceStatus === "pending" ? " selected" : ""}>Pending</option>
       </select></label>
-      <label><span>Due date</span><input class="finance-field" data-field="invoiceDueDate" type="date" value="${escapeHtml(item.invoiceDueDate || "")}"${item.type === "expense" ? " disabled" : ""}></label>
-      <label class="ledger-edit-note"><span>Description</span><input class="finance-field" data-field="description" value="${escapeHtml(item.description || "")}"></label>
+      <label><span>Due date</span><input class="finance-field" data-field="invoiceDueDate" type="date" value="${escapeHtml(item.invoiceDueDate || "")}"${item.type === "expense" || locked ? " disabled" : ""}></label>
+      <label class="ledger-edit-note"><span>Description</span><input class="finance-field" data-field="description" value="${escapeHtml(item.description || "")}" ${locked ? "disabled" : ""}></label>
       <div class="ledger-edit-actions">
         <button class="small-button" data-action="done" type="button">Done</button>
-        <button class="small-button danger" data-action="delete" type="button">Delete</button>
+        <button class="small-button danger" data-action="delete" type="button" ${locked ? "disabled" : ""}>Delete</button>
       </div>
     </article>
   `;
@@ -563,14 +914,16 @@ function renderArchiveTransactions(items) {
     .map((item) => {
       if (editingTransactionId === item.id) return renderEditableLedgerRow(item);
       const stream = streamDefinitions[item.stream] || streamDefinitions.gigs;
+      const paidFrom = moneySourceDefinitions[item.paidFrom] || "Monzo";
+      const locked = transactionIsLocked(item);
       return `
         <div class="archive-transaction" data-id="${escapeHtml(item.id)}">
           <span>${shortDate(item.date)}</span>
           <strong>${stream.label}</strong>
           <span>${escapeHtml(item.category || (item.type === "revenue" ? "Revenue" : "Cost"))}</span>
-          <span>${item.type === "revenue" ? "Revenue" : "Cost"}</span>
+          <span>${item.type === "revenue" ? "Monzo" : escapeHtml(paidFrom)}</span>
           <strong class="${item.type === "expense" ? "negative" : "positive"}">${item.type === "expense" ? "−" : "+"}${money(item.amount)}</strong>
-          <button class="ledger-edit" data-action="edit" type="button">Edit</button>
+          <button class="ledger-edit" data-action="edit" type="button" ${locked ? "disabled" : ""}>${locked ? "Locked" : "Edit"}</button>
         </div>
       `;
     })
@@ -599,6 +952,8 @@ function renderArchive() {
 
 function renderFinance() {
   renderSummary();
+  renderMonthlyClose();
+  renderTaxYearPanel();
   renderProfitStreams();
   renderStreamInspector();
   renderPendingInvoices();
@@ -622,9 +977,12 @@ function syncInvoiceFields() {
   const showInvoice = fields.type.value === "revenue";
   fields.invoiceStatusField.hidden = !showInvoice;
   fields.invoiceDueDateField.hidden = !showInvoice;
+  fields.paidFrom.disabled = showInvoice;
   if (!showInvoice) {
     fields.invoiceStatus.value = "received";
     fields.invoiceDueDate.value = "";
+  } else {
+    fields.paidFrom.value = "monzo";
   }
 }
 
@@ -633,16 +991,20 @@ function saveFinanceField(element) {
   const item = transactions.find((transaction) => transaction.id === row?.dataset.id);
   const field = element.dataset.field;
   if (!item || !field) return;
+  if (transactionIsLocked(item)) return;
   if (item[field] === element.value) return;
   item[field] = element.value;
   if (field === "type" && item.type === "expense") {
     item.invoiceStatus = "";
     item.invoiceDueDate = "";
+    if (!moneySourceDefinitions[item.paidFrom]) item.paidFrom = "monzo";
   }
-  if (field === "type" && item.type === "revenue" && !item.invoiceStatus) item.invoiceStatus = "pending";
+  if (field === "type" && item.type === "revenue") {
+    if (!item.invoiceStatus) item.invoiceStatus = "pending";
+    item.paidFrom = "monzo";
+  }
   saveTransactions();
   editingTransactionId = item.id;
-  renderFinance();
 }
 
 function finishFinanceDateEdit(element) {
@@ -658,6 +1020,7 @@ form.addEventListener("submit", (event) => {
     type: fields.type.value,
     date: fields.date.value,
     amount: fields.amount.value,
+    paidFrom: fields.type.value === "revenue" ? "monzo" : fields.paidFrom.value,
     category: fields.category.value.trim(),
     invoiceStatus: fields.type.value === "revenue" ? fields.invoiceStatus.value : "",
     invoiceDueDate: fields.type.value === "revenue" ? (fields.invoiceDueDate.value || fields.date.value) : "",
@@ -691,6 +1054,57 @@ streamInspector.addEventListener("click", (event) => {
   const card = event.target.closest(".category-stat-card");
   if (!card) return;
   selectCategory(card.dataset.category || "", card.dataset.stream || activeStream);
+});
+
+document.querySelector(".finance-stat-stack").addEventListener("click", (event) => {
+  const tile = event.target.closest("[data-panel-target]");
+  if (!tile) return;
+  document.querySelector(`#${tile.dataset.panelTarget}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+function saveCloseField(element) {
+  if (element.dataset.field === "activeCloseMonth") {
+    activeCloseMonth = element.value;
+    renderFinance();
+    return;
+  }
+  const close = closeForMonth(activeCloseMonth);
+  if (!close || close.status === "closed") return;
+  close[element.dataset.field] = element.value;
+  saveMonthlyCloses();
+}
+
+monthlyClosePanel.addEventListener("change", (event) => {
+  const field = event.target.closest(".close-field");
+  if (!field) return;
+  saveCloseField(field);
+  renderFinance();
+});
+
+monthlyClosePanel.addEventListener("focusout", (event) => {
+  const field = event.target.closest(".close-field");
+  if (!field || field.tagName === "SELECT") return;
+  saveCloseField(field);
+  renderSummary();
+});
+
+monthlyClosePanel.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) return;
+  const close = closeForMonth(activeCloseMonth);
+  if (!close) return;
+  if (button.dataset.action === "close-month") {
+    close.status = "closed";
+    close.reviewedAt = new Date().toISOString();
+    saveMonthlyCloses();
+    renderFinance();
+  }
+  if (button.dataset.action === "reopen-close") {
+    close.status = "open";
+    close.reopenedAt = new Date().toISOString();
+    saveMonthlyCloses();
+    renderFinance();
+  }
 });
 
 ledgerPeriodFilter.addEventListener("change", () => {
@@ -740,7 +1154,9 @@ financeDashboard.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   const row = button?.closest(".ledger-row, .archive-transaction");
   if (!button || !row) return;
+  const item = transactions.find((transaction) => transaction.id === row.dataset.id);
   if (button.dataset.action === "edit") {
+    if (!item || transactionIsLocked(item)) return;
     editingTransactionId = row.dataset.id;
     renderFinance();
   }
@@ -749,6 +1165,7 @@ financeDashboard.addEventListener("click", (event) => {
     renderFinance();
   }
   if (button.dataset.action === "delete") {
+    if (!item || transactionIsLocked(item)) return;
     transactions = transactions.filter((item) => item.id !== row.dataset.id);
     saveTransactions();
     editingTransactionId = "";
@@ -777,6 +1194,12 @@ window.addEventListener("ella-cloud-data-updated", (event) => {
       editingTransactionId = "";
     });
   }
+  if (keys.includes(financeCloseStorageKey)) {
+    renderFinanceWhenUiIdle(() => {
+      monthlyCloses = loadMonthlyCloses();
+      editingTransactionId = "";
+    });
+  }
   if (keys.some((key) => [gigStorageKey, sessionStorageKey].includes(key))) {
     window.setTimeout(backfillSourceExpenses, 0);
   }
@@ -793,5 +1216,6 @@ function backfillSourceExpenses() {
 
 fields.date.value = localDateKey();
 syncInvoiceFields();
+ensureMonthlyCloseWorkflow();
 renderFinance();
 window.addEventListener("load", () => window.setTimeout(backfillSourceExpenses, 2200));

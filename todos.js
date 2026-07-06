@@ -4,6 +4,7 @@ const todoStorageKey = "ella-crow-manual-todos-v1";
 const todoSnoozeStorageKey = "ella-crow-todo-snoozes-v1";
 const autoTodoCompletionStorageKey = "ella-crow-auto-todo-completions-v1";
 const financeStorageKey = "ella-crow-finance-v1";
+const financeCloseStorageKey = "ella-crow-finance-closes-v1";
 const opportunityStorageKey = "ella-crow-opportunities-v1";
 
 let gigs = loadGigs();
@@ -12,6 +13,7 @@ let manualTodos = loadManualTodos();
 let todoSnoozes = loadTodoSnoozes();
 let autoTodoCompletions = loadAutoTodoCompletions();
 let transactions = loadTransactions();
+let monthlyCloses = loadMonthlyCloses();
 let opportunities = loadOpportunities();
 let activeFilter = "open";
 
@@ -82,6 +84,15 @@ function loadTransactions() {
   }
 }
 
+function loadMonthlyCloses() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(financeCloseStorageKey) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function loadOpportunities() {
   try {
     const parsed = JSON.parse(localStorage.getItem(opportunityStorageKey) || "[]");
@@ -135,6 +146,36 @@ function addMonths(dateString, months) {
     date.setDate(0);
   }
   return localDateString(date);
+}
+
+function monthKey(dateString) {
+  const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function offsetMonthKey(offset) {
+  const date = new Date();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + offset);
+  return monthKey(localDateString(date));
+}
+
+function monthLabel(key) {
+  if (!key) return "Month";
+  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(`${key}-01T00:00:00`));
+}
+
+function closeDueDate(key) {
+  const date = new Date(`${key}-01T00:00:00`);
+  if (Number.isNaN(date.getTime())) return localDateString(new Date());
+  date.setMonth(date.getMonth() + 1);
+  date.setDate(8);
+  return localDateString(date);
+}
+
+function financeCloseIsOpen(key) {
+  return monthlyCloses.find((close) => close.monthKey === key)?.status !== "closed";
 }
 
 function localDateString(date) {
@@ -319,6 +360,20 @@ function getAutoTodos() {
       meta: `${Number(transaction.amount || 0).toLocaleString("en-GB", { style: "currency", currency: "GBP" })} · recorded ${formatDate(transaction.date)}`
     }));
 
+  const closeMonth = offsetMonthKey(-1);
+  const financeCloseTodos = financeCloseIsOpen(closeMonth)
+    ? [{
+        id: `auto-finance-month-close:${closeMonth}`,
+        type: "auto-finance-close",
+        category: "Finance",
+        title: `Close ${monthLabel(closeMonth)} finances`,
+        dueDate: closeDueDate(closeMonth),
+        done: false,
+        closeMonth,
+        meta: "Check Monzo against the expected balance, choose retain or payout, then lock the month in Finance."
+      }]
+    : [];
+
   const opportunityTodos = opportunities
     .filter((opportunity) => !isClosedOpportunity(opportunity) && opportunity.followUpDate && !opportunity.followUpDone)
     .map((opportunity) => ({
@@ -332,7 +387,7 @@ function getAutoTodos() {
       meta: `${opportunity.contact || "No contact added"}${opportunity.source ? ` · ${opportunity.source}` : ""}`
     }));
 
-  const openTodos = [...gigTodos, ...sessionTodos, ...financeTodos, ...opportunityTodos];
+  const openTodos = [...gigTodos, ...sessionTodos, ...financeTodos, ...financeCloseTodos, ...opportunityTodos];
   const openIds = new Set(openTodos.map((todo) => todo.id));
   const completedTodos = Object.values(autoTodoCompletions)
     .filter((todo) => todo && todo.id && !openIds.has(todo.id))
@@ -396,6 +451,7 @@ function reloadTodosFromStorage() {
   gigs = loadGigs();
   sessions = loadSessions();
   transactions = loadTransactions();
+  monthlyCloses = loadMonthlyCloses();
   opportunities = loadOpportunities();
   manualTodos = loadManualTodos();
   todoSnoozes = loadTodoSnoozes();
@@ -593,7 +649,7 @@ document.querySelectorAll(".filter").forEach((button) => {
 
 window.addEventListener("ella-cloud-data-updated", (event) => {
   const keys = event.detail?.keys || [];
-  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, todoSnoozeStorageKey, autoTodoCompletionStorageKey, financeStorageKey, opportunityStorageKey];
+  const todoKeys = [gigStorageKey, sessionStorageKey, todoStorageKey, todoSnoozeStorageKey, autoTodoCompletionStorageKey, financeStorageKey, financeCloseStorageKey, opportunityStorageKey];
   if (keys.some((key) => todoKeys.includes(key))) reloadTodosFromStorage();
 });
 

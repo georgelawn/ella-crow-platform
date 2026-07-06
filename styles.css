@@ -2277,6 +2277,172 @@
   min-width: 0;
 }
 
+.finance-control-panel {
+  background: rgba(255, 251, 231, 0.42);
+  border: 1px solid rgba(82, 62, 38, 0.26);
+  box-shadow: 0 16px 36px rgba(35, 23, 15, 0.045);
+  padding: 24px;
+}
+
+.finance-summary-tile {
+  cursor: pointer;
+}
+
+.close-command-row,
+.close-review-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.close-command-row {
+  align-items: end;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.close-command-row label,
+.close-review-grid label {
+  display: grid;
+  gap: 6px;
+}
+
+.close-summary-grid,
+.tax-detail-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 14px;
+}
+
+.close-summary-grid article,
+.tax-detail-grid article {
+  background: rgba(255, 248, 218, 0.55);
+  border: 1px solid rgba(82, 62, 38, 0.22);
+  padding: 14px;
+}
+
+.close-summary-grid span,
+.tax-detail-grid span {
+  color: var(--brown);
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1.1rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.close-summary-grid p,
+.tax-detail-grid p {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  margin-top: 5px;
+  text-transform: uppercase;
+}
+
+.close-review-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.close-note-field {
+  grid-column: 1 / -1;
+}
+
+.settlement-strip {
+  align-items: center;
+  background: var(--brown);
+  color: var(--gold);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.settlement-strip p,
+.settlement-strip span {
+  color: inherit;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.settlement-strip > div {
+  display: grid;
+  gap: 4px;
+}
+
+.settlement-strip > div:not(:first-child) {
+  text-align: right;
+}
+
+.settlement-strip strong {
+  color: inherit;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 1rem;
+}
+
+.tax-year-panel details {
+  display: grid;
+  gap: 14px;
+}
+
+.tax-summary-row {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  list-style: none;
+}
+
+.tax-summary-row::-webkit-details-marker {
+  display: none;
+}
+
+.tax-summary-row small,
+.tax-summary-row span,
+.tax-note,
+.tax-audit-row span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.tax-summary-row strong {
+  color: var(--brown);
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  margin-top: 3px;
+}
+
+.tax-note {
+  background: rgba(82, 62, 38, 0.08);
+  border: 1px solid rgba(82, 62, 38, 0.14);
+  padding: 12px;
+}
+
+.tax-audit-list {
+  display: grid;
+  gap: 7px;
+}
+
+.tax-audit-row {
+  align-items: center;
+  border-bottom: 1px solid rgba(82, 62, 38, 0.16);
+  display: grid;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.78rem;
+  gap: 10px;
+  grid-template-columns: 70px minmax(0, 1fr) 70px 70px 92px;
+  padding: 8px 0;
+}
+
+.tax-audit-row > *:last-child {
+  text-align: right;
+}
+
 .pending-invoice-list {
   display: grid;
   gap: 10px;
@@ -2642,6 +2808,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .close-summary-grid,
+  .tax-detail-grid,
+  .close-review-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .ledger-filter-bar .ghost-button,
   .category-detail-stats {
     grid-column: 1 / -1;
@@ -2773,8 +2945,20 @@
   .ledger-filter-bar,
   .category-stat-grid,
   .category-detail-panel,
-  .category-detail-stats {
+  .category-detail-stats,
+  .close-command-row,
+  .close-summary-grid,
+  .close-review-grid,
+  .tax-detail-grid,
+  .settlement-strip,
+  .tax-summary-row,
+  .tax-audit-row {
     grid-template-columns: 1fr;
+  }
+
+  .settlement-strip > div:not(:first-child),
+  .tax-audit-row > *:last-child {
+    text-align: left;
   }
 
   .stream-inspector-stats span {
@@ -7060,15 +7244,27 @@ a:focus-visible {
 }
 
 .ledger-filter-bar,
-.category-detail-panel {
+.category-detail-panel,
+.finance-control-panel,
+.close-summary-grid article,
+.tax-detail-grid article,
+.tax-note {
   background: var(--surface-subtle);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
 }
 
 .ledger-filter-bar label,
+.close-command-row label,
+.close-review-grid label,
 .category-detail-stats span,
-.category-stat-card small {
+.category-stat-card small,
+.close-summary-grid p,
+.tax-detail-grid p,
+.tax-summary-row small,
+.tax-summary-row span,
+.tax-note,
+.tax-audit-row span {
   color: var(--text-secondary);
   font-family: var(--font-interface);
   font-weight: 620;
@@ -7096,8 +7292,17 @@ a:focus-visible {
 }
 
 .category-detail-stats strong,
-.category-detail-panel h3 {
+.category-detail-panel h3,
+.close-summary-grid span,
+.tax-detail-grid span,
+.tax-summary-row strong {
   color: var(--text-primary);
+}
+
+.settlement-strip {
+  background: var(--text-primary);
+  border-radius: var(--radius-lg);
+  color: var(--surface);
 }
 
 .ledger-row.revenue {

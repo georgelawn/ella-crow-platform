@@ -38,6 +38,7 @@ The dashboard uses these local storage keys:
 - `ella-crow-gigs-v2`
 - `ella-crow-sessions-v1`
 - `ella-crow-finance-v1`
+- `ella-crow-finance-closes-v1`
 - `ella-crow-projects-v1`
 - `ella-crow-manual-todos-v1`
 - `ella-crow-todo-snoozes-v1`
@@ -50,6 +51,13 @@ The dashboard uses these local storage keys:
 `app-cloud.js` synchronizes these values through `public.ella_crow_store`.
 Changes to key names or stored object shapes are data migrations and must
 preserve existing user data.
+
+Finance transactions now track the operational money source with `paidFrom`
+(`monzo`, `george`, or `ella`) and default historic entries to `monzo`.
+`ella-crow-finance-closes-v1` stores monthly close records used for the Monzo
+sanity check, 50/50 settlement decision, close/reopen locking, and expected
+balance review. The To Do page generates an automatic Finance task for the
+previous month's close, due on the 8th, while the month remains unclosed.
 
 ## Live Supabase State
 

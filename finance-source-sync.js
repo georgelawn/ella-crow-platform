@@ -33,10 +33,12 @@
       stream: isSession && item.type === "Recording" ? "streaming" : "gigs",
       date: item.date || "",
       amount: String(sourceAmount(item)),
+      paidFrom: "monzo",
       category: isSession ? `${item.type || "Session"} cost` : "Gig cost",
       invoiceStatus: "",
       invoiceDueDate: "",
       description: `${title}${place ? ` · ${place}` : ""}`,
+      taxIncluded: true,
       sourceType,
       sourceId: item.id,
       sourceLinked: true

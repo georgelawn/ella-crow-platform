@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Finance</title>
-    <link rel="stylesheet" href="styles.css?v=42">
+    <link rel="stylesheet" href="styles.css?v=43">
   </head>
   <body>
     <header class="topbar">
@@ -32,29 +32,29 @@
     </header>
 
     <main class="shell">
-      <section class="finance-hero" aria-label="Finance summary">
+      <section class="finance-hero finance-control-hero" aria-label="Finance summary">
         <article class="finance-profit-card">
-          <p class="eyebrow">This month</p>
-          <span id="monthNet">£0</span>
-          <h2>Profit</h2>
-          <p id="monthProfitNote">No activity recorded yet.</p>
+          <p class="eyebrow">Monzo control</p>
+          <span id="expectedBalance">£0</span>
+          <h2>Expected balance</h2>
+          <p id="balanceNote">Confirm this against Monzo in the monthly close.</p>
         </article>
         <div class="finance-stat-stack">
-          <article>
-            <span id="monthRevenue">£0</span>
-            <p>Revenue</p>
+          <article class="finance-summary-tile" data-panel-target="monthlyClosePanel">
+            <span id="monthNet">£0</span>
+            <p>This month profit</p>
           </article>
-          <article>
-            <span id="monthExpenses">£0</span>
-            <p>Costs</p>
+          <article class="finance-summary-tile" data-panel-target="monthlyClosePanel">
+            <span id="monthChange">£0</span>
+            <p>vs last month</p>
           </article>
-          <article>
-            <span id="lastMonthNet">£0</span>
-            <p>Last month profit</p>
+          <article class="finance-summary-tile" data-panel-target="pendingInvoicePanel">
+            <span id="pendingIncomeTotal">£0</span>
+            <p>Pending income</p>
           </article>
-          <article>
-            <span id="allTimeNet">£0</span>
-            <p>All-time profit</p>
+          <article class="finance-summary-tile" data-panel-target="monthlyClosePanel">
+            <span id="settlementDue">None</span>
+            <p>Settlement due</p>
           </article>
         </div>
       </section>
@@ -101,6 +101,14 @@
               <input id="transactionAmount" type="number" min="0" step="0.01" required placeholder="0.00">
             </label>
             <label>
+              Paid from
+              <select id="transactionPaidFrom">
+                <option value="monzo">Monzo</option>
+                <option value="george">George</option>
+                <option value="ella">Ella</option>
+              </select>
+            </label>
+            <label>
               Category
               <input id="transactionCategory" placeholder="Venue fee, stock, royalties">
             </label>
@@ -123,11 +131,15 @@
             </div>
           </div>
 
+          <section class="monthly-close-panel finance-control-panel" id="monthlyClosePanel" aria-live="polite"></section>
+
+          <section class="tax-year-panel finance-control-panel" id="taxYearPanel" aria-live="polite"></section>
+
           <div class="profit-stream-grid" id="profitStreams"></div>
 
           <section class="stream-inspector" id="streamInspector" aria-live="polite"></section>
 
-          <section class="pending-invoices">
+          <section class="pending-invoices" id="pendingInvoicePanel">
             <div class="finance-section-heading">
               <div>
                 <p class="eyebrow">Waiting room</p>
@@ -187,10 +199,10 @@
     </main>
 
     <script src="cloud-config.js?v=3"></script>
-    <script src="app-cloud.js?v=11"></script>
+    <script src="app-cloud.js?v=12"></script>
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="finance-source-sync.js?v=1"></script>
-    <script src="finance.js?v=9"></script>
+    <script src="finance-source-sync.js?v=2"></script>
+    <script src="finance.js?v=10"></script>
   </body>
 </html>
