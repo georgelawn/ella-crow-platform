@@ -513,18 +513,23 @@ function renderStreamOverviewBar() {
   const currentTotals = totalsFor(itemsForMonth(currentMonthKey(), items));
   const pendingTotal = pendingInvoices().reduce((sum, item) => sum + numericAmount(item.amount), 0);
   const streamCount = Object.keys(streamDefinitions).filter((stream) => items.some((item) => item.stream === stream)).length;
+  const margin = marginFor(totals);
 
   streamOverviewBar.innerHTML = `
     <button class="stream-overview-button${activeStream === "all" ? " active" : ""}" data-stream="all" type="button">
-      <span>
-        <small>All streams</small>
-        <strong>${money(totals.net)} lifetime profit</strong>
+      <span class="stream-mark">A</span>
+      <span class="stream-card-copy">
+        <strong>All streams</strong>
+        <small>Gigs, merch and streaming together</small>
       </span>
-      <span><strong>${money(currentTotals.net)}</strong><small>This month</small></span>
-      <span><strong>${money(totals.revenue)}</strong><small>Total income</small></span>
-      <span><strong>${money(totals.expenses)}</strong><small>Total costs</small></span>
-      <span><strong>${pendingTotal ? money(pendingTotal) : "None"}</strong><small>Pending</small></span>
-      <span><strong>${streamCount || Object.keys(streamDefinitions).length}</strong><small>Streams</small></span>
+      <span class="stream-profit">
+        <small>This month profit</small>
+        <strong class="${currentTotals.net < 0 ? "negative" : "positive"}">${money(currentTotals.net, true)}</strong>
+      </span>
+      <span class="stream-card-foot">
+        <span class="trend-pill">${streamCount || Object.keys(streamDefinitions).length} streams</span>
+        <span>${money(totals.net)} lifetime${pendingTotal ? ` · ${money(pendingTotal)} pending` : ""}${margin === null ? "" : ` · ${Math.round(margin)}% margin`}</span>
+      </span>
     </button>
   `;
 }

@@ -1951,15 +1951,15 @@
 
 .stream-overview-button {
   align-items: center;
-  background: rgba(255, 248, 218, 0.68);
+  background: rgba(255, 248, 218, 0.58);
   border: 1px solid rgba(82, 62, 38, 0.32);
-  box-shadow: 0 14px 30px rgba(35, 23, 15, 0.045);
+  box-shadow: 0 12px 28px rgba(35, 23, 15, 0.045);
   color: var(--brown);
   cursor: pointer;
   display: grid;
   gap: 14px;
-  grid-template-columns: minmax(190px, 1.4fr) repeat(5, minmax(94px, 1fr));
-  padding: 16px 18px;
+  grid-template-columns: auto minmax(180px, 1.5fr) minmax(150px, 0.8fr);
+  padding: 14px 20px;
   text-align: left;
   transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
@@ -1968,32 +1968,21 @@
 .stream-overview-button.active {
   border-color: var(--brown);
   box-shadow: inset 0 -3px 0 var(--brown), 0 18px 34px rgba(35, 23, 15, 0.08);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
-.stream-overview-button span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
+.stream-overview-button .stream-profit {
+  border-left: 1px solid var(--line);
+  border-top: 0;
+  grid-column: auto;
+  padding-left: 18px;
+  padding-top: 0;
 }
 
-.stream-overview-button strong {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.96rem;
-  font-weight: 900;
-  overflow-wrap: anywhere;
-}
-
-.stream-overview-button span:first-child strong {
-  font-size: 1.1rem;
-}
-
-.stream-overview-button small {
-  color: var(--muted);
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 0.68rem;
-  font-weight: 800;
-  text-transform: uppercase;
+.stream-overview-button .stream-card-foot {
+  border-top: 1px solid var(--line);
+  grid-column: 1 / -1;
+  padding-top: 11px;
 }
 
 .profit-stream-grid {
@@ -2860,14 +2849,6 @@
 }
 
 @media (max-width: 1100px) {
-  .stream-overview-button {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .stream-overview-button span:first-child {
-    grid-column: 1 / -1;
-  }
-
   .profit-stream-grid {
     grid-template-columns: 1fr;
   }
@@ -2926,11 +2907,15 @@
 
 @media (max-width: 820px) {
   .stream-overview-button {
-    grid-template-columns: 1fr;
+    grid-template-columns: auto 1fr;
   }
 
-  .stream-overview-button span:first-child {
-    grid-column: auto;
+  .stream-overview-button .stream-profit {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    grid-column: 1 / -1;
+    padding-left: 0;
+    padding-top: 13px;
   }
 
   .ledger-row {
