@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Finance</title>
-    <link rel="stylesheet" href="styles.css?v=43">
+    <link rel="stylesheet" href="styles.css?v=44">
   </head>
   <body>
     <header class="topbar">
@@ -110,7 +110,10 @@
             </label>
             <label>
               Category
-              <input id="transactionCategory" placeholder="Venue fee, stock, royalties">
+              <span class="category-select-group">
+                <select id="transactionCategory" required></select>
+                <input id="transactionCategoryOther" placeholder="Custom category" hidden>
+              </span>
             </label>
             <label>
               Description
@@ -203,6 +206,6 @@
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
     <script src="finance-source-sync.js?v=2"></script>
-    <script src="finance.js?v=10"></script>
+    <script src="finance.js?v=11"></script>
   </body>
 </html>

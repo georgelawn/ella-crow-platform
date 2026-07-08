@@ -13,6 +13,43 @@ const moneySourceDefinitions = {
   george: "George",
   ella: "Ella"
 };
+const otherCategoryValue = "__other__";
+const financeCategories = [
+  "Gig fee",
+  "Rehearsal space",
+  "Recording / studio",
+  "Travel",
+  "Food",
+  "Equipment",
+  "Merch",
+  "Bank Fees",
+  "Streaming royalties",
+  "Distribution / release costs",
+  "Marketing",
+  "Musician / crew"
+];
+const legacyCategoryMap = {
+  "blue posts": "Gig fee",
+  "gig cost": "Musician / crew",
+  "gig payment": "Gig fee",
+  "the finsbury": "Gig fee",
+  theatreship: "Gig fee",
+  "pirate - the waiting room": "Rehearsal space",
+  "rehearsal - pirate": "Rehearsal space",
+  "rehearsal cost": "Rehearsal space",
+  "rehersal - pirate": "Rehearsal space",
+  "recording at rak": "Recording / studio",
+  "recording cost": "Recording / studio",
+  "session cost": "Musician / crew",
+  transport: "Travel",
+  travel: "Travel",
+  "food @ gig": "Food",
+  "food for band": "Food",
+  equipment: "Equipment",
+  merch: "Merch",
+  "merch stock": "Merch",
+  fees: "Bank Fees"
+};
 
 let transactions = loadTransactions();
 let monthlyCloses = loadMonthlyCloses();
@@ -53,6 +90,7 @@ const fields = {
   amount: document.querySelector("#transactionAmount"),
   paidFrom: document.querySelector("#transactionPaidFrom"),
   category: document.querySelector("#transactionCategory"),
+  categoryOther: document.querySelector("#transactionCategoryOther"),
   description: document.querySelector("#transactionDescription")
 };
 
@@ -84,6 +122,7 @@ function normalizeTransaction(item) {
     type,
     stream: inferStream(item),
     paidFrom,
+    category: normalizeFinanceCategory(item.category),
     taxIncluded: item.taxIncluded === false ? false : true
   };
 }
@@ -121,6 +160,45 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function normalizeFinanceCategory(value) {
+  const category = String(value || "").trim();
+  if (!category) return "";
+  const existing = financeCategories.find((item) => item.toLowerCase() === category.toLowerCase());
+  if (existing) return existing;
+  return legacyCategoryMap[category.toLowerCase()] || category;
+}
+
+function categorySelectValue(value) {
+  const category = normalizeFinanceCategory(value);
+  return financeCategories.includes(category) ? category : otherCategoryValue;
+}
+
+function customCategoryValue(value) {
+  const category = normalizeFinanceCategory(value);
+  return financeCategories.includes(category) ? "" : category;
+}
+
+function categoryOptions(selected) {
+  const selectValue = categorySelectValue(selected);
+  return [
+    ...financeCategories.map((category) => `<option value="${escapeHtml(category)}"${selectValue === category ? " selected" : ""}>${escapeHtml(category)}</option>`),
+    `<option value="${otherCategoryValue}"${selectValue === otherCategoryValue ? " selected" : ""}>Other</option>`
+  ].join("");
+}
+
+function selectedCategoryValue(select, otherInput = null) {
+  if (select.value === otherCategoryValue) return normalizeFinanceCategory(otherInput?.value || "");
+  return normalizeFinanceCategory(select.value);
+}
+
+function syncCategoryOtherField(select, otherInput = null) {
+  if (!select || !otherInput) return;
+  const showOther = select.value === otherCategoryValue;
+  otherInput.hidden = !showOther;
+  otherInput.required = showOther;
+  if (showOther) otherInput.focus();
 }
 
 function validDate(dateString) {
@@ -815,7 +893,7 @@ function renderEditableLedgerRow(item) {
     <article class="ledger-row ledger-editing" data-id="${escapeHtml(item.id)}">
       <label><span>Date</span><input class="finance-field" data-field="date" type="date" value="${escapeHtml(item.date)}" ${locked ? "disabled" : ""}></label>
       <label><span>Stream</span><select class="finance-field" data-field="stream" ${locked ? "disabled" : ""}>${streamOptions(item.stream)}</select></label>
-      <label><span>Category</span><input class="finance-field" data-field="category" value="${escapeHtml(item.category || "")}" ${locked ? "disabled" : ""}></label>
+      <label class="finance-category-field"><span>Category</span><span class="category-select-group"><select class="finance-field category-select" data-field="category" ${locked ? "disabled" : ""}>${categoryOptions(item.category)}</select><input class="finance-field category-other-field" data-field="category" value="${escapeHtml(customCategoryValue(item.category))}" placeholder="Custom category" ${categorySelectValue(item.category) === otherCategoryValue ? "required" : "hidden"} ${locked ? "disabled" : ""}></span></label>
       <label><span>Type</span><select class="finance-field" data-field="type" ${locked ? "disabled" : ""}>
         <option value="revenue"${item.type === "revenue" ? " selected" : ""}>Revenue</option>
         <option value="expense"${item.type === "expense" ? " selected" : ""}>Expense</option>
@@ -992,8 +1070,16 @@ function saveFinanceField(element) {
   const field = element.dataset.field;
   if (!item || !field) return;
   if (transactionIsLocked(item)) return;
-  if (item[field] === element.value) return;
-  item[field] = element.value;
+  let value = element.value;
+  if (field === "category") {
+    if (element.matches("select") && element.value === otherCategoryValue) {
+      syncCategoryOtherField(element, row.querySelector(".category-other-field"));
+      return;
+    }
+    value = normalizeFinanceCategory(value);
+  }
+  if (item[field] === value) return;
+  item[field] = value;
   if (field === "type" && item.type === "expense") {
     item.invoiceStatus = "";
     item.invoiceDueDate = "";
@@ -1013,7 +1099,8 @@ function finishFinanceDateEdit(element) {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!fields.date.value || !fields.amount.value || !fields.stream.value) return;
+  const category = selectedCategoryValue(fields.category, fields.categoryOther);
+  if (!fields.date.value || !fields.amount.value || !fields.stream.value || !category) return;
   transactions.push({
     id: crypto.randomUUID(),
     stream: fields.stream.value,
@@ -1021,7 +1108,7 @@ form.addEventListener("submit", (event) => {
     date: fields.date.value,
     amount: fields.amount.value,
     paidFrom: fields.type.value === "revenue" ? "monzo" : fields.paidFrom.value,
-    category: fields.category.value.trim(),
+    category,
     invoiceStatus: fields.type.value === "revenue" ? fields.invoiceStatus.value : "",
     invoiceDueDate: fields.type.value === "revenue" ? (fields.invoiceDueDate.value || fields.date.value) : "",
     description: fields.description.value.trim()
@@ -1030,6 +1117,8 @@ form.addEventListener("submit", (event) => {
   const selectedStream = fields.stream.value;
   form.reset();
   fields.stream.value = selectedStream;
+  fields.category.value = financeCategories[0];
+  syncCategoryOtherField(fields.category, fields.categoryOther);
   syncInvoiceFields();
   activeStream = selectedStream;
   renderFinance();
@@ -1037,10 +1126,13 @@ form.addEventListener("submit", (event) => {
 
 clearButton.addEventListener("click", () => {
   form.reset();
+  fields.category.value = financeCategories[0];
+  syncCategoryOtherField(fields.category, fields.categoryOther);
   syncInvoiceFields();
 });
 
 fields.type.addEventListener("change", syncInvoiceFields);
+fields.category.addEventListener("change", () => syncCategoryOtherField(fields.category, fields.categoryOther));
 
 streamGrid.addEventListener("click", (event) => {
   const card = event.target.closest("[data-stream]");
@@ -1215,6 +1307,9 @@ function backfillSourceExpenses() {
 }
 
 fields.date.value = localDateKey();
+fields.category.innerHTML = categoryOptions(financeCategories[0]);
+fields.category.value = financeCategories[0];
+syncCategoryOtherField(fields.category, fields.categoryOther);
 syncInvoiceFields();
 ensureMonthlyCloseWorkflow();
 renderFinance();

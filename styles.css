@@ -2277,6 +2277,12 @@
   min-width: 0;
 }
 
+.category-select-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
 .finance-control-panel {
   background: rgba(255, 251, 231, 0.42);
   border: 1px solid rgba(82, 62, 38, 0.26);
@@ -2616,6 +2622,10 @@
 .ledger-editing select {
   min-width: 0;
   padding: 8px;
+}
+
+.ledger-editing .finance-category-field {
+  min-width: 170px;
 }
 
 .ledger-edit-actions {
