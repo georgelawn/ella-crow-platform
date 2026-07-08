@@ -54,13 +54,14 @@ const legacyCategoryMap = {
 let transactions = loadTransactions();
 let monthlyCloses = loadMonthlyCloses();
 let editingTransactionId = "";
-let activeStream = "gigs";
+let activeStream = "all";
 let activeCategory = "";
 let ledgerPeriod = currentMonthKey();
 let ledgerStreamFilter = "all";
 let activeCloseMonth = offsetMonthKey(-1);
 
 const form = document.querySelector("#financeForm");
+const streamOverviewBar = document.querySelector("#streamOverviewBar");
 const streamGrid = document.querySelector("#profitStreams");
 const streamInspector = document.querySelector("#streamInspector");
 const monthlyClosePanel = document.querySelector("#monthlyClosePanel");
@@ -506,6 +507,28 @@ function renderProfitStreams() {
   }).join("");
 }
 
+function renderStreamOverviewBar() {
+  const items = transactions;
+  const totals = totalsFor(items);
+  const currentTotals = totalsFor(itemsForMonth(currentMonthKey(), items));
+  const pendingTotal = pendingInvoices().reduce((sum, item) => sum + numericAmount(item.amount), 0);
+  const streamCount = Object.keys(streamDefinitions).filter((stream) => items.some((item) => item.stream === stream)).length;
+
+  streamOverviewBar.innerHTML = `
+    <button class="stream-overview-button${activeStream === "all" ? " active" : ""}" data-stream="all" type="button">
+      <span>
+        <small>All streams</small>
+        <strong>${money(totals.net)} lifetime profit</strong>
+      </span>
+      <span><strong>${money(currentTotals.net)}</strong><small>This month</small></span>
+      <span><strong>${money(totals.revenue)}</strong><small>Total income</small></span>
+      <span><strong>${money(totals.expenses)}</strong><small>Total costs</small></span>
+      <span><strong>${pendingTotal ? money(pendingTotal) : "None"}</strong><small>Pending</small></span>
+      <span><strong>${streamCount || Object.keys(streamDefinitions).length}</strong><small>Streams</small></span>
+    </button>
+  `;
+}
+
 function closeMonthOptions() {
   const keys = [...new Set([
     offsetMonthKey(-1),
@@ -689,11 +712,19 @@ function ledgerPeriodLabel() {
 function selectCategory(category, stream = activeStream) {
   activeCategory = category || "";
   activeStream = stream;
-  ledgerStreamFilter = stream || "all";
+  ledgerStreamFilter = stream === "all" ? "all" : (stream || "all");
   ledgerPeriod = "all";
   editingTransactionId = "";
   renderFinance();
   document.querySelector(".current-ledger")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function selectStream(stream) {
+  activeStream = streamDefinitions[stream] ? stream : "all";
+  ledgerStreamFilter = activeStream === "all" ? "all" : activeStream;
+  activeCategory = "";
+  editingTransactionId = "";
+  renderFinance();
 }
 
 function streamMonthKeys(items) {
@@ -703,8 +734,13 @@ function streamMonthKeys(items) {
 }
 
 function renderStreamInspector() {
-  const definition = streamDefinitions[activeStream];
-  const streamItems = transactions.filter((item) => item.stream === activeStream);
+  const viewingAllStreams = activeStream === "all";
+  const definition = viewingAllStreams
+    ? { label: "All streams", description: "Gigs, merch and streaming together" }
+    : streamDefinitions[activeStream];
+  const streamItems = viewingAllStreams
+    ? transactions
+    : transactions.filter((item) => item.stream === activeStream);
   const allTotals = totalsFor(streamItems);
   const margin = marginFor(allTotals);
   const keys = streamMonthKeys(streamItems);
@@ -1032,6 +1068,7 @@ function renderFinance() {
   renderSummary();
   renderMonthlyClose();
   renderTaxYearPanel();
+  renderStreamOverviewBar();
   renderProfitStreams();
   renderStreamInspector();
   renderPendingInvoices();
@@ -1134,12 +1171,16 @@ clearButton.addEventListener("click", () => {
 fields.type.addEventListener("change", syncInvoiceFields);
 fields.category.addEventListener("change", () => syncCategoryOtherField(fields.category, fields.categoryOther));
 
+streamOverviewBar.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-stream='all']");
+  if (!button) return;
+  selectStream("all");
+});
+
 streamGrid.addEventListener("click", (event) => {
   const card = event.target.closest("[data-stream]");
   if (!card) return;
-  activeStream = card.dataset.stream;
-  renderProfitStreams();
-  renderStreamInspector();
+  selectStream(card.dataset.stream);
 });
 
 streamInspector.addEventListener("click", (event) => {
