@@ -508,11 +508,13 @@
 }
 
 .bio-period-toggle,
+.creative-period-toggle,
 .social-period-toggle {
   display: flex;
 }
 
 .bio-period-toggle button,
+.creative-period-toggle button,
 .social-period-toggle button {
   background: transparent;
   border: 1px solid var(--line);
@@ -525,6 +527,7 @@
 }
 
 .bio-period-toggle button.active,
+.creative-period-toggle button.active,
 .social-period-toggle button.active {
   background: var(--brown);
   color: var(--cream);
@@ -623,6 +626,13 @@
 
 .creative-match-panel {
   margin-top: 24px;
+}
+
+.creative-panel-actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .creative-match-list {
@@ -1430,6 +1440,7 @@
     grid-column: 1 / -1;
   }
   .bio-period-toggle,
+  .creative-period-toggle,
   .social-period-toggle { display: grid; grid-template-columns: repeat(3, 1fr); }
   .bio-summary-strip { grid-template-columns: 1fr; }
   .bio-summary-strip > div { border-right: 0; }
@@ -6844,6 +6855,7 @@ a:focus-visible {
 .social-back-button,
 .mobile-panel-toggle,
 .bio-period-toggle button,
+.creative-period-toggle button,
 .social-period-toggle button {
   border-radius: var(--radius-md);
   font-family: var(--font-interface);
@@ -6905,6 +6917,7 @@ a:focus-visible {
 
 .filter.active,
 .bio-period-toggle button.active,
+.creative-period-toggle button.active,
 .social-period-toggle button.active,
 .platform-tab.active {
   background: var(--accent-subtle);

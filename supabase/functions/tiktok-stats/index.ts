@@ -2,6 +2,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const API_ROOT = "https://open.tiktokapis.com";
 const DEFAULT_ACCOUNT_KEY = "ella";
+const VIDEO_PAGE_SIZE = 20;
+const MAX_VIDEO_PAGES = 25;
 const ALLOWED_ORIGINS = new Set([
   "https://georgelawn.github.io",
   "http://localhost:8765",
@@ -60,6 +62,31 @@ async function apiRequest(
     throw new Error(payload.error?.message || "TikTok API request failed.");
   }
   return payload;
+}
+
+async function listVideos(videoFields: string, accessToken: string) {
+  const videos: Array<Record<string, unknown>> = [];
+  let cursor: number | null = null;
+
+  for (let page = 0; page < MAX_VIDEO_PAGES; page += 1) {
+    const body: Record<string, number> = { max_count: VIDEO_PAGE_SIZE };
+    if (cursor != null) body.cursor = cursor;
+    const payload = await apiRequest(
+      `/v2/video/list/?fields=${videoFields}`,
+      accessToken,
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    );
+    videos.push(...(payload.data?.videos || []));
+
+    const nextCursor = numberValue(payload.data?.cursor);
+    if (!payload.data?.has_more || !nextCursor || nextCursor === cursor) break;
+    cursor = nextCursor;
+  }
+
+  return videos;
 }
 
 async function currentAccessToken(
@@ -130,10 +157,7 @@ async function accountSnapshot(
   ].join(",");
   const [userPayload, videoPayload] = await Promise.all([
     apiRequest(`/v2/user/info/?fields=${userFields}`, accessToken),
-    apiRequest(`/v2/video/list/?fields=${videoFields}`, accessToken, {
-      method: "POST",
-      body: JSON.stringify({ max_count: 20 }),
-    }),
+    listVideos(videoFields, accessToken),
   ]);
 
   const user = userPayload.data?.user || {};
@@ -147,7 +171,7 @@ async function accountSnapshot(
     likes: numberValue(user.likes_count),
     videos: numberValue(user.video_count),
   };
-  const videos = (videoPayload.data?.videos || []).map(
+  const videos = videoPayload.map(
     (video: Record<string, unknown>) => ({
       id: `${selectedAccount}:${String(video.id || "")}`,
       sourceId: String(video.id || ""),

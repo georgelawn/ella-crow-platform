@@ -15,7 +15,10 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Social integrations: Supabase Edge Functions for YouTube, Instagram/Facebook,
   and TikTok. TikTok supports multiple OAuth account slots through
   `tiktok_tokens.account_key`; the stats function combines connected slots into
-  one dashboard snapshot.
+  one dashboard snapshot. `tiktok-stats` paginates TikTok's video list with
+  cursors, up to 25 pages of 20 videos per connected account, so the dashboard
+  stores all videos currently exposed by TikTok's API rather than only the first
+  page.
 - Calendar integration: Google Apps Script web app
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat

@@ -19,12 +19,18 @@
     "30": { days: 30, label: "Last 30 days", suffix: "last 30 days" },
     all: { days: null, label: "All time", suffix: "all time" }
   };
+  const CREATIVE_PERIODS = {
+    all: { label: "All time", suffix: "all time" },
+    month: { label: "This month", suffix: "this month" },
+    "7": { label: "Last 7 days", suffix: "last 7 days" }
+  };
   const state = {
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
     tiktok: readJson(LOCAL_TIKTOK_KEY),
     manualCreativeMatches: readJson(LOCAL_CREATIVE_MATCHES_KEY) || {},
     creativeVisibleCount: 5,
+    creativePeriod: "all",
     creativeSearch: null,
     socialPeriod: "30",
     bio: null,
@@ -56,6 +62,8 @@
     bioList: document.querySelector("#bioPlatformList"),
     bioEmpty: document.querySelector("#bioEmptyState"),
     creativeSummary: document.querySelector("#creativeMatchSummary"),
+    creativeTopPeriod: document.querySelector("#creativeTopPeriod"),
+    creativeRecentPeriod: document.querySelector("#creativeRecentPeriod"),
     creativeTopMatches: document.querySelector("#creativeTopMatches"),
     creativeMatches: document.querySelector("#creativeMatches"),
     creativeSearchPanel: document.querySelector("#creativeSearchPanel"),
@@ -123,6 +131,23 @@
 
   function selectedPeriod() {
     return SOCIAL_PERIODS[state.socialPeriod] || SOCIAL_PERIODS["30"];
+  }
+
+  function selectedCreativePeriod() {
+    return CREATIVE_PERIODS[state.creativePeriod] || CREATIVE_PERIODS.all;
+  }
+
+  function creativePeriodIncludes(group) {
+    if (state.creativePeriod === "all") return true;
+    const latest = new Date(group.latestTime);
+    if (!Number.isFinite(latest.getTime())) return false;
+    if (state.creativePeriod === "month") return sameMonth(latest);
+    if (state.creativePeriod === "7") {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 7);
+      return latest >= cutoff && latest < new Date();
+    }
+    return true;
   }
 
   function periodSuffix() {
@@ -420,6 +445,9 @@
     );
     document.querySelectorAll("[data-bio-period]").forEach((button) =>
       button.classList.toggle("active", button.dataset.bioPeriod === state.socialPeriod)
+    );
+    document.querySelectorAll("[data-creative-period]").forEach((button) =>
+      button.classList.toggle("active", button.dataset.creativePeriod === state.creativePeriod)
     );
   }
 
@@ -1064,7 +1092,9 @@
 
   function renderCreativeMatches() {
     const groups = creativeGroups();
-    const matchedGroups = groups.filter((group) => group.entries.length > 1);
+    const matchedGroups = groups.filter((group) =>
+      group.entries.length > 1 && creativePeriodIncludes(group)
+    );
     const topGroups = [...matchedGroups].sort((a, b) => b.totalViews - a.totalViews).slice(0, 3);
     const topIds = new Set(topGroups.map((group) => group.id));
     const recentGroups = [...matchedGroups]
@@ -1075,8 +1105,10 @@
     elements.creativeTopMatches.replaceChildren();
     elements.creativeMatches.replaceChildren();
     elements.creativeEmpty.hidden = matchedGroups.length > 0;
+    elements.creativeTopPeriod.textContent = selectedCreativePeriod().label;
+    elements.creativeRecentPeriod.textContent = `Newest first, ${selectedCreativePeriod().suffix}`;
     elements.creativeSummary.textContent = matchedGroups.length
-      ? `${matchedGroups.length} matched ${matchedGroups.length === 1 ? "video" : "videos"}`
+      ? `${matchedGroups.length} matched ${matchedGroups.length === 1 ? "video" : "videos"} ${selectedCreativePeriod().suffix}`
       : "Awaiting matches";
 
     topGroups.forEach((group, index) =>
@@ -1451,9 +1483,21 @@
     renderBio();
   }
 
+  function setCreativePeriod(nextPeriod) {
+    if (!CREATIVE_PERIODS[nextPeriod] || state.creativePeriod === nextPeriod) return;
+    state.creativePeriod = nextPeriod;
+    state.creativeVisibleCount = 5;
+    state.creativeSearch = null;
+    syncPeriodButtons();
+    renderCreativeMatches();
+  }
+
   elements.refresh.addEventListener("click", refreshAll);
   document.querySelectorAll("[data-social-period]").forEach((button) => {
     button.addEventListener("click", () => setSocialPeriod(button.dataset.socialPeriod || "30"));
+  });
+  document.querySelectorAll("[data-creative-period]").forEach((button) => {
+    button.addEventListener("click", () => setCreativePeriod(button.dataset.creativePeriod || "all"));
   });
   elements.back.addEventListener("click", closeDrilldown);
   elements.creativeShowMore.addEventListener("click", () => {
