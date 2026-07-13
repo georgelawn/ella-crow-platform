@@ -635,6 +635,34 @@
   gap: 10px;
 }
 
+.creative-merge-bar {
+  align-items: center;
+  border: 1px solid var(--line);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin: 0 0 12px;
+  padding: 10px;
+}
+
+.creative-merge-bar[hidden] {
+  display: none;
+}
+
+.creative-merge-bar span {
+  color: var(--muted);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-right: auto;
+  text-transform: uppercase;
+}
+
+.creative-merge-bar span[data-state="error"] {
+  color: #a33626;
+}
+
 .creative-match-list {
   display: grid;
   gap: 12px;
@@ -673,8 +701,43 @@
   border: 2px solid var(--line);
   display: grid;
   gap: 16px;
-  grid-template-columns: 140px minmax(0, 1fr) auto;
+  grid-template-columns: 82px 140px minmax(0, 1fr) auto;
   padding: 12px;
+}
+
+.creative-match-card.selected {
+  border-color: var(--brown);
+  box-shadow: 0 0 0 3px rgba(217, 195, 120, 0.22);
+}
+
+.creative-select-control {
+  align-items: center;
+  background: rgba(82, 62, 38, 0.06);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 88px;
+  justify-items: center;
+  padding: 10px 8px;
+  text-align: center;
+}
+
+.creative-select-control input {
+  accent-color: var(--brown);
+  height: 24px;
+  margin: 0;
+  width: 24px;
+}
+
+.creative-select-control span {
+  color: var(--brown);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .creative-match-card > img {
@@ -1275,7 +1338,10 @@
   .bio-platform-name { grid-column: 1 / -1; }
   .creative-match-card {
     align-items: start;
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 76px 110px minmax(0, 1fr);
+  }
+  .creative-select-control span {
+    display: block;
   }
   .creative-match-total {
     border-left: 0;
@@ -1382,7 +1448,14 @@
     margin-top: 0;
   }
   .creative-match-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .creative-select-control span {
+    display: block;
+  }
+  .creative-match-card > img,
+  .creative-match-copy {
+    grid-column: 2;
   }
   .creative-platform-strip {
     grid-template-columns: repeat(2, minmax(0, 1fr));

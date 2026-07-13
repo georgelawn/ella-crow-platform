@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=44">
+    <link rel="stylesheet" href="styles.css?v=46">
   </head>
   <body>
     <header class="topbar">
@@ -95,7 +95,7 @@
               <span id="creativeMatchSummary">Building matches</span>
               <div class="creative-period-toggle" aria-label="Cross-platform video reporting period">
                 <button class="active" data-creative-period="all" type="button">All time</button>
-                <button data-creative-period="month" type="button">This month</button>
+                <button data-creative-period="30" type="button">Last 30 days</button>
                 <button data-creative-period="7" type="button">Last 7 days</button>
               </div>
             </div>
@@ -103,6 +103,11 @@
           <div class="creative-section-heading">
             <h3>Top 3 performers</h3>
             <span id="creativeTopPeriod">All time</span>
+          </div>
+          <div class="creative-merge-bar" id="creativeMergeBar" hidden>
+            <span id="creativeSelectionSummary">0 selected</span>
+            <button class="small-button" id="mergeCreativeButton" type="button" disabled>Merge videos</button>
+            <button class="small-button" id="clearCreativeSelectionButton" type="button">Clear</button>
           </div>
           <div class="creative-match-list creative-top-list" id="creativeTopMatches"></div>
           <div class="creative-section-heading">
@@ -173,6 +178,6 @@
     <script src="app-cloud.js?v=12"></script>
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="social.js?v=19"></script>
+    <script src="social.js?v=22"></script>
   </body>
 </html>

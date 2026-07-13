@@ -54,6 +54,9 @@ The dashboard uses these local storage keys:
 `app-cloud.js` synchronizes these values through `public.ella_crow_store`.
 Changes to key names or stored object shapes are data migrations and must
 preserve existing user data.
+`ella-crow-social-creative-matches-v1` stores manual cross-platform video
+matches by group id and may include `__mergedGroups`, an array of manually
+merged creative group-id sets used by the Social page.
 
 Finance transactions now track the operational money source with `paidFrom`
 (`monzo`, `george`, or `ella`) and default historic entries to `monzo`.

@@ -21,7 +21,7 @@
   };
   const CREATIVE_PERIODS = {
     all: { label: "All time", suffix: "all time" },
-    month: { label: "This month", suffix: "this month" },
+    "30": { label: "Last 30 days", suffix: "last 30 days" },
     "7": { label: "Last 7 days", suffix: "last 7 days" }
   };
   const state = {
@@ -29,6 +29,7 @@
     meta: readJson(LOCAL_META_KEY),
     tiktok: readJson(LOCAL_TIKTOK_KEY),
     manualCreativeMatches: readJson(LOCAL_CREATIVE_MATCHES_KEY) || {},
+    selectedCreativeGroups: new Set(),
     creativeVisibleCount: 5,
     creativePeriod: "all",
     creativeSearch: null,
@@ -64,6 +65,10 @@
     creativeSummary: document.querySelector("#creativeMatchSummary"),
     creativeTopPeriod: document.querySelector("#creativeTopPeriod"),
     creativeRecentPeriod: document.querySelector("#creativeRecentPeriod"),
+    creativeMergeBar: document.querySelector("#creativeMergeBar"),
+    creativeSelectionSummary: document.querySelector("#creativeSelectionSummary"),
+    mergeCreative: document.querySelector("#mergeCreativeButton"),
+    clearCreativeSelection: document.querySelector("#clearCreativeSelectionButton"),
     creativeTopMatches: document.querySelector("#creativeTopMatches"),
     creativeMatches: document.querySelector("#creativeMatches"),
     creativeSearchPanel: document.querySelector("#creativeSearchPanel"),
@@ -141,10 +146,9 @@
     if (state.creativePeriod === "all") return true;
     const latest = new Date(group.latestTime);
     if (!Number.isFinite(latest.getTime())) return false;
-    if (state.creativePeriod === "month") return sameMonth(latest);
-    if (state.creativePeriod === "7") {
+    if (state.creativePeriod === "30" || state.creativePeriod === "7") {
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - 7);
+      cutoff.setDate(cutoff.getDate() - Number(state.creativePeriod));
       return latest >= cutoff && latest < new Date();
     }
     return true;
@@ -865,6 +869,58 @@
     );
   }
 
+  function manualMergedGroupIds() {
+    return Array.isArray(state.manualCreativeMatches.__mergedGroups)
+      ? state.manualCreativeMatches.__mergedGroups
+        .filter((groupIds) => Array.isArray(groupIds) && groupIds.length > 1)
+        .map((groupIds) => [...new Set(groupIds.map(String))])
+      : [];
+  }
+
+  function hasPlatformCollision(entries) {
+    const platforms = entries.map((entry) => entry.platform);
+    return new Set(platforms).size !== platforms.length;
+  }
+
+  function refreshCreativeGroup(group) {
+    group.entries = group.entries.sort((a, b) => a.publishedTime - b.publishedTime);
+    group.platforms = platformEntryMap(group.entries);
+    group.totalViews = group.entries.reduce((sum, entry) => sum + entry.views, 0);
+    group.latestTime = Math.max(...group.entries.map((entry) => entry.publishedTime));
+    group.earliestTime = Math.min(...group.entries.map((entry) => entry.publishedTime));
+    group.title = [...group.entries].sort((a, b) => b.performance - a.performance)[0]?.title || "Matched video";
+    return group;
+  }
+
+  function applyManualGroupMerges(groups) {
+    return manualMergedGroupIds().reduce((nextGroups, mergeIds) => {
+      const mergeIdSet = new Set(mergeIds);
+      const mergeGroups = nextGroups.filter((group) => mergeIdSet.has(group.id));
+      if (mergeGroups.length < 2) return nextGroups;
+      const entries = mergeGroups.flatMap((group) => group.entries);
+      if (hasPlatformCollision(entries)) return nextGroups;
+
+      const targetId = mergeIds.find((id) => nextGroups.some((group) => group.id === id)) || mergeGroups[0].id;
+      const merged = {
+        id: targetId,
+        confidence: Math.max(...mergeGroups.map((group) => numberValue(group.confidence))),
+        reasons: [...new Set([...mergeGroups.flatMap((group) => group.reasons), "manual merge"])],
+        entries,
+        platforms: {},
+        manualPlatforms: new Set(mergeGroups.flatMap((group) => [...group.manualPlatforms])),
+        totalViews: 0,
+        latestTime: 0,
+        earliestTime: 0,
+        title: "Matched video"
+      };
+
+      return [
+        ...nextGroups.filter((group) => !mergeIdSet.has(group.id)),
+        refreshCreativeGroup(merged)
+      ];
+    }, groups);
+  }
+
   function applyManualCreativeMatches(groups, entries) {
     const byId = new Map(entries.map((entry) => [entry.id, entry]));
 
@@ -883,17 +939,11 @@
       });
     });
 
-    return groups
+    const matchedGroups = groups
       .filter((group) => group.entries.length)
-      .map((group) => {
-        group.entries = group.entries.sort((a, b) => a.publishedTime - b.publishedTime);
-        group.platforms = platformEntryMap(group.entries);
-        group.totalViews = group.entries.reduce((sum, entry) => sum + entry.views, 0);
-        group.latestTime = Math.max(...group.entries.map((entry) => entry.publishedTime));
-        group.earliestTime = Math.min(...group.entries.map((entry) => entry.publishedTime));
-        group.title = [...group.entries].sort((a, b) => b.performance - a.performance)[0]?.title || "Matched video";
-        return group;
-      });
+      .map(refreshCreativeGroup);
+
+    return applyManualGroupMerges(matchedGroups);
   }
 
   function creativeGroups() {
@@ -998,9 +1048,13 @@
       timeStyle: "short"
     }).format(new Date(group.earliestTime));
     const card = document.createElement("article");
-    card.className = "creative-match-card";
+    card.className = `creative-match-card ${state.selectedCreativeGroups.has(group.id) ? "selected" : ""}`;
     card.dataset.creativeId = group.id;
     card.innerHTML = `
+      <label class="creative-select-control" title="Select this video group to merge it">
+        <input type="checkbox" data-creative-select="${group.id}" ${state.selectedCreativeGroups.has(group.id) ? "checked" : ""}>
+        <span>Select to merge</span>
+      </label>
       <img src="${topEntry.item.thumbnail || ""}" alt="">
       <div class="creative-match-copy">
         <span>${rank ? `#${rank} performer · ` : ""}${group.confidence ? `${group.confidence}% likely match · ` : ""}${date}</span>
@@ -1095,6 +1149,10 @@
     const matchedGroups = groups.filter((group) =>
       group.entries.length > 1 && creativePeriodIncludes(group)
     );
+    const visibleGroupIds = new Set(matchedGroups.map((group) => group.id));
+    state.selectedCreativeGroups = new Set(
+      [...state.selectedCreativeGroups].filter((groupId) => visibleGroupIds.has(groupId))
+    );
     const topGroups = [...matchedGroups].sort((a, b) => b.totalViews - a.totalViews).slice(0, 3);
     const topIds = new Set(topGroups.map((group) => group.id));
     const recentGroups = [...matchedGroups]
@@ -1118,7 +1176,48 @@
       elements.creativeMatches.append(renderCreativeCard(group))
     );
     elements.creativeShowMore.hidden = recentGroups.length <= state.creativeVisibleCount;
+    renderCreativeMergeControls();
     renderCreativeSearch(groups);
+  }
+
+  function renderCreativeMergeControls(message = "") {
+    const selectedCount = state.selectedCreativeGroups.size;
+    elements.creativeMergeBar.hidden = selectedCount === 0;
+    elements.mergeCreative.disabled = selectedCount < 2;
+    elements.creativeSelectionSummary.dataset.state = message ? "error" : "";
+    elements.creativeSelectionSummary.textContent = message ||
+      `${selectedCount} ${selectedCount === 1 ? "video" : "videos"} selected`;
+  }
+
+  function mergeSelectedCreativeGroups() {
+    if (state.selectedCreativeGroups.size < 2) return;
+    const selectedIds = [...state.selectedCreativeGroups];
+    const selectedIdSet = new Set(selectedIds);
+    const groups = creativeGroups().filter((group) => selectedIdSet.has(group.id));
+    if (groups.length < 2) return;
+    const entries = groups.flatMap((group) => group.entries);
+    if (hasPlatformCollision(entries)) {
+      renderCreativeMergeControls("Can't merge groups with the same platform twice");
+      return;
+    }
+
+    const mergedGroups = manualMergedGroupIds();
+    const mergedSet = new Set(selectedIds);
+    const remainingGroups = [];
+    mergedGroups.forEach((groupIds) => {
+      if (groupIds.some((groupId) => selectedIdSet.has(groupId))) {
+        groupIds.forEach((groupId) => mergedSet.add(groupId));
+      } else {
+        remainingGroups.push(groupIds);
+      }
+    });
+    state.manualCreativeMatches.__mergedGroups = [
+      ...remainingGroups,
+      [...mergedSet]
+    ];
+    state.selectedCreativeGroups = new Set();
+    saveManualCreativeMatches();
+    renderCreativeMatches();
   }
 
   function renderContent(platform, data) {
@@ -1488,6 +1587,7 @@
     state.creativePeriod = nextPeriod;
     state.creativeVisibleCount = 5;
     state.creativeSearch = null;
+    state.selectedCreativeGroups = new Set();
     syncPeriodButtons();
     renderCreativeMatches();
   }
@@ -1504,6 +1604,11 @@
     state.creativeVisibleCount += 5;
     renderCreativeMatches();
   });
+  elements.mergeCreative.addEventListener("click", mergeSelectedCreativeGroups);
+  elements.clearCreativeSelection.addEventListener("click", () => {
+    state.selectedCreativeGroups = new Set();
+    renderCreativeMatches();
+  });
   elements.overview.addEventListener("click", (event) => {
     const searchButton = event.target.closest("[data-creative-search]");
     if (searchButton) {
@@ -1515,6 +1620,13 @@
       return;
     }
 
+  });
+  elements.overview.addEventListener("change", (event) => {
+    const checkbox = event.target.closest("[data-creative-select]");
+    if (!checkbox) return;
+    if (checkbox.checked) state.selectedCreativeGroups.add(checkbox.dataset.creativeSelect);
+    else state.selectedCreativeGroups.delete(checkbox.dataset.creativeSelect);
+    renderCreativeMatches();
   });
   elements.creativeSearchPanel.addEventListener("click", (event) => {
     if (event.target.closest("[data-creative-search-close]") ||
