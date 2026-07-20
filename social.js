@@ -19,6 +19,12 @@
     "30": { days: 30, label: "Last 30 days", suffix: "last 30 days" },
     all: { days: null, label: "All time", suffix: "all time" }
   };
+  const BIO_PERIODS = {
+    "3": { days: 3, label: "Last 3 days" },
+    "7": { days: 7, label: "Last 7 days" },
+    "30": { days: 30, label: "Last 30 days" },
+    all: { days: 366, label: "All time" }
+  };
   const CREATIVE_PERIODS = {
     all: { label: "All time", suffix: "all time" },
     "30": { label: "Last 30 days", suffix: "last 30 days" },
@@ -34,6 +40,8 @@
     creativePeriod: "all",
     creativeSearch: null,
     socialPeriod: "30",
+    bioPeriod: "30",
+    historyPlatforms: new Set(PLATFORM_ORDER),
     bio: null,
     activePlatform: null,
     supabase: null,
@@ -51,6 +59,10 @@
     refresh: document.querySelector("#refreshSocialButton"),
     viewSharePeriod: document.querySelector("#viewSharePeriod"),
     cards: document.querySelector("#platformOverviewCards"),
+    historyRange: document.querySelector("#socialHistoryRange"),
+    historyFilters: document.querySelector("#socialHistoryFilters"),
+    historyScroll: document.querySelector("#socialHistoryScroll"),
+    historyChart: document.querySelector("#socialHistoryChart"),
     viewShareDonut: document.querySelector("#viewShareDonut"),
     viewShareLegend: document.querySelector("#viewShareLegend"),
     totalPlatformViews: document.querySelector("#totalPlatformViews"),
@@ -448,7 +460,7 @@
       button.classList.toggle("active", button.dataset.socialPeriod === state.socialPeriod)
     );
     document.querySelectorAll("[data-bio-period]").forEach((button) =>
-      button.classList.toggle("active", button.dataset.bioPeriod === state.socialPeriod)
+      button.classList.toggle("active", button.dataset.bioPeriod === state.bioPeriod)
     );
     document.querySelectorAll("[data-creative-period]").forEach((button) =>
       button.classList.toggle("active", button.dataset.creativePeriod === state.creativePeriod)
@@ -491,6 +503,178 @@
     facebook: "#506f91",
     tiktok: "#23170f"
   };
+
+  function snapshotItems(platform, snapshot) {
+    if (!snapshot) return [];
+    if (platform === "youtube" || platform === "shorts") {
+      return (snapshot.videos || [])
+        .filter((video) => platform === "shorts" ? isShort(video) : !isShort(video));
+    }
+    if (platform === "instagram") return snapshot.media || [];
+    if (platform === "facebook") {
+      return (snapshot.facebook?.posts || []).filter(isFacebookVideoPost);
+    }
+    if (platform === "tiktok") return snapshot.videos || [];
+    return [];
+  }
+
+  function snapshotViewGain(platform, current, previous) {
+    const previousTime = new Date(previous?.checkedAt).getTime();
+    const previousItems = new Map(
+      snapshotItems(platform, previous).map((item) => [String(item.id), item])
+    );
+    return snapshotItems(platform, current).reduce((sum, item) => {
+      const earlier = previousItems.get(String(item.id));
+      if (earlier) {
+        return sum + Math.max(0, numberValue(item.views) - numberValue(earlier.views));
+      }
+      const publishedTime = new Date(item.publishedAt).getTime();
+      return sum + (Number.isFinite(publishedTime) && publishedTime >= previousTime
+        ? numberValue(item.views)
+        : 0);
+    }, 0);
+  }
+
+  function platformHistory(platform) {
+    if (platform === "youtube" || platform === "shorts") return state.youtube?.history || [];
+    if (platform === "instagram" || platform === "facebook") return state.meta?.history || [];
+    if (platform === "tiktok") return state.tiktok?.history || [];
+    return [];
+  }
+
+  function historySeries(platform) {
+    const byDay = new Map();
+    platformHistory(platform).forEach((snapshot) => {
+      const time = new Date(snapshot?.checkedAt).getTime();
+      if (!Number.isFinite(time)) return;
+      byDay.set(new Date(time).toISOString().slice(0, 10), {
+        time,
+        snapshot
+      });
+    });
+    const snapshots = [...byDay.entries()]
+      .map(([date, value]) => ({ date, ...value }))
+      .sort((a, b) => a.time - b.time);
+    const daily = new Map();
+    snapshots.forEach((snapshot, index) => {
+      if (!index) {
+        daily.set(snapshot.date, null);
+        return;
+      }
+      daily.set(
+        snapshot.date,
+        snapshotViewGain(platform, snapshot.snapshot, snapshots[index - 1].snapshot)
+      );
+    });
+    return daily;
+  }
+
+  function dateRange(seriesByPlatform) {
+    const dates = [...new Set(
+      [...seriesByPlatform.values()].flatMap((series) => [...series.keys()])
+    )].sort();
+    if (!dates.length) return [];
+    const start = new Date(`${dates[0]}T00:00:00Z`);
+    const end = new Date(`${dates[dates.length - 1]}T00:00:00Z`);
+    const result = [];
+    for (const cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
+      result.push(cursor.toISOString().slice(0, 10));
+    }
+    return result;
+  }
+
+  function rollingAverage(values, index) {
+    const sample = values.slice(Math.max(0, index - 29), index + 1)
+      .filter((value) => value != null);
+    return sample.length
+      ? sample.reduce((sum, value) => sum + value, 0) / sample.length
+      : null;
+  }
+
+  function svgPath(points, x, y) {
+    let path = "";
+    let drawing = false;
+    points.forEach((value, index) => {
+      if (value == null) {
+        drawing = false;
+        return;
+      }
+      path += `${drawing ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)} `;
+      drawing = true;
+    });
+    return path.trim();
+  }
+
+  function renderHistoryFilters() {
+    elements.historyFilters.replaceChildren();
+    PLATFORM_ORDER.forEach((platform) => {
+      const label = document.createElement("label");
+      label.className = "social-history-filter";
+      label.innerHTML = `
+        <input type="checkbox" data-history-platform="${platform}" ${state.historyPlatforms.has(platform) ? "checked" : ""}>
+        <i style="--platform-colour:${PLATFORM_COLOURS[platform]}"></i>
+        <span>${PLATFORM_LABELS[platform]}</span>`;
+      elements.historyFilters.append(label);
+    });
+  }
+
+  function renderHistoryChart() {
+    renderHistoryFilters();
+    const seriesByPlatform = new Map(PLATFORM_ORDER.map((platform) => [platform, historySeries(platform)]));
+    const dates = dateRange(seriesByPlatform);
+    const visible = PLATFORM_ORDER.filter((platform) => state.historyPlatforms.has(platform));
+    elements.historyChart.replaceChildren();
+    if (!dates.length || !visible.length) {
+      elements.historyRange.textContent = dates.length ? "No platforms selected" : "Awaiting daily snapshots";
+      elements.historyChart.innerHTML = `<div class="social-history-empty"><strong>${dates.length ? "Choose a platform" : "History is building"}</strong><span>${dates.length ? "Use the filters above to add chart lines." : "Two saved days are needed before daily view gains can be calculated."}</span></div>`;
+      return;
+    }
+
+    const series = visible.map((platform) => {
+      const actual = dates.map((date) => seriesByPlatform.get(platform).has(date)
+        ? seriesByPlatform.get(platform).get(date)
+        : null);
+      return { platform, actual, average: actual.map((value, index) => rollingAverage(actual, index)) };
+    });
+    const maximum = Math.max(1, ...series.flatMap((item) => [...item.actual, ...item.average])
+      .filter((value) => value != null));
+    const chartWidth = Math.max(880, 112 + Math.max(dates.length - 1, 1) * 44);
+    const chartHeight = 360;
+    const left = 64;
+    const right = 28;
+    const top = 24;
+    const bottom = 58;
+    const plotHeight = chartHeight - top - bottom;
+    const x = (index) => left + index * ((chartWidth - left - right) / Math.max(dates.length - 1, 1));
+    const y = (value) => top + plotHeight - value / maximum * plotHeight;
+    const formatAxis = new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 });
+    const formatDay = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+    const axis = Array.from({ length: 5 }, (_, index) => {
+      const value = maximum * index / 4;
+      return `<g><line x1="${left}" y1="${y(value)}" x2="${chartWidth - right}" y2="${y(value)}"></line><text x="${left - 10}" y="${y(value) + 4}" text-anchor="end">${formatAxis.format(value)}</text></g>`;
+    }).join("");
+    const dateTicks = dates.map((date, index) => {
+      if (index !== 0 && index !== dates.length - 1 && index % 7 !== 0) return "";
+      return `<text x="${x(index)}" y="${chartHeight - 20}" text-anchor="middle">${formatDay.format(new Date(`${date}T12:00:00Z`))}</text>`;
+    }).join("");
+    const lines = series.map(({ platform, actual, average }) => {
+      const colour = PLATFORM_COLOURS[platform];
+      const points = actual.map((value, index) => value == null ? "" : `
+        <circle cx="${x(index)}" cy="${y(value)}" r="6" tabindex="0" aria-label="${PLATFORM_LABELS[platform]}, ${dates[index]}: ${full(value)} daily views">
+          <title>${PLATFORM_LABELS[platform]} · ${formatDay.format(new Date(`${dates[index]}T12:00:00Z`))}: ${full(value)} daily views</title>
+        </circle>`).join("");
+      return `<g class="history-series" style="--series-colour:${colour}">
+        <path class="history-average-line" d="${svgPath(average, x, y)}"></path>
+        <path class="history-actual-line" d="${svgPath(actual, x, y)}"></path>
+        <g class="history-points">${points}</g>
+      </g>`;
+    }).join("");
+    elements.historyChart.innerHTML = `<svg viewBox="0 0 ${chartWidth} ${chartHeight}" width="${chartWidth}" height="${chartHeight}" role="img" aria-label="Daily platform views and rolling 30-day averages"><g class="history-grid">${axis}</g><g class="history-dates">${dateTicks}</g>${lines}</svg>`;
+    elements.historyRange.textContent = `${formatDay.format(new Date(`${dates[0]}T12:00:00Z`))} – ${formatDay.format(new Date(`${dates[dates.length - 1]}T12:00:00Z`))}`;
+    requestAnimationFrame(() => {
+      elements.historyScroll.scrollLeft = elements.historyScroll.scrollWidth;
+    });
+  }
 
   function renderViewShare() {
     elements.viewSharePeriod.textContent = periodLabel();
@@ -1411,6 +1595,7 @@
 
   function renderOverview() {
     renderPlatformCards();
+    renderHistoryChart();
     renderViewShare();
     renderWeekdays();
     renderCreativeMatches();
@@ -1490,7 +1675,7 @@
   async function loadBio() {
     const client = await ensureSupabase();
     if (!client) return;
-    const days = selectedPeriod().days == null ? 366 : selectedPeriod().days;
+    const days = (BIO_PERIODS[state.bioPeriod] || BIO_PERIODS["30"]).days;
     const { data, error } = await client.rpc("get_bio_link_summary", { p_days: days });
     if (!error) state.bio = data;
   }
@@ -1578,6 +1763,12 @@
     syncPeriodButtons();
     if (state.activePlatform) renderDrilldown(state.activePlatform);
     else renderOverview();
+  }
+
+  async function setBioPeriod(nextPeriod) {
+    if (!BIO_PERIODS[nextPeriod] || state.bioPeriod === nextPeriod) return;
+    state.bioPeriod = nextPeriod;
+    syncPeriodButtons();
     await loadBio();
     renderBio();
   }
@@ -1622,6 +1813,13 @@
 
   });
   elements.overview.addEventListener("change", (event) => {
+    const historyCheckbox = event.target.closest("[data-history-platform]");
+    if (historyCheckbox) {
+      if (historyCheckbox.checked) state.historyPlatforms.add(historyCheckbox.dataset.historyPlatform);
+      else state.historyPlatforms.delete(historyCheckbox.dataset.historyPlatform);
+      renderHistoryChart();
+      return;
+    }
     const checkbox = event.target.closest("[data-creative-select]");
     if (!checkbox) return;
     if (checkbox.checked) state.selectedCreativeGroups.add(checkbox.dataset.creativeSelect);
@@ -1668,7 +1866,7 @@
     }
   });
   document.querySelectorAll("[data-bio-period]").forEach((button) => {
-    button.addEventListener("click", () => setSocialPeriod(button.dataset.bioPeriod || "30"));
+    button.addEventListener("click", () => setBioPeriod(button.dataset.bioPeriod || "30"));
   });
 
   async function initialise() {

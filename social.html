@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=46">
+    <link rel="stylesheet" href="styles.css?v=47">
   </head>
   <body>
     <header class="topbar">
@@ -53,6 +53,22 @@
 
       <section id="socialOverview">
         <section class="social-platform-grid" id="platformOverviewCards" aria-label="Platform overview"></section>
+
+        <section class="social-premium-panel social-history-panel">
+          <div class="social-panel-heading social-history-heading">
+            <div>
+              <p class="eyebrow">Daily View History</p>
+              <h2>Views per day</h2>
+              <p>Daily gains between saved platform snapshots, with each platform's rolling 30-day average.</p>
+            </div>
+            <span id="socialHistoryRange">Loading history</span>
+          </div>
+          <div class="social-history-filters" id="socialHistoryFilters" aria-label="Platforms shown on the views chart"></div>
+          <div class="social-history-scroll" id="socialHistoryScroll" tabindex="0" aria-label="Scrollable daily platform views chart">
+            <div class="social-history-chart" id="socialHistoryChart"></div>
+          </div>
+          <p class="social-history-note">Solid lines are daily views. Dashed lines are rolling 30-day averages. Hover or focus a point for its exact value.</p>
+        </section>
 
         <section class="social-overview-grid social-measurement-grid">
           <article class="social-premium-panel view-share-panel">
@@ -132,6 +148,7 @@
               <p>Visits to Ella's platform link pages and the destinations people choose next.</p>
             </div>
             <div class="bio-period-toggle" aria-label="Bio link reporting period">
+              <button data-bio-period="3" type="button">Last 3 days</button>
               <button data-bio-period="7" type="button">Last 7 days</button>
               <button class="active" data-bio-period="30" type="button">Last 30 days</button>
               <button data-bio-period="all" type="button">All time</button>
@@ -178,6 +195,6 @@
     <script src="app-cloud.js?v=12"></script>
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="social.js?v=22"></script>
+    <script src="social.js?v=23"></script>
   </body>
 </html>

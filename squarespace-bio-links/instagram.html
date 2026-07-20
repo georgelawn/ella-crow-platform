@@ -101,6 +101,20 @@
     box-shadow: 0 6px 16px rgba(45,15,30,.14);
     transform: translateY(-1px);
   }
+  #ella-bio-links-instagram .ella-link-primary {
+    background: linear-gradient(135deg, #2d0f1e, #641f43);
+    border-color: #fff3fa;
+    box-shadow: 0 7px 20px rgba(45,15,30,.34), 0 0 0 3px rgba(255,255,255,.28);
+    color: #fff;
+  }
+  #ella-bio-links-instagram .ella-link-primary:hover,
+  #ella-bio-links-instagram .ella-link-primary:focus-visible {
+    background: linear-gradient(135deg, #3b1328, #7b2853);
+    box-shadow: 0 9px 24px rgba(45,15,30,.4), 0 0 0 3px rgba(255,255,255,.42);
+  }
+  #ella-bio-links-instagram .ella-link-primary .ella-link-copy small { color: rgba(255,255,255,.78); }
+  #ella-bio-links-instagram .ella-link-primary .ella-link-icon svg { height: 24px; width: 24px; }
+  #ella-bio-links-instagram .ella-link-primary .ella-link-end { align-items: center; display: flex; font-size: 1.25rem; justify-content: center; }
   #ella-bio-links-instagram .ella-link-icon {
     align-items: center;
     display: flex;
@@ -168,9 +182,11 @@
     { href: "https://www.youtube.com/@ellacrowmusic", label: "YouTube", logo: "https://cdn.simpleicons.org/youtube/ffffff" }
   ];
 
+  const hangerIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5.5a3 3 0 1 1 4.4 2.65C12.5 8.65 12 9.2 12 10v1.25"/><path d="m12 11.25-8.45 5.2A1.4 1.4 0 0 0 4.3 19h15.4a1.4 1.4 0 0 0 .75-2.55Z"/></svg>`;
   const destinations = [
+    { label: "New Merch Out Now!", detail: "Shop the new collection", url: "https://ellacrow.bandcamp.com/", icon: hangerIcon, track: "New Merch", primary: true },
     { label: "Join the community 🐦‍⬛", detail: "WhatsApp community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/2d0f1e", track: "WhatsApp Community" },
-    { label: "Come and watch me live &#127908;", detail: "Tickets are here", url: "https://wegottickets.com/f/21926", icon: "LIVE", track: "Next Gig Tickets" },
+    { label: "Come and watch me this Saturday &#127908;", detail: "Tickets are here", url: "https://link.dice.fm/m5f3be4908bd", icon: "LIVE", track: "Next Gig Tickets" },
     { label: "Listen to my unreleased music &#128144;", detail: "SoundCloud", url: "https://soundcloud.com/ellacrow", logo: "https://cdn.simpleicons.org/soundcloud/2d0f1e", track: "SoundCloud" },
     { label: "Listen to my music &#11088;", detail: "Spotify and Apple Music", music: true, icon: "&#9835;", track: "Music menu" }
   ];
@@ -205,12 +221,12 @@
 
   function buildLink(destination) {
     const link = document.createElement("a");
-    link.className = "ella-link";
+    link.className = `ella-link${destination.primary ? " ella-link-primary" : ""}`;
     link.href = trackedUrl(destination.url);
     const icon = destination.logo
       ? `<img src="${destination.logo}" alt="">`
       : `<span class="${destination.icon === "LIVE" ? "ella-live-badge" : "ella-text-badge"}">${destination.icon}</span>`;
-    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true"></span>`;
+    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true">${destination.primary ? "&#8594;" : ""}</span>`;
     link.addEventListener("click", async (event) => {
       event.preventDefault();
       const target = link.href;
