@@ -64,6 +64,9 @@ Finance transactions now track the operational money source with `paidFrom`
 sanity check, 50/50 settlement decision, close/reopen locking, and expected
 balance review. The To Do page generates an automatic Finance task for the
 previous month's close, due on the 8th, while the month remains unclosed.
+The To Do page and Telegram digest also generate one automatic EPK content
+update task for each gig after its date has passed. Completing it records
+`epkContentUpdated` and `epkContentUpdatedAt` on that gig so it is not recreated.
 
 ## Live Supabase State
 

@@ -277,6 +277,18 @@ function autoGigTodos_(gigs) {
     const status = derivedStatus_(gig);
     const isUpcoming = validDateKey_(gig.date) && gig.date >= todayKey_();
 
+    if (validDateKey_(gig.date) && gig.date < todayKey_() && !gig.epkContentUpdated) {
+      todos.push({
+        id: `gig-epk-content:${gig.id}`,
+        type: "auto-gig-epk-content",
+        category: "Gigs",
+        title: `Update Ella's EPK with new gig content: ${gig.title || "Gig"}`,
+        dueDate: gig.date,
+        done: false,
+        meta: `${gig.venue || "Venue not added"} - gig on ${formatDate_(gig.date)}`
+      });
+    }
+
     if (status === "complete" && !gig.prsSetlistLogged) {
       todos.push({
         id: `gig-prs-setlist:${gig.id}`,

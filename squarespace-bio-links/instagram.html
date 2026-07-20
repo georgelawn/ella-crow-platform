@@ -73,6 +73,7 @@
     gap: 13px;
   }
   #ella-bio-links-instagram .ella-link,
+  #ella-bio-links-instagram .ella-event-toggle,
   #ella-bio-links-instagram .ella-music-toggle,
   #ella-bio-links-instagram .ella-music-option {
     align-items: center;
@@ -93,6 +94,8 @@
   }
   #ella-bio-links-instagram .ella-link:hover,
   #ella-bio-links-instagram .ella-link:focus-visible,
+  #ella-bio-links-instagram .ella-event-toggle:hover,
+  #ella-bio-links-instagram .ella-event-toggle:focus-visible,
   #ella-bio-links-instagram .ella-music-toggle:hover,
   #ella-bio-links-instagram .ella-music-toggle:focus-visible,
   #ella-bio-links-instagram .ella-music-option:hover,
@@ -142,20 +145,28 @@
     white-space: nowrap;
   }
   #ella-bio-links-instagram .ella-link-copy { display: block; min-width: 0; white-space: nowrap; }
+  #ella-bio-links-instagram .ella-event-toggle .ella-link-copy { line-height: 1.25; white-space: normal; }
   #ella-bio-links-instagram .ella-link-copy small { color: rgba(45,15,30,.65); display: block; font-size: clamp(.56rem, 1.8vw, .66rem); font-weight: 600; letter-spacing: .07em; margin-top: 3px; white-space: nowrap; }
   #ella-bio-links-instagram .ella-link-end { display: block; height: 20px; width: 40px; }
   #ella-bio-links-instagram .ella-link-chevron { font-size: 1rem; line-height: 1; transition: transform 160ms ease; }
   #ella-bio-links-instagram details[open] .ella-link-chevron { transform: rotate(180deg); }
   #ella-bio-links-instagram details.ella-music { display: block; }
-  #ella-bio-links-instagram details.ella-music > summary { cursor: pointer; list-style: none; }
-  #ella-bio-links-instagram details.ella-music > summary::-webkit-details-marker { display: none; }
+  #ella-bio-links-instagram details.ella-event { display: block; }
+  #ella-bio-links-instagram details.ella-music > summary,
+  #ella-bio-links-instagram details.ella-event > summary { cursor: pointer; list-style: none; }
+  #ella-bio-links-instagram details.ella-music > summary::-webkit-details-marker,
+  #ella-bio-links-instagram details.ella-event > summary::-webkit-details-marker { display: none; }
   #ella-bio-links-instagram .ella-music-panel { display: grid; gap: 10px; margin-top: 10px; padding: 0 6px 2px; }
   #ella-bio-links-instagram .ella-music-option { background: #fce0ef; min-height: 58px; }
+  #ella-bio-links-instagram .ella-event-panel { background: #fce0ef; border: 1px solid rgba(45,15,30,.45); border-radius: 22px; box-shadow: 0 4px 12px rgba(45,15,30,.08); display: grid; gap: 8px; margin-top: 10px; padding: 16px 20px; text-align: left; }
+  #ella-bio-links-instagram .ella-event-panel p { margin: 0; }
+  #ella-bio-links-instagram .ella-event-panel a { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 520px) {
     #ella-bio-links-instagram { padding: 28px 12px 26px; }
     #ella-bio-links-instagram .ella-links-avatar { height: 88px; width: 88px; }
     #ella-bio-links-instagram .ella-links-logo { margin-bottom: 16px; width: 76%; }
     #ella-bio-links-instagram .ella-link,
+    #ella-bio-links-instagram .ella-event-toggle,
     #ella-bio-links-instagram .ella-music-toggle,
     #ella-bio-links-instagram .ella-music-option { grid-template-columns: 34px minmax(0, 1fr) 34px; padding-inline: 12px; }
     #ella-bio-links-instagram .ella-link-icon { height: 34px; width: 34px; }
@@ -186,7 +197,7 @@
   const destinations = [
     { label: "New Merch Out Now!", detail: "Shop the new collection", url: "https://ellacrow.bandcamp.com/", icon: hangerIcon, track: "New Merch", primary: true },
     { label: "Join the community 🐦‍⬛", detail: "WhatsApp community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/2d0f1e", track: "WhatsApp Community" },
-    { label: "Come and watch me this Saturday &#127908;", detail: "Tickets are here", url: "https://link.dice.fm/m5f3be4908bd", icon: "LIVE", track: "Next Gig Tickets" },
+    { label: "Free Show - Old Dispensary - 31st July &#127908;", detail: "Show details", event: true, icon: "LIVE", track: "Next Gig Details" },
     { label: "Listen to my unreleased music &#128144;", detail: "SoundCloud", url: "https://soundcloud.com/ellacrow", logo: "https://cdn.simpleicons.org/soundcloud/2d0f1e", track: "SoundCloud" },
     { label: "Listen to my music &#11088;", detail: "Spotify and Apple Music", music: true, icon: "&#9835;", track: "Music menu" }
   ];
@@ -269,7 +280,21 @@
     return wrapper;
   }
 
-  destinations.forEach((destination) => { list.append(destination.music ? buildMusic() : buildLink(destination)); });
+  function buildEvent(destination) {
+    const wrapper = document.createElement("details");
+    wrapper.className = "ella-event";
+    const summary = document.createElement("summary");
+    summary.className = "ella-event-toggle";
+    summary.innerHTML = `<span class="ella-link-icon"><span class="ella-live-badge">${destination.icon}</span></span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-chevron" aria-hidden="true">&#8964;</span>`;
+    const panel = document.createElement("div");
+    panel.className = "ella-event-panel";
+    panel.innerHTML = `<p><strong>Location:</strong> <a href="https://maps.app.goo.gl/2UMzfGKpcPSJ5EkC8" target="_blank" rel="noopener">The Old Dispensary</a></p><p><strong>Date:</strong> 31st July</p><p><strong>Time:</strong> 7:30pm</p>`;
+    summary.addEventListener("click", () => { if (!wrapper.open) void Promise.resolve(record("click", destination.track)).catch(() => {}); });
+    wrapper.append(summary, panel);
+    return wrapper;
+  }
+
+  destinations.forEach((destination) => { list.append(destination.music ? buildMusic() : destination.event ? buildEvent(destination) : buildLink(destination)); });
   void Promise.resolve(record("view")).catch(() => {});
 })();
 </script>

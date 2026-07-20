@@ -278,6 +278,18 @@ function getAutoTodos() {
   const gigTodos = gigs.flatMap((gig) => {
     const status = derivedStatus(gig);
     const isUpcoming = dateStamp(gig.date) >= todayStamp();
+    const epkTodo = dateStamp(gig.date) < todayStamp() && !gig.epkContentUpdated
+      ? [{
+          id: `gig-epk-content:${gig.id}`,
+          type: "auto-gig-epk-content",
+          category: "Gigs",
+          title: `Update Ella's EPK with new gig content: ${gig.title}`,
+          dueDate: gig.date,
+          done: false,
+          gigId: gig.id,
+          meta: `${gig.venue || "Venue not added"} · gig on ${formatDate(gig.date)}`
+        }]
+      : [];
     const prsTodo = status === "complete" && !gig.prsSetlistLogged
       ? [{
           id: `gig-prs-setlist:${gig.id}`,
@@ -291,7 +303,7 @@ function getAutoTodos() {
         }]
       : [];
 
-    if (!isUpcoming || !["booked", "pending"].includes(status)) return prsTodo;
+    if (!isUpcoming || !["booked", "pending"].includes(status)) return [...epkTodo, ...prsTodo];
 
     const pendingGigTodo = status === "pending"
       ? [{
@@ -322,7 +334,7 @@ function getAutoTodos() {
         meta: `${gig.venue || "Venue TBC"} · gig on ${formatDate(gig.date)}`
       }));
 
-    return [...pendingGigTodo, ...pendingPlayerTodos, ...prsTodo];
+    return [...pendingGigTodo, ...pendingPlayerTodos, ...epkTodo, ...prsTodo];
   });
 
   const sessionTodos = sessions.flatMap((session) => {
@@ -557,6 +569,13 @@ function toggleAutoTodo(todo) {
   if (todo.type === "auto-gig-prs-setlist") {
     gig.prsSetlistLogged = true;
     gig.prsSetlistLoggedAt = new Date().toISOString();
+    saveGigs();
+    return;
+  }
+
+  if (todo.type === "auto-gig-epk-content") {
+    gig.epkContentUpdated = true;
+    gig.epkContentUpdatedAt = new Date().toISOString();
     saveGigs();
     return;
   }
