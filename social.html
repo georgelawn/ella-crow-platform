@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | Social</title>
-    <link rel="stylesheet" href="styles.css?v=47">
+    <link rel="stylesheet" href="styles.css?v=48">
   </head>
   <body>
     <header class="topbar">
@@ -57,17 +57,28 @@
         <section class="social-premium-panel social-history-panel">
           <div class="social-panel-heading social-history-heading">
             <div>
-              <p class="eyebrow">Daily View History</p>
-              <h2>Views per day</h2>
-              <p>Daily gains between saved platform snapshots, with each platform's rolling 30-day average.</p>
+              <p class="eyebrow">View Trend</p>
+              <h2>30-day rolling views</h2>
+              <p>Daily view gains smoothed into a rolling 30-day average for a clearer platform trend.</p>
             </div>
             <span id="socialHistoryRange">Loading history</span>
           </div>
-          <div class="social-history-filters" id="socialHistoryFilters" aria-label="Platforms shown on the views chart"></div>
-          <div class="social-history-scroll" id="socialHistoryScroll" tabindex="0" aria-label="Scrollable daily platform views chart">
-            <div class="social-history-chart" id="socialHistoryChart"></div>
+          <div class="social-history-controls">
+            <div class="social-history-filters" id="socialHistoryFilters" aria-label="Platforms shown on the views chart"></div>
+            <div class="social-history-zoom" aria-label="Timeline zoom controls">
+              <button id="socialHistoryZoomOut" type="button" aria-label="Zoom timeline out">&minus;</button>
+              <input id="socialHistoryZoom" type="range" min="40" max="300" step="10" value="100" aria-label="Timeline zoom">
+              <button id="socialHistoryZoomIn" type="button" aria-label="Zoom timeline in">+</button>
+              <output id="socialHistoryZoomValue" for="socialHistoryZoom">100%</output>
+            </div>
           </div>
-          <p class="social-history-note">Solid lines are daily views. Dashed lines are rolling 30-day averages. Hover or focus a point for its exact value.</p>
+          <div class="social-history-viewport">
+            <div class="social-history-y-axis" id="socialHistoryYAxis" aria-hidden="true"></div>
+            <div class="social-history-scroll" id="socialHistoryScroll" tabindex="0" aria-label="Scrollable rolling 30-day platform views chart">
+              <div class="social-history-chart" id="socialHistoryChart"></div>
+            </div>
+          </div>
+          <p class="social-history-note">Each line is a rolling 30-day average. Pinch over the chart or use the zoom control to expand and compress the timeline.</p>
         </section>
 
         <section class="social-overview-grid social-measurement-grid">
@@ -195,6 +206,6 @@
     <script src="app-cloud.js?v=12"></script>
     <script src="dashboard-command.js?v=4"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="social.js?v=23"></script>
+    <script src="social.js?v=24"></script>
   </body>
 </html>

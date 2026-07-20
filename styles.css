@@ -1635,7 +1635,7 @@
   color: var(--text-secondary);
 }
 
-/* Scrollable daily social history */
+/* Scrollable social history */
 .social-history-panel {
   display: grid;
   gap: 18px;
@@ -1651,6 +1651,13 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.social-history-controls {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
 }
 
 .social-history-filter {
@@ -1692,17 +1699,75 @@
 }
 
 .social-history-filter i::after {
-  border-top: 2px dashed var(--platform-colour);
-  content: "";
-  left: 0;
-  position: absolute;
-  top: 5px;
-  width: 22px;
+  content: none;
+}
+
+.social-history-zoom {
+  align-items: center;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+  padding: 5px 8px;
+}
+
+.social-history-zoom button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  font-family: var(--font-interface);
+  font-size: 1rem;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.social-history-zoom input {
+  accent-color: var(--accent);
+  cursor: ew-resize;
+  margin: 0;
+  width: 104px;
+}
+
+.social-history-zoom output {
+  color: var(--text-secondary);
+  font-family: var(--font-interface);
+  font-size: 0.68rem;
+  font-weight: 700;
+  min-width: 34px;
+  text-align: right;
+}
+
+.social-history-viewport {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.social-history-y-axis {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  box-shadow: 6px 0 12px rgba(30, 29, 26, 0.05);
+  min-height: 360px;
+  position: relative;
+  z-index: 2;
+}
+
+.social-history-y-axis svg {
+  display: block;
 }
 
 .social-history-scroll {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-color: var(--accent-border) var(--surface-subtle);
@@ -1729,30 +1794,25 @@
   stroke-width: 1;
 }
 
-.history-grid text,
-.history-dates text {
+.history-dates text,
+.history-y-labels text {
   fill: var(--text-secondary);
   font-family: var(--font-interface);
   font-size: 11px;
 }
 
-.history-actual-line,
-.history-average-line {
+.history-y-labels line {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.history-trend-line {
   fill: none;
   stroke: var(--series-colour);
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
-}
-
-.history-actual-line {
   stroke-width: 2.5;
-}
-
-.history-average-line {
-  opacity: 0.72;
-  stroke-dasharray: 8 6;
-  stroke-width: 2;
 }
 
 .history-points circle {
@@ -1802,6 +1862,32 @@
   .social-history-filter {
     flex: 1 1 calc(50% - 4px);
     justify-content: flex-start;
+  }
+
+  .social-history-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .social-history-zoom {
+    justify-content: center;
+  }
+
+  .social-history-zoom input {
+    flex: 1 1 auto;
+    width: auto;
+  }
+
+  .social-history-viewport {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .social-history-y-axis {
+    overflow: hidden;
+  }
+
+  .social-history-y-axis svg {
+    margin-left: -10px;
   }
 }
 

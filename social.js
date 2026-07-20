@@ -4,6 +4,7 @@
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
   const LOCAL_TIKTOK_KEY = "ella-crow-social-tiktok-v1";
   const LOCAL_CREATIVE_MATCHES_KEY = "ella-crow-social-creative-matches-v1";
+  const SOCIAL_HISTORY_START = "2026-06-01";
   const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
   const COMPARISON_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
   const CREATIVE_PLATFORMS = ["tiktok", "youtube", "instagram", "facebook"];
@@ -42,6 +43,7 @@
     socialPeriod: "30",
     bioPeriod: "30",
     historyPlatforms: new Set(PLATFORM_ORDER),
+    historyZoom: 1,
     bio: null,
     activePlatform: null,
     supabase: null,
@@ -61,8 +63,13 @@
     cards: document.querySelector("#platformOverviewCards"),
     historyRange: document.querySelector("#socialHistoryRange"),
     historyFilters: document.querySelector("#socialHistoryFilters"),
+    historyYAxis: document.querySelector("#socialHistoryYAxis"),
     historyScroll: document.querySelector("#socialHistoryScroll"),
     historyChart: document.querySelector("#socialHistoryChart"),
+    historyZoom: document.querySelector("#socialHistoryZoom"),
+    historyZoomOut: document.querySelector("#socialHistoryZoomOut"),
+    historyZoomIn: document.querySelector("#socialHistoryZoomIn"),
+    historyZoomValue: document.querySelector("#socialHistoryZoomValue"),
     viewShareDonut: document.querySelector("#viewShareDonut"),
     viewShareLegend: document.querySelector("#viewShareLegend"),
     totalPlatformViews: document.querySelector("#totalPlatformViews"),
@@ -574,8 +581,9 @@
       [...seriesByPlatform.values()].flatMap((series) => [...series.keys()])
     )].sort();
     if (!dates.length) return [];
-    const start = new Date(`${dates[0]}T00:00:00Z`);
+    const start = new Date(`${SOCIAL_HISTORY_START}T00:00:00Z`);
     const end = new Date(`${dates[dates.length - 1]}T00:00:00Z`);
+    if (end < start) return [];
     const result = [];
     for (const cursor = new Date(start); cursor <= end; cursor.setUTCDate(cursor.getUTCDate() + 1)) {
       result.push(cursor.toISOString().slice(0, 10));
@@ -618,15 +626,32 @@
     });
   }
 
-  function renderHistoryChart() {
+  function niceAxisMaximum(value) {
+    if (!Number.isFinite(value) || value <= 0) return 1;
+    const magnitude = 10 ** Math.floor(Math.log10(value));
+    const normalized = value / magnitude;
+    const step = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+    return step * magnitude;
+  }
+
+  function syncHistoryZoomControl() {
+    const percentValue = Math.round(state.historyZoom * 100);
+    elements.historyZoom.value = String(percentValue);
+    elements.historyZoomValue.value = `${percentValue}%`;
+    elements.historyZoomValue.textContent = `${percentValue}%`;
+  }
+
+  function renderHistoryChart({ scrollToLatest = true } = {}) {
     renderHistoryFilters();
+    syncHistoryZoomControl();
     const seriesByPlatform = new Map(PLATFORM_ORDER.map((platform) => [platform, historySeries(platform)]));
     const dates = dateRange(seriesByPlatform);
     const visible = PLATFORM_ORDER.filter((platform) => state.historyPlatforms.has(platform));
     elements.historyChart.replaceChildren();
+    elements.historyYAxis.replaceChildren();
     if (!dates.length || !visible.length) {
       elements.historyRange.textContent = dates.length ? "No platforms selected" : "Awaiting daily snapshots";
-      elements.historyChart.innerHTML = `<div class="social-history-empty"><strong>${dates.length ? "Choose a platform" : "History is building"}</strong><span>${dates.length ? "Use the filters above to add chart lines." : "Two saved days are needed before daily view gains can be calculated."}</span></div>`;
+      elements.historyChart.innerHTML = `<div class="social-history-empty"><strong>${dates.length ? "Choose a platform" : "History is building"}</strong><span>${dates.length ? "Use the filters above to add chart lines." : "Two saved days are needed before the rolling average can be calculated."}</span></div>`;
       return;
     }
 
@@ -634,13 +659,17 @@
       const actual = dates.map((date) => seriesByPlatform.get(platform).has(date)
         ? seriesByPlatform.get(platform).get(date)
         : null);
-      return { platform, actual, average: actual.map((value, index) => rollingAverage(actual, index)) };
+      return { platform, average: actual.map((value, index) => rollingAverage(actual, index)) };
     });
-    const maximum = Math.max(1, ...series.flatMap((item) => [...item.actual, ...item.average])
-      .filter((value) => value != null));
-    const chartWidth = Math.max(880, 112 + Math.max(dates.length - 1, 1) * 44);
+    const maximum = niceAxisMaximum(Math.max(1, ...series.flatMap((item) => item.average)
+      .filter((value) => value != null)));
+    const daySpacing = 44 * state.historyZoom;
+    const chartWidth = Math.max(
+      elements.historyScroll.clientWidth || 760,
+      48 + Math.max(dates.length - 1, 1) * daySpacing
+    );
     const chartHeight = 360;
-    const left = 64;
+    const left = 14;
     const right = 28;
     const top = 24;
     const bottom = 58;
@@ -651,28 +680,49 @@
     const formatDay = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
     const axis = Array.from({ length: 5 }, (_, index) => {
       const value = maximum * index / 4;
-      return `<g><line x1="${left}" y1="${y(value)}" x2="${chartWidth - right}" y2="${y(value)}"></line><text x="${left - 10}" y="${y(value) + 4}" text-anchor="end">${formatAxis.format(value)}</text></g>`;
+      return `<line x1="0" y1="${y(value)}" x2="${chartWidth}" y2="${y(value)}"></line>`;
     }).join("");
+    const yAxis = Array.from({ length: 5 }, (_, index) => {
+      const value = maximum * index / 4;
+      return `<text x="52" y="${y(value) + 4}" text-anchor="end">${formatAxis.format(value)}</text><line x1="58" y1="${y(value)}" x2="64" y2="${y(value)}"></line>`;
+    }).join("");
+    const tickInterval = Math.max(1, Math.ceil(72 / daySpacing));
     const dateTicks = dates.map((date, index) => {
-      if (index !== 0 && index !== dates.length - 1 && index % 7 !== 0) return "";
+      if (index !== 0 && index !== dates.length - 1 && index % tickInterval !== 0) return "";
       return `<text x="${x(index)}" y="${chartHeight - 20}" text-anchor="middle">${formatDay.format(new Date(`${date}T12:00:00Z`))}</text>`;
     }).join("");
-    const lines = series.map(({ platform, actual, average }) => {
+    const lines = series.map(({ platform, average }) => {
       const colour = PLATFORM_COLOURS[platform];
-      const points = actual.map((value, index) => value == null ? "" : `
-        <circle cx="${x(index)}" cy="${y(value)}" r="6" tabindex="0" aria-label="${PLATFORM_LABELS[platform]}, ${dates[index]}: ${full(value)} daily views">
-          <title>${PLATFORM_LABELS[platform]} · ${formatDay.format(new Date(`${dates[index]}T12:00:00Z`))}: ${full(value)} daily views</title>
+      const points = average.map((value, index) => value == null ? "" : `
+        <circle cx="${x(index)}" cy="${y(value)}" r="6" tabindex="0" aria-label="${PLATFORM_LABELS[platform]}, ${dates[index]}: ${full(Math.round(value))} rolling 30-day average views">
+          <title>${PLATFORM_LABELS[platform]} · ${formatDay.format(new Date(`${dates[index]}T12:00:00Z`))}: ${full(Math.round(value))} rolling 30-day average views</title>
         </circle>`).join("");
       return `<g class="history-series" style="--series-colour:${colour}">
-        <path class="history-average-line" d="${svgPath(average, x, y)}"></path>
-        <path class="history-actual-line" d="${svgPath(actual, x, y)}"></path>
+        <path class="history-trend-line" d="${svgPath(average, x, y)}"></path>
         <g class="history-points">${points}</g>
       </g>`;
     }).join("");
-    elements.historyChart.innerHTML = `<svg viewBox="0 0 ${chartWidth} ${chartHeight}" width="${chartWidth}" height="${chartHeight}" role="img" aria-label="Daily platform views and rolling 30-day averages"><g class="history-grid">${axis}</g><g class="history-dates">${dateTicks}</g>${lines}</svg>`;
+    elements.historyYAxis.innerHTML = `<svg viewBox="0 0 64 ${chartHeight}" width="64" height="${chartHeight}"><g class="history-y-labels">${yAxis}</g></svg>`;
+    elements.historyChart.innerHTML = `<svg viewBox="0 0 ${chartWidth} ${chartHeight}" width="${chartWidth}" height="${chartHeight}" role="img" aria-label="Rolling 30-day platform view averages"><g class="history-grid">${axis}</g><g class="history-dates">${dateTicks}</g>${lines}</svg>`;
     elements.historyRange.textContent = `${formatDay.format(new Date(`${dates[0]}T12:00:00Z`))} – ${formatDay.format(new Date(`${dates[dates.length - 1]}T12:00:00Z`))}`;
-    requestAnimationFrame(() => {
+    if (scrollToLatest) requestAnimationFrame(() => {
       elements.historyScroll.scrollLeft = elements.historyScroll.scrollWidth;
+    });
+  }
+
+  function setHistoryZoom(nextZoom, anchorClientX = null) {
+    const scroll = elements.historyScroll;
+    const rect = scroll.getBoundingClientRect();
+    const anchorOffset = anchorClientX == null
+      ? scroll.clientWidth / 2
+      : Math.min(Math.max(anchorClientX - rect.left, 0), scroll.clientWidth);
+    const anchorRatio = scroll.scrollWidth
+      ? (scroll.scrollLeft + anchorOffset) / scroll.scrollWidth
+      : 1;
+    state.historyZoom = Math.min(3, Math.max(0.4, nextZoom));
+    renderHistoryChart({ scrollToLatest: false });
+    requestAnimationFrame(() => {
+      scroll.scrollLeft = anchorRatio * scroll.scrollWidth - anchorOffset;
     });
   }
 
@@ -1784,6 +1834,20 @@
   }
 
   elements.refresh.addEventListener("click", refreshAll);
+  elements.historyZoom.addEventListener("input", () => {
+    setHistoryZoom(numberValue(elements.historyZoom.value) / 100);
+  });
+  elements.historyZoomOut.addEventListener("click", () => {
+    setHistoryZoom(state.historyZoom - 0.2);
+  });
+  elements.historyZoomIn.addEventListener("click", () => {
+    setHistoryZoom(state.historyZoom + 0.2);
+  });
+  elements.historyScroll.addEventListener("wheel", (event) => {
+    if (!event.ctrlKey) return;
+    event.preventDefault();
+    setHistoryZoom(state.historyZoom * Math.exp(-event.deltaY * 0.012), event.clientX);
+  }, { passive: false });
   document.querySelectorAll("[data-social-period]").forEach((button) => {
     button.addEventListener("click", () => setSocialPeriod(button.dataset.socialPeriod || "30"));
   });
