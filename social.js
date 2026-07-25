@@ -2,16 +2,18 @@
   const config = window.ELLA_CLOUD_CONFIG || {};
   const LOCAL_YOUTUBE_KEY = "ella-crow-social-youtube-v1";
   const LOCAL_META_KEY = "ella-crow-social-instagram-v1";
+  const LOCAL_INSTAGRAM_DIRECT_KEY = "ella-crow-social-instagram-direct-v1";
   const LOCAL_TIKTOK_KEY = "ella-crow-social-tiktok-v1";
   const LOCAL_CREATIVE_MATCHES_KEY = "ella-crow-social-creative-matches-v1";
   const SOCIAL_HISTORY_START = "2026-06-01";
-  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "facebook", "tiktok"];
-  const COMPARISON_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
-  const CREATIVE_PLATFORMS = ["tiktok", "youtube", "instagram", "facebook"];
+  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "instagram-direct", "facebook", "tiktok"];
+  const COMPARISON_PLATFORMS = ["shorts", "instagram", "instagram-direct", "facebook", "tiktok"];
+  const CREATIVE_PLATFORMS = ["tiktok", "youtube", "instagram", "instagram-direct", "facebook"];
   const PLATFORM_LABELS = {
     youtube: "YouTube",
     shorts: "YouTube Shorts",
     instagram: "Instagram",
+    "instagram-direct": "Instagram Direct",
     facebook: "Facebook",
     tiktok: "TikTok"
   };
@@ -34,6 +36,7 @@
   const state = {
     youtube: readJson(LOCAL_YOUTUBE_KEY),
     meta: readJson(LOCAL_META_KEY),
+    instagramDirect: readJson(LOCAL_INSTAGRAM_DIRECT_KEY),
     tiktok: readJson(LOCAL_TIKTOK_KEY),
     manualCreativeMatches: readJson(LOCAL_CREATIVE_MATCHES_KEY) || {},
     selectedCreativeGroups: new Set(),
@@ -255,6 +258,9 @@
       content = youtubeContent(platform);
     }
     if (platform === "instagram") content = state.meta?.current?.media || [];
+    if (platform === "instagram-direct") {
+      content = state.instagramDirect?.current?.media || [];
+    }
     if (platform === "facebook") {
       content = (state.meta?.current?.facebook?.posts || []).filter(isFacebookVideoPost);
     }
@@ -329,12 +335,46 @@
 
     if (platform === "instagram") {
       const current = state.meta?.current;
+      const accountCount = numberValue(current?.accountCount) ||
+        (Array.isArray(current?.accounts) ? current.accounts.length : 0);
       const media = contentForPeriod(platform);
       const measuredReach = totals(media, "reach").views;
       const rates = engagementRates(media, "reach");
       const base = baseline(state.meta, platform);
       return {
         connected: Boolean(current?.account),
+        accountCount,
+        audience: numberValue(current?.account?.followers),
+        audienceLabel: "followers",
+        reach: measuredReach,
+        reachLabel: `views ${periodSuffix()}`,
+        previousReach: 0,
+        hasPreviousPeriod: false,
+        output: media.length,
+        outputLabel: periodOutputLabel("posts and Reels"),
+        engagement: rates.engagement,
+        likes: rates.likes,
+        comments: rates.comments,
+        audienceDelta: base
+          ? numberValue(current.account.followers) - numberValue(base.account?.followers)
+          : null,
+        reachDelta: null,
+        content: media,
+        checkedAt: current?.checkedAt
+      };
+    }
+
+    if (platform === "instagram-direct") {
+      const current = state.instagramDirect?.current;
+      const media = contentForPeriod(platform);
+      const measuredReach = totals(media, "reach").views;
+      const rates = engagementRates(media, "reach");
+      const base = baseline(state.instagramDirect, platform);
+      return {
+        connected: Boolean(current?.account),
+        identityLabel: current?.account?.username
+          ? `@${current.account.username}`
+          : "Instagram Direct",
         audience: numberValue(current?.account?.followers),
         audienceLabel: "followers",
         reach: measuredReach,
@@ -445,6 +485,7 @@
       youtube: "YT",
       shorts: "SHORTS",
       instagram: "IG",
+      "instagram-direct": "IG2",
       facebook: "FB",
       tiktok: "TT"
     }[platform];
@@ -487,7 +528,7 @@
           <i>${platformMark(platform)}</i>
           <span>${data.comingSoon ? "Coming soon" : data.connected ? "Live" : "Connect"}</span>
         </span>
-        <strong>${PLATFORM_LABELS[platform]}</strong>
+        <strong>${data.identityLabel || PLATFORM_LABELS[platform]}</strong>
         <span class="platform-card-number">${data.connected ? compact(data.reach) : "-"}</span>
         <small>${data.reachLabel}</small>
         <span class="platform-card-signal">${
@@ -507,6 +548,7 @@
     youtube: "#8f3527",
     shorts: "#c45b45",
     instagram: "#a55f78",
+    "instagram-direct": "#c4839d",
     facebook: "#506f91",
     tiktok: "#23170f"
   };
@@ -518,6 +560,7 @@
         .filter((video) => platform === "shorts" ? isShort(video) : !isShort(video));
     }
     if (platform === "instagram") return snapshot.media || [];
+    if (platform === "instagram-direct") return snapshot.media || [];
     if (platform === "facebook") {
       return (snapshot.facebook?.posts || []).filter(isFacebookVideoPost);
     }
@@ -545,6 +588,7 @@
   function platformHistory(platform) {
     if (platform === "youtube" || platform === "shorts") return state.youtube?.history || [];
     if (platform === "instagram" || platform === "facebook") return state.meta?.history || [];
+    if (platform === "instagram-direct") return state.instagramDirect?.history || [];
     if (platform === "tiktok") return state.tiktok?.history || [];
     return [];
   }
@@ -783,10 +827,10 @@
     ];
     const dayData = new Map(weekdayOrder.map((day) => [
       day,
-      { shorts: 0, instagram: 0, facebook: 0, tiktok: 0 }
+      { shorts: 0, instagram: 0, "instagram-direct": 0, facebook: 0, tiktok: 0 }
     ]));
 
-    ["shorts", "instagram", "facebook", "tiktok"].forEach((platform) => {
+    ["shorts", "instagram", "instagram-direct", "facebook", "tiktok"].forEach((platform) => {
       const content = platform === "shorts"
         ? contentForPeriod("shorts")
         : platformData(platform).content;
@@ -933,7 +977,10 @@
   function contentType(platform, item) {
     if (platform === "shorts") return "Short";
     if (platform === "youtube") return "Video";
-    if (platform === "instagram") return item.productType === "REELS" ? "Reel" : "Post";
+    if (platform === "instagram" || platform === "instagram-direct") {
+      const type = item.productType === "REELS" ? "Reel" : "Post";
+      return item.accountUsername ? `${type} · @${item.accountUsername}` : type;
+    }
     if (platform === "tiktok") return item.accountName ? `TikTok · ${item.accountName}` : "TikTok";
     return "Facebook post";
   }
@@ -1000,6 +1047,7 @@
       tiktok: state.tiktok?.current?.videos || [],
       youtube: youtubeContent("shorts"),
       instagram: state.meta?.current?.media || [],
+      "instagram-direct": state.instagramDirect?.current?.media || [],
       facebook: (state.meta?.current?.facebook?.posts || []).filter(isFacebookVideoPost)
     };
   }
@@ -1305,9 +1353,8 @@
     return card;
   }
 
-  function unmatchedCreativeEntries(platform, groups) {
+  function availableCreativeEntries(platform, groups) {
     const available = groups
-      .filter((group) => group.entries.length === 1)
       .flatMap((group) => group.entries.map((entry) => ({ ...entry, groupId: group.id })));
     return available
       .filter((entry) =>
@@ -1328,20 +1375,20 @@
       id: search.groupId,
       title: "this video"
     };
-    const options = unmatchedCreativeEntries(search.platform, groups);
+    const options = availableCreativeEntries(search.platform, groups);
     const title = document.createElement("div");
     const dialog = document.createElement("div");
     dialog.className = "creative-search-dialog";
     dialog.setAttribute("role", "dialog");
     dialog.setAttribute("aria-modal", "true");
-    dialog.setAttribute("aria-label", `${creativePlatformLabel(search.platform)} unmatched videos`);
+    dialog.setAttribute("aria-label", `${creativePlatformLabel(search.platform)} available videos`);
     const heading = document.createElement("div");
     heading.className = "creative-search-heading";
     heading.innerHTML = `
       <div>
         <span>Manual match</span>
-        <strong>${creativePlatformLabel(search.platform)} unmatched videos</strong>
-        <p>Choose the upload that belongs with "${group.title.slice(0, 78)}".</p>
+        <strong>${creativePlatformLabel(search.platform)} available videos</strong>
+        <p>Choose the upload that belongs with "${group.title.slice(0, 78)}". Choosing one already linked elsewhere moves it here.</p>
       </div>
       <button class="small-button" data-creative-search-close type="button">Close</button>`;
     dialog.append(heading);
@@ -1349,7 +1396,7 @@
     if (!options.length) {
       const empty = document.createElement("p");
       empty.className = "creative-search-empty";
-      empty.textContent = "No unmatched videos are available for this platform.";
+      empty.textContent = "No videos are available for this platform.";
       dialog.append(empty);
       elements.creativeSearchPanel.append(dialog);
       return;
@@ -1566,11 +1613,12 @@
   function renderDrilldown(platform) {
     const data = platformData(platform);
     elements.eyebrow.textContent = "Platform intelligence";
-    elements.title.textContent = PLATFORM_LABELS[platform];
+    elements.title.textContent = data.identityLabel || PLATFORM_LABELS[platform];
     elements.description.textContent = {
       youtube: "Long-form video performance, audience growth and the subjects worth developing.",
       shorts: "Short-form video performance, engagement and the creative ideas worth repeating.",
       instagram: "Reels, posts and the signals converting reach into a returning audience.",
+      "instagram-direct": "The separately connected Instagram account, tracked without mixing its audience or content into Ella's original account.",
       facebook: "Page growth, post response and Ella's community activity on Facebook.",
       tiktok: "Short-form video performance, engagement and the creative ideas worth repeating."
     }[platform];
@@ -1607,7 +1655,7 @@
         `<article class="social-premium-panel"><span>${label}</span><strong>${title}</strong><p>${copy}</p></article>`
       ).join("");
     elements.contentEyebrow.textContent = "Content performance";
-    elements.contentTitle.textContent = platform === "instagram"
+    elements.contentTitle.textContent = platform === "instagram" || platform === "instagram-direct"
         ? `Posts and Reels, ${periodSuffix()}`
         : platform === "facebook"
           ? `Facebook, ${periodSuffix()}`
@@ -1653,6 +1701,7 @@
     const dates = [
       state.youtube?.current?.checkedAt,
       state.meta?.current?.checkedAt,
+      state.instagramDirect?.current?.checkedAt,
       state.tiktok?.current?.checkedAt
     ].filter(Boolean).sort();
     elements.updated.textContent = dates.length
@@ -1693,6 +1742,9 @@
     if (error) return;
     const youtubeRows = (data || []).filter((row) => row.platform === "youtube");
     const metaRows = (data || []).filter((row) => row.platform === "meta");
+    const instagramDirectRows = (data || []).filter(
+      (row) => row.platform === "instagram_direct"
+    );
     const tiktokRows = (data || []).filter((row) => row.platform === "tiktok");
     if (youtubeRows.length) {
       const current = youtubeRows[youtubeRows.length - 1].payload;
@@ -1708,6 +1760,16 @@
         current,
         previous: metaRows.length > 1 ? metaRows[metaRows.length - 2].payload : null,
         history: metaRows.map((row) => row.payload)
+      };
+    }
+    if (instagramDirectRows.length) {
+      const current = instagramDirectRows[instagramDirectRows.length - 1].payload;
+      state.instagramDirect = {
+        current,
+        previous: instagramDirectRows.length > 1
+          ? instagramDirectRows[instagramDirectRows.length - 2].payload
+          : null,
+        history: instagramDirectRows.map((row) => row.payload)
       };
     }
     if (tiktokRows.length) {
@@ -1752,10 +1814,11 @@
     state.refreshing = true;
     elements.refresh.disabled = true;
     elements.refresh.textContent = "Refreshing";
-    setMessage("Fetching YouTube, Instagram, Facebook and TikTok...", "loading");
+    setMessage("Fetching YouTube, both Instagram accounts, Facebook and TikTok...", "loading");
     const results = await Promise.allSettled([
       fetchSnapshot(config.youtubeStatsUrl, "YouTube"),
       fetchSnapshot(config.instagramStatsUrl, "Instagram and Facebook"),
+      fetchSnapshot(config.instagramDirectStatsUrl, "Instagram Direct"),
       fetchSnapshot(config.tiktokStatsUrl, "TikTok")
     ]);
     const errors = [];
@@ -1784,6 +1847,20 @@
     }
     if (results[2].status === "fulfilled") {
       const current = results[2].value;
+      state.instagramDirect = {
+        current,
+        previous: state.instagramDirect?.current || null,
+        history: appendHistory(state.instagramDirect?.history, current)
+      };
+      localStorage.setItem(
+        LOCAL_INSTAGRAM_DIRECT_KEY,
+        JSON.stringify(state.instagramDirect)
+      );
+    } else if (!String(results[2].reason?.message || "").includes("not been authorised")) {
+      errors.push(results[2].reason?.message || "Instagram Direct failed");
+    }
+    if (results[3].status === "fulfilled") {
+      const current = results[3].value;
       state.tiktok = {
         current,
         previous: state.tiktok?.current || null,
@@ -1791,7 +1868,7 @@
       };
       localStorage.setItem(LOCAL_TIKTOK_KEY, JSON.stringify(state.tiktok));
     } else {
-      errors.push(results[2].reason?.message || "TikTok failed");
+      errors.push(results[3].reason?.message || "TikTok failed");
     }
     await loadBio();
     if (state.activePlatform) renderDrilldown(state.activePlatform);
@@ -1904,6 +1981,13 @@
     const platform = manualButton.dataset.creativeManualPlatform;
     const entryId = manualButton.dataset.creativeManualEntry;
     if (!groupId || !platform || !entryId) return;
+    Object.entries(state.manualCreativeMatches).forEach(([savedGroupId, matches]) => {
+      if (savedGroupId === groupId || savedGroupId === "__mergedGroups" ||
+        !matches || typeof matches !== "object" || Array.isArray(matches) ||
+        matches[platform] !== entryId) return;
+      delete matches[platform];
+      if (!Object.keys(matches).length) delete state.manualCreativeMatches[savedGroupId];
+    });
     state.manualCreativeMatches[groupId] = {
       ...(state.manualCreativeMatches[groupId] || {}),
       [platform]: entryId
@@ -1944,6 +2028,7 @@
     const newest = Math.max(
       new Date(state.youtube?.current?.checkedAt || 0).getTime(),
       new Date(state.meta?.current?.checkedAt || 0).getTime(),
+      new Date(state.instagramDirect?.current?.checkedAt || 0).getTime(),
       new Date(state.tiktok?.current?.checkedAt || 0).getTime()
     );
     if (!newest || Date.now() - newest > 12 * 60 * 60 * 1000) refreshAll();

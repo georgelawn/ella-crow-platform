@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.instagram-stats]
 verify_jwt = false
 
+[functions.instagram-direct-auth]
+verify_jwt = false
+
+[functions.instagram-direct-stats]
+verify_jwt = false
+
 [functions.tiktok-auth]
 verify_jwt = false
 

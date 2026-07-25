@@ -7,5 +7,6 @@ window.ELLA_CLOUD_CONFIG = {
   youtubeChannelId: "UCbZAHmVbINt96YrYrotvB1Q",
   youtubeStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/youtube-stats",
   instagramStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/instagram-stats",
+  instagramDirectStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/instagram-direct-stats?account=secondary",
   tiktokStatsUrl: "https://hmwnkhgsocdevehebjpq.supabase.co/functions/v1/tiktok-stats"
 };

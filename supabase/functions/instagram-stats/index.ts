@@ -205,6 +205,91 @@ function facebookVideoAttachments(post: {
   });
 }
 
+type ConnectedPage = {
+  id: string;
+  name?: string;
+  access_token?: string;
+  instagram_business_account?: { id?: string };
+};
+
+async function instagramSnapshot(
+  page: ConnectedPage,
+  configuredAccessToken: string,
+) {
+  const instagramId = page.instagram_business_account?.id;
+  if (!instagramId) throw new Error(`Facebook Page ${page.id} has no Instagram account.`);
+
+  const accessToken = page.access_token || configuredAccessToken;
+  const account = await graphRequest(instagramId, {
+    fields: "id,username,name,profile_picture_url,followers_count,media_count",
+  }, accessToken);
+  const mediaPayload = await graphRequest(`${account.id}/media`, {
+    fields: "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
+    limit: "24",
+  }, accessToken);
+  const recentMedia = (mediaPayload.data || []).filter(
+    (media: { timestamp?: string }) => media.timestamp &&
+      new Date(media.timestamp) >= new Date(monthStartIso()),
+  );
+  const [insights, reach, profileViews, accountViews] = await Promise.all([
+    Promise.all(
+      recentMedia.map((media: { id: string }) => mediaInsights(media.id, accessToken)),
+    ),
+    accountInsight(account.id, "reach", accessToken),
+    accountInsight(account.id, "profile_views", accessToken),
+    accountInsight(account.id, "views", accessToken),
+  ]);
+
+  const accountSummary = {
+    id: account.id,
+    username: account.username || "",
+    name: account.name || account.username || "Instagram account",
+    thumbnail: account.profile_picture_url || "",
+    followers: numberValue(account.followers_count),
+    mediaCount: numberValue(account.media_count),
+  };
+
+  return {
+    account: accountSummary,
+    month: {
+      reach,
+      profileViews,
+      views: accountViews,
+      posts: recentMedia.length,
+    },
+    media: recentMedia.map((media: {
+      id: string;
+      caption?: string;
+      media_type?: string;
+      media_product_type?: string;
+      media_url?: string;
+      thumbnail_url?: string;
+      permalink?: string;
+      timestamp?: string;
+      like_count?: number;
+      comments_count?: number;
+    }, index: number) => ({
+      id: media.id,
+      accountId: accountSummary.id,
+      accountName: accountSummary.name,
+      accountUsername: accountSummary.username,
+      caption: media.caption || "Instagram post",
+      mediaType: media.media_type || "",
+      productType: media.media_product_type || "",
+      thumbnail: media.thumbnail_url || media.media_url || "",
+      permalink: media.permalink || "",
+      publishedAt: media.timestamp || "",
+      likes: numberValue(media.like_count),
+      comments: numberValue(media.comments_count),
+      views: numberValue(insights[index]?.views),
+      reach: numberValue(insights[index]?.reach),
+      saved: numberValue(insights[index]?.saved),
+      shares: numberValue(insights[index]?.shares),
+      interactions: numberValue(insights[index]?.total_interactions),
+    })),
+  };
+}
+
 export default {
   async fetch(request: Request) {
   const origin = request.headers.get("origin");
@@ -227,25 +312,20 @@ export default {
   }
 
   try {
-    let page: {
-      id: string;
-      name?: string;
-      access_token?: string;
-      instagram_business_account?: { id?: string };
-    } | undefined;
+    let pages: ConnectedPage[] = [];
 
     try {
       const tokenOwner = await graphRequest("me", {
         fields: "id,name,instagram_business_account",
       }, configuredAccessToken);
       if (tokenOwner.instagram_business_account?.id) {
-        page = tokenOwner;
+        pages = [tokenOwner];
       }
     } catch (error) {
       console.warn("Configured token is not a direct Page token", error);
     }
 
-    if (!page) {
+    if (!pages.length) {
       const pagesPayload = await graphRequest("me/accounts", {
         fields: "id,name,access_token",
         limit: "100",
@@ -267,22 +347,49 @@ export default {
           }
         }),
       );
-      page = connectedPages.find(
+      pages = connectedPages.filter(
         (candidate: { instagram_business_account?: { id?: string } }) =>
           candidate.instagram_business_account?.id,
       );
     }
 
-    if (!page?.instagram_business_account?.id) {
+    if (!pages.length) {
       throw new Error(
         "No Instagram professional account is connected to a Facebook Page managed by this login.",
       );
     }
 
+    const page = pages[0];
     const accessToken = page.access_token || configuredAccessToken;
-    const account = await graphRequest(page.instagram_business_account.id, {
-      fields: "id,username,name,profile_picture_url,followers_count,media_count",
-    }, accessToken);
+    const instagramResults = await Promise.allSettled(
+      pages.map((connectedPage) => instagramSnapshot(connectedPage, configuredAccessToken)),
+    );
+    const instagramSnapshots = instagramResults.flatMap((result, index) => {
+      if (result.status === "fulfilled") return [result.value];
+      console.warn(`Instagram account on Facebook Page ${pages[index].id} unavailable`, result.reason);
+      return [];
+    });
+    if (!instagramSnapshots.length) {
+      throw new Error("Connected Instagram accounts could not be fetched.");
+    }
+    const accounts = instagramSnapshots.map((snapshot) => snapshot.account);
+    const media = instagramSnapshots
+      .flatMap((snapshot) => snapshot.media)
+      .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)));
+    const month = instagramSnapshots.reduce((total, snapshot) => ({
+      reach: total.reach + snapshot.month.reach,
+      profileViews: total.profileViews + snapshot.month.profileViews,
+      views: total.views + snapshot.month.views,
+      posts: total.posts + snapshot.month.posts,
+    }), { reach: 0, profileViews: 0, views: 0, posts: 0 });
+    const account = accounts.length === 1 ? accounts[0] : {
+      id: accounts.map((item) => item.id).join(","),
+      username: "",
+      name: `${accounts.length} Instagram accounts`,
+      thumbnail: accounts[0].thumbnail,
+      followers: accounts.reduce((sum, item) => sum + item.followers, 0),
+      mediaCount: accounts.reduce((sum, item) => sum + item.mediaCount, 0),
+    };
     let pageDetails: {
       fan_count?: number;
       followers_count?: number;
@@ -296,10 +403,6 @@ export default {
     } catch (error) {
       console.warn("Facebook Page details unavailable", error);
     }
-    const mediaPayload = await graphRequest(`${account.id}/media`, {
-      fields: "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count",
-      limit: "24",
-    }, accessToken);
     let pagePostsPayload: {
       data?: Array<{
         id: string;
@@ -330,17 +433,7 @@ export default {
       console.warn("Facebook Page posts unavailable", error);
     }
 
-    const recentMedia = (mediaPayload.data || []).filter(
-      (media: { timestamp?: string }) => media.timestamp &&
-        new Date(media.timestamp) >= new Date(monthStartIso()),
-    );
-    const insights = await Promise.all(
-      recentMedia.map((media: { id: string }) => mediaInsights(media.id, accessToken)),
-    );
-    const [reach, profileViews, accountViews, pageImpressions, pageEngagedUsers] = await Promise.all([
-      accountInsight(account.id, "reach", accessToken),
-      accountInsight(account.id, "profile_views", accessToken),
-      accountInsight(account.id, "views", accessToken),
+    const [pageImpressions, pageEngagedUsers] = await Promise.all([
       pageInsight(page.id, "page_media_view,page_views_total", accessToken),
       pageInsight(page.id, "page_post_engagements", accessToken),
     ]);
@@ -456,45 +549,16 @@ export default {
         },
         account: {
           id: account.id,
-          username: account.username || "3llacrow",
-          name: account.name || "Ella Crow",
-          thumbnail: account.profile_picture_url || "",
-          followers: numberValue(account.followers_count),
-          mediaCount: numberValue(account.media_count),
+          username: account.username,
+          name: account.name,
+          thumbnail: account.thumbnail,
+          followers: account.followers,
+          mediaCount: account.mediaCount,
         },
-        month: {
-          reach,
-          profileViews,
-          views: accountViews,
-          posts: recentMedia.length,
-        },
-        media: recentMedia.map((media: {
-          id: string;
-          caption?: string;
-          media_type?: string;
-          media_product_type?: string;
-          media_url?: string;
-          thumbnail_url?: string;
-          permalink?: string;
-          timestamp?: string;
-          like_count?: number;
-          comments_count?: number;
-        }, index: number) => ({
-          id: media.id,
-          caption: media.caption || "Instagram post",
-          mediaType: media.media_type || "",
-          productType: media.media_product_type || "",
-          thumbnail: media.thumbnail_url || media.media_url || "",
-          permalink: media.permalink || "",
-          publishedAt: media.timestamp || "",
-          likes: numberValue(media.like_count),
-          comments: numberValue(media.comments_count),
-          views: numberValue(insights[index]?.views),
-          reach: numberValue(insights[index]?.reach),
-          saved: numberValue(insights[index]?.saved),
-          shares: numberValue(insights[index]?.shares),
-          interactions: numberValue(insights[index]?.total_interactions),
-        })),
+        accounts,
+        accountCount: accounts.length,
+        month,
+        media,
       },
     }, 200, origin);
   } catch (error) {

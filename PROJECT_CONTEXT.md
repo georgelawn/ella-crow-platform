@@ -13,12 +13,22 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Shared state: browser `localStorage`, synchronized by `app-cloud.js`
 - Database: Supabase project `hmwnkhgsocdevehebjpq`
 - Social integrations: Supabase Edge Functions for YouTube, Instagram/Facebook,
-  and TikTok. TikTok supports multiple OAuth account slots through
+  and TikTok. Instagram discovery collects every professional account connected
+  to a Facebook Page returned by the configured Meta login and combines their
+  audience, monthly insights, and media into one dashboard snapshot; Facebook
+  reporting remains tied to the first/primary connected Page. TikTok supports
+  multiple OAuth account slots through
   `tiktok_tokens.account_key`; the stats function combines connected slots into
   one dashboard snapshot. `tiktok-stats` paginates TikTok's video list with
   cursors, up to 25 pages of 20 videos per connected account, so the dashboard
   stores all videos currently exposed by TikTok's API rather than only the first
   page.
+  A second, independent Instagram source uses Business Login for Instagram via
+  `instagram-direct-auth` and `instagram-direct-stats`. Its provider token is
+  stored in `instagram_direct_tokens`, its OAuth state in
+  `instagram_direct_oauth_states`, and its daily snapshots use the separate
+  `instagram_direct` platform key so the two Instagram accounts are never
+  combined in reporting.
 - Calendar integration: Google Apps Script web app
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat
@@ -70,20 +80,22 @@ update task for each gig after its date has passed. Completing it records
 
 ## Live Supabase State
 
-As inspected on June 15, 2026:
+As inspected on July 22, 2026:
 
 - Project status: active and healthy
 - Postgres: 17, region `eu-west-1`
 - Public tables: `ella_crow_store`, `bio_link_clicks`, `social_snapshots`,
-  `tiktok_oauth_states`, and `tiktok_tokens`
-- RLS: enabled on all five public tables
-- Active Edge Functions: `youtube-stats`, `instagram-stats`, `tiktok-auth`, and
+  `tiktok_oauth_states`, `tiktok_tokens`, `instagram_direct_oauth_states`, and
+  `instagram_direct_tokens`
+- RLS: enabled on all seven public tables
+- Active Edge Functions: `youtube-stats`, `instagram-stats`,
+  `instagram-direct-auth`, `instagram-direct-stats`, `tiktok-auth`, and
   `tiktok-stats`
-- Recorded Supabase migrations: none
+- Recorded Supabase migration: `instagram_direct_login`
 
-The SQL files currently in `supabase/` are setup scripts, not migration-history
-files. Future schema changes should use `supabase/migrations/` so the repository
-can explain and reproduce the live database state.
+The older SQL files directly under `supabase/` are setup scripts. Migration
+history is recorded under `supabase/migrations/` so the repository can explain
+and reproduce subsequent live database changes.
 
 ## Security Model
 

@@ -78,7 +78,7 @@
 .social-platform-grid {
   display: grid;
   gap: clamp(3px, 0.8vw, 12px);
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .platform-overview-card {
@@ -201,6 +201,7 @@
 .platform-youtube { background: #f1dfb0; }
 .platform-shorts { background: #e8d29d; }
 .platform-instagram { background: #ead3c7; }
+.platform-instagram-direct { background: #efdce2; }
 .platform-facebook { background: #d9dfdd; }
 .platform-tiktok {
   background: var(--brown);
@@ -210,6 +211,7 @@
 .platform-tiktok .platform-card-signal,
 .platform-tiktok > small { color: rgba(255, 244, 205, 0.66); }
 .platform-instagram .platform-card-top i { border-radius: 10px; }
+.platform-instagram-direct .platform-card-top i { border-radius: 10px; }
 .platform-facebook .platform-card-top i { border-radius: 50%; }
 .platform-shorts .platform-card-top i { border-radius: 50% 9px 50% 9px; }
 .platform-youtube .platform-card-top i { border-radius: 9px; }
@@ -786,7 +788,7 @@
 .creative-platform-strip {
   display: grid;
   gap: 8px;
-  grid-template-columns: repeat(4, minmax(86px, 1fr));
+  grid-template-columns: repeat(5, minmax(72px, 1fr));
 }
 
 .creative-platform-strip a {
@@ -7825,6 +7827,7 @@ a:focus-visible {
 .platform-youtube,
 .platform-shorts,
 .platform-instagram,
+.platform-instagram-direct,
 .platform-facebook {
   background: var(--surface);
 }
