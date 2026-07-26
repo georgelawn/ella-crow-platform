@@ -529,8 +529,8 @@ function loadEllaStore_() {
 }
 
 function derivedStatus_(gig) {
-  if (gig.manualStatus) return gig.status || "booked";
   if (validDateKey_(gig.date) && gig.date < todayKey_()) return "complete";
+  if (gig.manualStatus) return gig.status || "booked";
   return gig.status || "booked";
 }
 

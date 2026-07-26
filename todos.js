@@ -186,8 +186,8 @@ function localDateString(date) {
 }
 
 function derivedStatus(gig) {
-  if (gig.manualStatus) return gig.status || "booked";
   if (dateStamp(gig.date) < todayStamp()) return "complete";
+  if (gig.manualStatus) return gig.status || "booked";
   return gig.status || "booked";
 }
 

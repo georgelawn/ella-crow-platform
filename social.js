@@ -6,9 +6,23 @@
   const LOCAL_TIKTOK_KEY = "ella-crow-social-tiktok-v1";
   const LOCAL_CREATIVE_MATCHES_KEY = "ella-crow-social-creative-matches-v1";
   const SOCIAL_HISTORY_START = "2026-06-01";
-  const PLATFORM_ORDER = ["youtube", "shorts", "instagram", "instagram-direct", "facebook", "tiktok"];
-  const COMPARISON_PLATFORMS = ["shorts", "instagram", "instagram-direct", "facebook", "tiktok"];
-  const CREATIVE_PLATFORMS = ["tiktok", "youtube", "instagram", "instagram-direct", "facebook"];
+  const INSTAGRAM_DIRECT_VISIBLE = false;
+  const PLATFORM_ORDER = [
+    "youtube", "shorts", "instagram",
+    ...(INSTAGRAM_DIRECT_VISIBLE ? ["instagram-direct"] : []),
+    "facebook", "tiktok"
+  ];
+  const COMPARISON_PLATFORMS = [
+    "shorts", "instagram",
+    ...(INSTAGRAM_DIRECT_VISIBLE ? ["instagram-direct"] : []),
+    "facebook", "tiktok"
+  ];
+  const HISTORY_PLATFORMS = ["shorts", "instagram", "facebook", "tiktok"];
+  const CREATIVE_PLATFORMS = [
+    "tiktok", "youtube", "instagram",
+    ...(INSTAGRAM_DIRECT_VISIBLE ? ["instagram-direct"] : []),
+    "facebook"
+  ];
   const PLATFORM_LABELS = {
     youtube: "YouTube",
     shorts: "YouTube Shorts",
@@ -45,7 +59,7 @@
     creativeSearch: null,
     socialPeriod: "30",
     bioPeriod: "30",
-    historyPlatforms: new Set(PLATFORM_ORDER),
+    historyPlatforms: new Set(HISTORY_PLATFORMS),
     historyZoom: 1,
     bio: null,
     activePlatform: null,
@@ -553,71 +567,18 @@
     tiktok: "#23170f"
   };
 
-  function snapshotItems(platform, snapshot) {
-    if (!snapshot) return [];
-    if (platform === "youtube" || platform === "shorts") {
-      return (snapshot.videos || [])
-        .filter((video) => platform === "shorts" ? isShort(video) : !isShort(video));
-    }
-    if (platform === "instagram") return snapshot.media || [];
-    if (platform === "instagram-direct") return snapshot.media || [];
-    if (platform === "facebook") {
-      return (snapshot.facebook?.posts || []).filter(isFacebookVideoPost);
-    }
-    if (platform === "tiktok") return snapshot.videos || [];
-    return [];
-  }
-
-  function snapshotViewGain(platform, current, previous) {
-    const previousTime = new Date(previous?.checkedAt).getTime();
-    const previousItems = new Map(
-      snapshotItems(platform, previous).map((item) => [String(item.id), item])
-    );
-    return snapshotItems(platform, current).reduce((sum, item) => {
-      const earlier = previousItems.get(String(item.id));
-      if (earlier) {
-        return sum + Math.max(0, numberValue(item.views) - numberValue(earlier.views));
-      }
-      const publishedTime = new Date(item.publishedAt).getTime();
-      return sum + (Number.isFinite(publishedTime) && publishedTime >= previousTime
-        ? numberValue(item.views)
-        : 0);
-    }, 0);
-  }
-
-  function platformHistory(platform) {
-    if (platform === "youtube" || platform === "shorts") return state.youtube?.history || [];
-    if (platform === "instagram" || platform === "facebook") return state.meta?.history || [];
-    if (platform === "instagram-direct") return state.instagramDirect?.history || [];
-    if (platform === "tiktok") return state.tiktok?.history || [];
-    return [];
-  }
-
-  function historySeries(platform) {
+  function publishedViewSeries(platform) {
     const byDay = new Map();
-    platformHistory(platform).forEach((snapshot) => {
-      const time = new Date(snapshot?.checkedAt).getTime();
+    allPlatformContent(platform).forEach((item) => {
+      const time = new Date(item?.publishedAt).getTime();
       if (!Number.isFinite(time)) return;
-      byDay.set(new Date(time).toISOString().slice(0, 10), {
-        time,
-        snapshot
-      });
-    });
-    const snapshots = [...byDay.entries()]
-      .map(([date, value]) => ({ date, ...value }))
-      .sort((a, b) => a.time - b.time);
-    const daily = new Map();
-    snapshots.forEach((snapshot, index) => {
-      if (!index) {
-        daily.set(snapshot.date, null);
-        return;
-      }
-      daily.set(
-        snapshot.date,
-        snapshotViewGain(platform, snapshot.snapshot, snapshots[index - 1].snapshot)
+      const day = new Date(time).toISOString().slice(0, 10);
+      byDay.set(
+        day,
+        numberValue(byDay.get(day)) + numberValue(item.views || item.reach)
       );
     });
-    return daily;
+    return byDay;
   }
 
   function dateRange(seriesByPlatform) {
@@ -659,7 +620,7 @@
 
   function renderHistoryFilters() {
     elements.historyFilters.replaceChildren();
-    PLATFORM_ORDER.forEach((platform) => {
+    HISTORY_PLATFORMS.forEach((platform) => {
       const label = document.createElement("label");
       label.className = "social-history-filter";
       label.innerHTML = `
@@ -688,14 +649,16 @@
   function renderHistoryChart({ scrollToLatest = true } = {}) {
     renderHistoryFilters();
     syncHistoryZoomControl();
-    const seriesByPlatform = new Map(PLATFORM_ORDER.map((platform) => [platform, historySeries(platform)]));
+    const seriesByPlatform = new Map(
+      HISTORY_PLATFORMS.map((platform) => [platform, publishedViewSeries(platform)])
+    );
     const dates = dateRange(seriesByPlatform);
-    const visible = PLATFORM_ORDER.filter((platform) => state.historyPlatforms.has(platform));
+    const visible = HISTORY_PLATFORMS.filter((platform) => state.historyPlatforms.has(platform));
     elements.historyChart.replaceChildren();
     elements.historyYAxis.replaceChildren();
     if (!dates.length || !visible.length) {
       elements.historyRange.textContent = dates.length ? "No platforms selected" : "Awaiting daily snapshots";
-      elements.historyChart.innerHTML = `<div class="social-history-empty"><strong>${dates.length ? "Choose a platform" : "History is building"}</strong><span>${dates.length ? "Use the filters above to add chart lines." : "Two saved days are needed before the rolling average can be calculated."}</span></div>`;
+      elements.historyChart.innerHTML = `<div class="social-history-empty"><strong>${dates.length ? "Choose a platform" : "No published content yet"}</strong><span>${dates.length ? "Use the filters above to add chart lines." : "Published posts and Shorts will appear here after the next refresh."}</span></div>`;
       return;
     }
 
@@ -827,10 +790,10 @@
     ];
     const dayData = new Map(weekdayOrder.map((day) => [
       day,
-      { shorts: 0, instagram: 0, "instagram-direct": 0, facebook: 0, tiktok: 0 }
+      Object.fromEntries(COMPARISON_PLATFORMS.map((platform) => [platform, 0]))
     ]));
 
-    ["shorts", "instagram", "instagram-direct", "facebook", "tiktok"].forEach((platform) => {
+    COMPARISON_PLATFORMS.forEach((platform) => {
       const content = platform === "shorts"
         ? contentForPeriod("shorts")
         : platformData(platform).content;
@@ -1243,7 +1206,7 @@
         .filter(({ match }) => match && match.score >= 48)
         .sort((a, b) => b.match.score - a.match.score);
 
-      ["shorts", "instagram", "facebook", "tiktok"].forEach((platform) => {
+      CREATIVE_PLATFORMS.forEach((platform) => {
         if (platform === seed.platform) return;
         const best = candidates.find(({ candidate }) => candidate.platform === platform);
         if (!best) return;
@@ -1814,7 +1777,7 @@
     state.refreshing = true;
     elements.refresh.disabled = true;
     elements.refresh.textContent = "Refreshing";
-    setMessage("Fetching YouTube, both Instagram accounts, Facebook and TikTok...", "loading");
+    setMessage("Fetching YouTube, Instagram, Facebook and TikTok...", "loading");
     const results = await Promise.allSettled([
       fetchSnapshot(config.youtubeStatsUrl, "YouTube"),
       fetchSnapshot(config.instagramStatsUrl, "Instagram and Facebook"),

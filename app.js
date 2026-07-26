@@ -206,10 +206,9 @@ function todayStamp() {
 }
 
 function derivedStatus(gig) {
-  if (gig.manualStatus) return gig.status || "booked";
-
   const date = new Date(`${gig.date}T00:00:00`);
   if (date.getTime() < todayStamp()) return "complete";
+  if (gig.manualStatus) return gig.status || "booked";
   return gig.status || "booked";
 }
 

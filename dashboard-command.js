@@ -69,8 +69,8 @@
   }
 
   function gigStatus(gig) {
-    if (gig.manualStatus) return gig.status || "booked";
     if (isPast(gig.date)) return "complete";
+    if (gig.manualStatus) return gig.status || "booked";
     return gig.status || "booked";
   }
 
