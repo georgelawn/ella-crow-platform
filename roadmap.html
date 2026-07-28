@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | Roadmap</title>
+    <link rel="stylesheet" href="styles.css?v=51">
+  </head>
+  <body class="roadmap-page">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>Roadmap</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link active" href="roadmap.html">Roadmap</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="roadmap-shell">
+      <section class="roadmap-hero">
+        <div class="roadmap-hero-copy">
+          <p class="roadmap-kicker">The road to Signing</p>
+          <h2 id="roadmapTitle">The next chapter</h2>
+          <p id="roadmapDescription">Build momentum, open the right doors and arrive at 4 December with the story moving.</p>
+        </div>
+        <div class="roadmap-hero-actions">
+          <button class="roadmap-button roadmap-button-primary" id="addCheckpointButton" type="button">Add checkpoint</button>
+          <button class="roadmap-button" id="editRoadmapButton" type="button">Edit journey</button>
+        </div>
+      </section>
+
+      <section class="roadmap-command" aria-label="Roadmap progress">
+        <article class="roadmap-progress-card">
+          <div class="roadmap-progress-copy">
+            <span>Journey progress</span>
+            <strong id="roadmapProgressValue">0%</strong>
+          </div>
+          <div class="roadmap-progress-track" aria-hidden="true">
+            <i id="roadmapProgressFill"></i>
+          </div>
+        </article>
+        <article>
+          <span>Next checkpoint</span>
+          <strong id="nextCheckpointLabel">—</strong>
+          <small id="nextCheckpointDate">No date</small>
+        </article>
+        <article>
+          <span>Open actions</span>
+          <strong id="openRoadmapTasks">0</strong>
+          <small id="overdueRoadmapTasks">Nothing overdue</small>
+        </article>
+        <article class="roadmap-signal" id="roadmapSignal">
+          <span>Current signal</span>
+          <strong id="roadmapSignalLabel">On track</strong>
+          <small id="roadmapSignalDetail">The journey is moving as planned.</small>
+        </article>
+      </section>
+
+      <section class="roadmap-stage" aria-label="Scrollable campaign roadmap">
+        <div class="roadmap-stage-head">
+          <div>
+            <p class="roadmap-kicker" id="journeyRangeLabel">July — December 2026</p>
+          </div>
+          <div class="roadmap-stage-controls">
+            <span>Scroll to travel</span>
+            <button class="roadmap-icon-button" id="scrollRoadmapBack" type="button" aria-label="Scroll roadmap left">←</button>
+            <button class="roadmap-icon-button" id="scrollRoadmapForward" type="button" aria-label="Scroll roadmap right">→</button>
+          </div>
+        </div>
+
+        <div class="roadmap-viewport" id="roadmapViewport" tabindex="0">
+          <div class="roadmap-track" id="roadmapTrack"></div>
+        </div>
+      </section>
+
+      <section class="roadmap-footnote">
+        <p><span></span>Every checkpoint, date and goal can be changed. Roadmap actions can also be sent to the main To Do list.</p>
+      </section>
+    </main>
+
+    <dialog class="roadmap-dialog" id="checkpointDialog">
+      <form id="checkpointForm" method="dialog" autocomplete="off">
+        <input id="checkpointId" type="hidden">
+        <div class="roadmap-dialog-head">
+          <div>
+            <p class="roadmap-kicker">Journey checkpoint</p>
+            <h2 id="checkpointDialogTitle">Add checkpoint</h2>
+          </div>
+          <button class="roadmap-dialog-close" data-close-dialog type="button" aria-label="Close">×</button>
+        </div>
+
+        <label>
+          Checkpoint title
+          <input id="checkpointTitle" required placeholder="e.g. First label meetings">
+        </label>
+
+        <div class="field-row">
+          <label>
+            Date
+            <input id="checkpointDate" type="date" required>
+          </label>
+          <label>
+            Status
+            <select id="checkpointStatus">
+              <option value="planned">Planned</option>
+              <option value="active">In progress</option>
+              <option value="complete">Complete</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Goal
+          <textarea id="checkpointGoal" rows="3" required placeholder="What needs to be true at this point?"></textarea>
+        </label>
+
+        <label>
+          Notes
+          <textarea id="checkpointNotes" rows="3" placeholder="Context, decisions or useful links"></textarea>
+        </label>
+
+        <div class="roadmap-dialog-actions">
+          <button class="roadmap-button roadmap-button-danger" id="deleteCheckpointButton" type="button">Delete</button>
+          <span></span>
+          <button class="roadmap-button" data-close-dialog type="button">Cancel</button>
+          <button class="roadmap-button roadmap-button-primary" type="submit">Save checkpoint</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="roadmap-dialog" id="taskDialog">
+      <form id="taskForm" method="dialog" autocomplete="off">
+        <input id="taskCheckpointId" type="hidden">
+        <input id="roadmapTaskId" type="hidden">
+        <div class="roadmap-dialog-head">
+          <div>
+            <p class="roadmap-kicker">Checkpoint action</p>
+            <h2 id="taskDialogTitle">Add action</h2>
+          </div>
+          <button class="roadmap-dialog-close" data-close-dialog type="button" aria-label="Close">×</button>
+        </div>
+
+        <label>
+          Action
+          <input id="roadmapTaskTitle" required placeholder="e.g. Finalise the one-page label deck">
+        </label>
+
+        <label>
+          Due date
+          <input id="roadmapTaskDueDate" type="date" required>
+        </label>
+
+        <label class="roadmap-check-option">
+          <input id="roadmapTaskAddToTodo" type="checkbox" checked>
+          <span>Add this action to the main To Do list</span>
+        </label>
+
+        <div class="roadmap-dialog-actions">
+          <button class="roadmap-button roadmap-button-danger" id="deleteRoadmapTaskButton" type="button">Delete</button>
+          <span></span>
+          <button class="roadmap-button" data-close-dialog type="button">Cancel</button>
+          <button class="roadmap-button roadmap-button-primary" type="submit">Save action</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="roadmap-dialog" id="journeyDialog">
+      <form id="journeyForm" method="dialog" autocomplete="off">
+        <div class="roadmap-dialog-head">
+          <div>
+            <p class="roadmap-kicker">Journey settings</p>
+            <h2>Edit roadmap</h2>
+          </div>
+          <button class="roadmap-dialog-close" data-close-dialog type="button" aria-label="Close">×</button>
+        </div>
+
+        <label>
+          Roadmap title
+          <input id="journeyTitle" required>
+        </label>
+
+        <label>
+          Description
+          <textarea id="journeyDescription" rows="3" required></textarea>
+        </label>
+
+        <div class="field-row">
+          <label>
+            Journey begins
+            <input id="journeyStartDate" type="date" required>
+          </label>
+          <label>
+            Destination
+            <input id="journeyTargetDate" type="date" required>
+          </label>
+        </div>
+
+        <div class="roadmap-dialog-actions">
+          <span></span>
+          <span></span>
+          <button class="roadmap-button" data-close-dialog type="button">Cancel</button>
+          <button class="roadmap-button roadmap-button-primary" type="submit">Save journey</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=13"></script>
+    <script src="dashboard-command.js?v=6"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="roadmap.js?v=2"></script>
+  </body>
+</html>

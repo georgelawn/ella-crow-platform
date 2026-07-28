@@ -7,6 +7,7 @@
     "ella-crow-finance-v1",
     "ella-crow-finance-closes-v1",
     "ella-crow-projects-v1",
+    "ella-crow-roadmap-v1",
     "ella-crow-opportunities-v1",
     "ella-crow-opportunities",
     "ella-crow-email-opportunities-v1",

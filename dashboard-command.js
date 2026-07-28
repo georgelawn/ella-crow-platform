@@ -4,6 +4,7 @@
     sessions: "ella-crow-sessions-v1",
     finance: "ella-crow-finance-v1",
     projects: "ella-crow-projects-v1",
+    roadmap: "ella-crow-roadmap-v1",
     todos: "ella-crow-manual-todos-v1",
     opportunities: "ella-crow-opportunities-v1",
     contacts: "ella-crow-contacts-v1"
@@ -15,6 +16,15 @@
       return Array.isArray(value) ? value : [];
     } catch {
       return [];
+    }
+  }
+
+  function readObject(key) {
+    try {
+      const value = JSON.parse(localStorage.getItem(key) || "null");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
     }
   }
 
@@ -108,6 +118,7 @@
       sessions: readArray(keys.sessions),
       finance: readArray(keys.finance),
       projects: readArray(keys.projects),
+      roadmap: readObject(keys.roadmap),
       todos: readArray(keys.todos),
       opportunities: readArray(keys.opportunities),
       contacts: readArray(keys.contacts)
@@ -140,6 +151,24 @@
         date: item.deadline,
         weight: projectAtRisk(item) ? 3 : 1
       })),
+      ...(Array.isArray(data.roadmap.checkpoints) ? data.roadmap.checkpoints : []).flatMap((checkpoint) => [
+        {
+          area: "Roadmap",
+          title: checkpoint.title || "Untitled checkpoint",
+          detail: [checkpoint.status, dateLabel(checkpoint.date), checkpoint.goal].filter(Boolean).join(" · "),
+          href: "roadmap.html",
+          date: checkpoint.date,
+          weight: checkpoint.status === "active" ? 3 : checkpoint.status === "complete" ? 0 : 2
+        },
+        ...(Array.isArray(checkpoint.tasks) ? checkpoint.tasks : []).map((task) => ({
+          area: "Roadmap",
+          title: task.title || "Untitled roadmap action",
+          detail: [`Action for ${checkpoint.title || "checkpoint"}`, `Due ${dateLabel(task.dueDate)}`].join(" · "),
+          href: "roadmap.html",
+          date: task.dueDate,
+          weight: task.done ? 0 : 2
+        }))
+      ]),
       ...data.todos.map((item) => ({
         area: "To Do",
         title: item.title || "Untitled task",

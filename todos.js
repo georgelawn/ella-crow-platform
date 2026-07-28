@@ -443,7 +443,7 @@ function renderTodos() {
   renderSummary();
   const todos = filteredTodos().sort((a, b) => dateStamp(a.dueDate) - dateStamp(b.dueDate));
   emptyState.classList.toggle("visible", todos.length === 0);
-  const categories = ["Gigs", "Sessions", "Finance", "Opportunities"];
+  const categories = ["Roadmap", "Gigs", "Sessions", "Finance", "Opportunities"];
   todoList.innerHTML = categories.map((category) => {
     const categoryTodos = todos.filter((todo) => todo.category === category);
     if (!categoryTodos.length) return "";

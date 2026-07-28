@@ -33,6 +33,9 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat
 - Bio pages: embeddable Squarespace snippets in `squarespace-bio-links/`
+- Roadmap: `roadmap.html` and `roadmap.js` provide a horizontally scrollable,
+  editable campaign journey with checkpoints, actions, progress and schedule
+  health. Roadmap actions can be mirrored into the manual To Do list.
 
 Each main page has a matching JavaScript file. `styles.css` is shared across
 the dashboard. `cloud-config.js` contains public browser configuration.
@@ -53,6 +56,7 @@ The dashboard uses these local storage keys:
 - `ella-crow-finance-v1`
 - `ella-crow-finance-closes-v1`
 - `ella-crow-projects-v1`
+- `ella-crow-roadmap-v1`
 - `ella-crow-manual-todos-v1`
 - `ella-crow-todo-snoozes-v1`
 - `ella-crow-auto-todo-completions-v1`
@@ -67,6 +71,12 @@ preserve existing user data.
 `ella-crow-social-creative-matches-v1` stores manual cross-platform video
 matches by group id and may include `__mergedGroups`, an array of manually
 merged creative group-id sets used by the Social page.
+
+Roadmap actions mirrored into `ella-crow-manual-todos-v1` use the `Roadmap`
+category and retain a `roadmapTaskId`. Completion is synchronized in both
+directions whenever the Roadmap page is open. The roadmap object and manual
+To Do list remain separate storage keys so deleting a To Do does not delete its
+campaign checkpoint.
 
 Finance transactions now track the operational money source with `paidFrom`
 (`monzo`, `george`, or `ella`) and default historic entries to `monzo`.
