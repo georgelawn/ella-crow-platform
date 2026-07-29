@@ -33,6 +33,11 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat
 - Bio pages: embeddable Squarespace snippets in `squarespace-bio-links/`
+- EPK: `epk.html` is the standalone source embedded into Squarespace using
+  `squarespace-epk-embed.html`. GitHub Pages serves the HTML because Supabase
+  Edge Functions and Storage intentionally return HTML as plain text. The EPK
+  sends its rendered height to the parent page with `postMessage`; the
+  Squarespace snippet validates the GitHub Pages origin before resizing.
 - Roadmap: `roadmap.html` and `roadmap.js` provide a horizontally scrollable,
   editable campaign journey with checkpoints, actions, progress and schedule
   health. Roadmap actions can be mirrored into the manual To Do list.
@@ -135,6 +140,11 @@ used when the user explicitly requests Netlify.
 
 Supabase Edge Functions are deployed separately from the static site. A GitHub
 push does not by itself deploy changed Edge Functions or database SQL.
+
+The public EPK is deployed with the static site at
+`https://georgelawn.github.io/ella-crow-platform/epk.html`. After EPK changes
+are pushed to `main`, the Squarespace iframe reflects them without replacing
+the Squarespace code block.
 
 Google Apps Script is also deployed separately from the static site. The source
 of truth is `apps-script/google-calendar-sync-webapp.gs`. For Telegram due-item

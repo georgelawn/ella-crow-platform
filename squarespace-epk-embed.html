@@ -1,0 +1,32 @@
+<div style="width:100%;margin:0;padding:0;background:#edd286;overflow:hidden;">
+  <iframe
+    id="ella-epk"
+    src="https://georgelawn.github.io/ella-crow-platform/epk.html"
+    title="Ella Crow Electronic Press Kit"
+    scrolling="no"
+    loading="eager"
+    style="display:block;width:100%;height:2400px;margin:0;border:0;background:#edd286;overflow:hidden;"
+  ></iframe>
+</div>
+
+<script>
+  (() => {
+    const frame = document.getElementById("ella-epk");
+    if (!frame) return;
+
+    window.addEventListener("message", (event) => {
+      if (
+        event.origin !== "https://georgelawn.github.io" ||
+        event.source !== frame.contentWindow ||
+        event.data?.type !== "ella-epk-height"
+      ) {
+        return;
+      }
+
+      const height = Number(event.data.height);
+      if (Number.isFinite(height) && height > 0) {
+        frame.style.height = `${Math.ceil(height)}px`;
+      }
+    });
+  })();
+</script>
