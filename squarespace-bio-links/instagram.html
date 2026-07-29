@@ -1,3 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Ella Crow links for Instagram visitors.">
+<title>Ella Crow — Instagram Links</title>
+<style>
+  @font-face {
+    font-family: "Bitter";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("https://file.squarespace-cdn.com/content/v2/namespaces/fonts/libraries/sqsp/assets/44255219-9adc-43bf-8519-28a654d111c5/latin.woff2") format("woff2");
+  }
+  @font-face {
+    font-family: "Bitter";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("https://file.squarespace-cdn.com/content/v2/namespaces/fonts/libraries/sqsp/assets/6ad379fe-3a34-4b6d-ba88-661cd4579049/latin.woff2") format("woff2");
+  }
+  :root { --body-font-font-family: "Bitter"; }
+  html, body { margin: 0; background: transparent; }
+</style>
+</head>
+<body>
 <div id="ella-bio-links-instagram"></div>
 <style>
   #ella-bio-links-instagram {
@@ -179,6 +206,7 @@
 (() => {
   const root = document.querySelector("#ella-bio-links-instagram");
   const platform = "instagram";
+  const isPreview = new URLSearchParams(window.location.search).has("preview");
   const supabaseClient = window.supabase
     ? window.supabase.createClient(
         "https://hmwnkhgsocdevehebjpq.supabase.co",
@@ -210,7 +238,7 @@
   }
 
   function record(eventType, buttonName = null) {
-    if (!supabaseClient) return Promise.resolve();
+    if (isPreview || !supabaseClient) return Promise.resolve();
     return supabaseClient.from("bio_link_clicks").insert({ platform, event_type: eventType, button_name: buttonName });
   }
 
@@ -242,7 +270,7 @@
       event.preventDefault();
       const target = link.href;
       await Promise.race([record("click", destination.track), new Promise(resolve => setTimeout(resolve, 650))]);
-      window.location.assign(target);
+    window.top.location.assign(target);
     });
     return link;
   }
@@ -268,7 +296,7 @@
         event.preventDefault();
         const target = link.href;
         await Promise.race([record("click", item.label), new Promise(resolve => setTimeout(resolve, 650))]);
-        window.location.assign(target);
+      window.top.location.assign(target);
       });
       panel.append(link);
     });
@@ -298,3 +326,29 @@
   void Promise.resolve(record("view")).catch(() => {});
 })();
 </script>
+<script>
+(() => {
+  const root = document.querySelector("#ella-bio-links-instagram");
+  if (!root || window.parent === window) return;
+
+  const reportHeight = () => {
+    const styles = getComputedStyle(root);
+    const height = Math.ceil(
+      root.offsetHeight +
+      parseFloat(styles.marginTop || "0") +
+      parseFloat(styles.marginBottom || "0")
+    );
+    window.parent.postMessage(
+      { type: "ella-bio-links-height", platform: "instagram", height },
+      "*"
+    );
+  };
+
+  window.addEventListener("load", reportHeight);
+  new ResizeObserver(reportHeight).observe(root);
+  document.fonts?.ready.then(reportHeight);
+  reportHeight();
+})();
+</script>
+</body>
+</html>

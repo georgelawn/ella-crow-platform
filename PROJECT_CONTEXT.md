@@ -32,7 +32,12 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Calendar integration: Google Apps Script web app
 - Phone reminders: Google Apps Script daily trigger sends a Telegram due-item
   digest to a configured private chat
-- Bio pages: embeddable Squarespace snippets in `squarespace-bio-links/`
+- Bio pages: standalone Instagram, TikTok, YouTube, and Facebook link pages in
+  `squarespace-bio-links/`, each with a matching `*-embed.html` Squarespace
+  iframe snippet. The hosted pages retain Supabase `bio_link_clicks` tracking,
+  report their rendered height with `postMessage`, and navigate tracked links
+  in the top-level browser window. Add `?preview=1` when browser-testing a
+  hosted bio page so verification does not insert fake analytics events.
 - EPK: `epk.html` is the standalone source embedded into Squarespace using
   `squarespace-epk-embed.html`. GitHub Pages serves the HTML because Supabase
   Edge Functions and Storage intentionally return HTML as plain text. The EPK
