@@ -264,16 +264,12 @@
     const link = document.createElement("a");
     link.className = `ella-link${destination.primary ? " ella-link-primary" : ""}`;
     link.href = trackedUrl(destination.url);
+    link.target = "_top";
     const icon = destination.logo
       ? `<img src="${destination.logo}" alt="">`
       : `<span class="${destination.icon === "LIVE" ? "ella-live-badge" : "ella-text-badge"}">${destination.icon}</span>`;
     link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true">${destination.primary ? "&#8594;" : ""}</span>`;
-    link.addEventListener("click", async (event) => {
-      event.preventDefault();
-      const target = link.href;
-      await Promise.race([record("click", destination.track), new Promise(resolve => setTimeout(resolve, 650))]);
-    window.top.location.assign(target);
-    });
+    link.addEventListener("click", () => { void Promise.resolve(record("click", destination.track)).catch(() => {}); });
     return link;
   }
 
@@ -292,14 +288,10 @@
       const link = document.createElement("a");
       link.className = "ella-music-option";
       link.href = trackedUrl(item.url);
+      link.target = "_top";
       const icon = item.logo ? `<img src="${item.logo}" alt="">` : item.icon;
       link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${item.label}<small>${item.detail}</small></span><span class="ella-link-end" aria-hidden="true"></span>`;
-      link.addEventListener("click", async (event) => {
-        event.preventDefault();
-        const target = link.href;
-        await Promise.race([record("click", item.label), new Promise(resolve => setTimeout(resolve, 650))]);
-      window.top.location.assign(target);
-      });
+      link.addEventListener("click", () => { void Promise.resolve(record("click", item.label)).catch(() => {}); });
       panel.append(link);
     });
     wrapper.append(summary, panel);
