@@ -227,7 +227,7 @@
   const destinations = [
     { label: "New Merch Out Now!", detail: "Shop the new collection", url: "https://ellacrow.bandcamp.com/", icon: hangerIcon, track: "New Merch", primary: true },
     { label: "Join the community 🐦‍⬛", detail: "WhatsApp community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/2d0f1e", track: "WhatsApp Community" },
-    { label: "Come and watch me live &#127908;", detail: "Tickets are here", url: "https://wegottickets.com/f/27781/#tickets", icon: "LIVE", track: "Next Gig Tickets" },
+    { label: "Headline Show @ The Victoria, Dalston - 4th December", detail: "(tickets coming soon)", icon: "LIVE" },
     { label: "New single: You Can't Have It out now", detail: "Spotify and Apple Music", music: true, icon: "&#9835;", track: "Music menu" }
   ];
 
@@ -260,15 +260,19 @@
   const list = root.querySelector(".ella-links-list");
 
   function buildLink(destination) {
-    const link = document.createElement("a");
+    const link = document.createElement(destination.url ? "a" : "div");
     link.className = `ella-link${destination.primary ? " ella-link-primary" : ""}`;
-    link.href = trackedUrl(destination.url);
-    link.target = "_top";
+    if (destination.url) {
+      link.href = trackedUrl(destination.url);
+      link.target = "_top";
+    }
     const icon = destination.logo
       ? `<img src="${destination.logo}" alt="">`
       : `<span class="${destination.icon === "LIVE" ? "ella-live-badge" : "ella-text-badge"}">${destination.icon}</span>`;
     link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true">${destination.primary ? "&#8594;" : ""}</span>`;
-    link.addEventListener("click", () => { void Promise.resolve(record("click", destination.track)).catch(() => {}); });
+    if (destination.url) {
+      link.addEventListener("click", () => { void Promise.resolve(record("click", destination.track)).catch(() => {}); });
+    }
     return link;
   }
 
