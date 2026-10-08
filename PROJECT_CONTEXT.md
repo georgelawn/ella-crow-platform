@@ -46,6 +46,15 @@ contacts, calendar events, social performance, and bio-link analytics.
 - Roadmap: `roadmap.html` and `roadmap.js` provide a horizontally scrollable,
   editable campaign journey with checkpoints, actions, progress and schedule
   health. Roadmap actions can be mirrored into the manual To Do list.
+- December show campaign: `gig-campaign.html` and `gig-campaign.js` provide a
+  dedicated command centre for the 4 December 2026 headline show. It tracks
+  the 200-ticket target, sales pace and milestones, the pre-gig single plan,
+  campaign actions, industry invitations, a friends/family/fans audience CRM,
+  and the current campaign phase. The CRM records invitation state, follow-up
+  date, owner and attributed ticket purchases. Actions can be mirrored into the
+  manual To Do list. All editable campaign data is stored inside the
+  `ella-crow-december-show-v1` object and synchronized through Supabase; HTML
+  edits are not needed for operational updates.
 
 Each main page has a matching JavaScript file. `styles.css` is shared across
 the dashboard. `cloud-config.js` contains public browser configuration.
@@ -67,6 +76,7 @@ The dashboard uses these local storage keys:
 - `ella-crow-finance-closes-v1`
 - `ella-crow-projects-v1`
 - `ella-crow-roadmap-v1`
+- `ella-crow-december-show-v1`
 - `ella-crow-manual-todos-v1`
 - `ella-crow-todo-snoozes-v1`
 - `ella-crow-auto-todo-completions-v1`

@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Ella Crow | 4 December Campaign</title>
+    <link rel="stylesheet" href="styles.css?v=53">
+  </head>
+  <body class="campaign-page">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Ella Crow Management</p>
+        <h1>4 December</h1>
+      </div>
+      <details class="nav-menu">
+        <summary class="ghost-button nav-menu-button" aria-label="Open navigation menu">
+          <span class="menu-icon" aria-hidden="true"></span>
+          <span>Menu</span>
+        </summary>
+        <div class="header-actions">
+          <a class="ghost-button nav-link" href="index.html">Gigs</a>
+          <a class="ghost-button nav-link" href="calendar.html">Calendar</a>
+          <a class="ghost-button nav-link" href="sessions.html">Sessions</a>
+          <a class="ghost-button nav-link" href="finance.html">Finance</a>
+          <a class="ghost-button nav-link" href="projects.html">Projects</a>
+          <a class="ghost-button nav-link" href="roadmap.html">Roadmap</a>
+          <a class="ghost-button nav-link active" href="gig-campaign.html">4 Dec</a>
+          <a class="ghost-button nav-link" href="todos.html">To Do</a>
+          <a class="ghost-button nav-link" href="opportunities.html">Opportunities</a>
+          <a class="ghost-button nav-link" href="social.html">Social</a>
+          <a class="ghost-button nav-link" href="contacts.html">Contacts</a>
+        </div>
+      </details>
+    </header>
+
+    <main class="campaign-shell">
+      <section class="campaign-hero">
+        <div>
+          <p class="campaign-kicker">Headline show command centre</p>
+          <h2>Sell the room. Fill it with the right people. Make the night move Ella forward.</h2>
+          <p>A live campaign for a 200-cap show, one pre-gig single and four unreleased songs kept in reserve.</p>
+        </div>
+        <div class="campaign-countdown">
+          <strong id="daysToShow">—</strong>
+          <span>days to show</span>
+          <small id="showDateLabel">Friday 4 December 2026</small>
+        </div>
+      </section>
+
+      <section class="campaign-scoreboard" aria-label="Campaign health">
+        <article>
+          <span>Paid tickets</span>
+          <strong><b id="ticketsSoldValue">0</b> / <b id="capacityValue">200</b></strong>
+          <small id="ticketPaceLabel">Campaign not started</small>
+        </article>
+        <article>
+          <span>Sell-through</span>
+          <strong id="sellThroughValue">0%</strong>
+          <small id="forecastLabel">Forecast appears after sales are logged</small>
+        </article>
+        <article>
+          <span>Industry confirmed</span>
+          <strong id="industryConfirmedValue">0</strong>
+          <small id="industryPipelineLabel">0 active conversations</small>
+        </article>
+        <article id="campaignHealthCard">
+          <span>Campaign completion</span>
+          <strong id="campaignCompletionValue">0%</strong>
+          <small id="campaignHealthLabel">Start with the next due action</small>
+        </article>
+      </section>
+
+      <section class="campaign-grid campaign-grid-primary">
+        <article class="campaign-panel campaign-ticket-panel">
+          <div class="campaign-panel-head">
+            <div>
+              <p class="campaign-kicker">Ticket engine</p>
+              <h3>Road to 200</h3>
+            </div>
+            <button class="campaign-button" id="editCampaignButton" type="button">Edit numbers</button>
+          </div>
+          <div class="campaign-ticket-progress" aria-label="Ticket sell-through">
+            <i id="ticketProgressFill"></i>
+            <span id="ticketProgressMarker"></span>
+          </div>
+          <div class="campaign-ticket-labels">
+            <span>0</span><span>50</span><span>100</span><span>150</span><span>200</span>
+          </div>
+          <div class="campaign-ticket-callout">
+            <strong id="ticketNextMove">Log the current ticket count</strong>
+            <p id="ticketMath">The campaign will calculate the daily sales rate needed to sell out.</p>
+          </div>
+          <div class="campaign-target-list" id="ticketTargetList"></div>
+          <a class="campaign-ticket-link" id="ticketLink" href="#" target="_blank" rel="noreferrer" hidden>Open ticket page ↗</a>
+        </article>
+
+        <article class="campaign-panel campaign-strategy-panel">
+          <div class="campaign-panel-head">
+            <div>
+              <p class="campaign-kicker">Release strategy</p>
+              <h3>Use one song to create the moment</h3>
+            </div>
+          </div>
+          <div class="campaign-strategy-statement">
+            <span>Recommended architecture</span>
+            <strong>Release the clearest audience-converter 4 weeks before the show.</strong>
+            <p>The single is the invitation. The gig is the proof. The other four songs stay unreleased so the night gives industry a reason to ask what comes next.</p>
+          </div>
+          <ol class="campaign-principles">
+            <li><b>Do not market two separate things.</b><span>Every single asset carries the 4 December ticket call-to-action.</span></li>
+            <li><b>Build a three-song live proof arc.</b><span>Open familiar, land the new single, then play one unreleased song that makes the future obvious.</span></li>
+            <li><b>Capture evidence, not just memories.</b><span>Film crowd, full-room, strongest song and short fan reactions for January conversations.</span></li>
+          </ol>
+          <div class="campaign-release-date">
+            <span>Working single date</span>
+            <strong id="singleDateLabel">Friday 6 November 2026</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="campaign-panel campaign-actions-panel">
+        <div class="campaign-panel-head">
+          <div>
+            <p class="campaign-kicker">Execution</p>
+            <h3>What has to happen</h3>
+          </div>
+          <div class="campaign-filter-group" id="actionFilters" role="group" aria-label="Filter campaign actions">
+            <button class="active" data-filter="open" type="button">Open</button>
+            <button data-filter="all" type="button">All</button>
+            <button data-filter="done" type="button">Done</button>
+          </div>
+        </div>
+        <div class="campaign-action-board" id="campaignActionBoard"></div>
+        <button class="campaign-add-button" id="addCampaignActionButton" type="button">+ Add campaign action</button>
+      </section>
+
+      <section class="campaign-panel audience-crm-panel">
+        <div class="campaign-panel-head audience-crm-head">
+          <div>
+            <p class="campaign-kicker">Audience CRM</p>
+            <h3>Friends, family and everyone we mean to invite</h3>
+          </div>
+          <button class="campaign-button campaign-button-primary" id="addAudienceContactButton" type="button">Add people</button>
+        </div>
+        <p class="campaign-panel-intro">The personal sales list. Keep every invitation, follow-up and confirmed purchase visible so warm people never get lost between posts.</p>
+        <div class="audience-crm-stats" id="audienceCrmStats"></div>
+        <div class="audience-crm-toolbar">
+          <div class="campaign-filter-group" id="audienceFilters" role="group" aria-label="Filter audience contacts">
+            <button class="active" data-filter="action" type="button">Needs action</button>
+            <button data-filter="all" type="button">Everyone</button>
+            <button data-filter="bought" type="button">Bought</button>
+          </div>
+          <label class="audience-search"><span>Search</span><input id="audienceSearch" type="search" placeholder="Name, group or contact"></label>
+        </div>
+        <div class="audience-list" id="audienceList"></div>
+        <p class="campaign-empty" id="audienceEmpty">No audience contacts yet. Add friends, family, fans, collaborators or partner guests—one at a time or as a batch.</p>
+      </section>
+
+      <section class="campaign-grid campaign-grid-secondary">
+        <article class="campaign-panel campaign-industry-panel">
+          <div class="campaign-panel-head">
+            <div>
+              <p class="campaign-kicker">Industry room</p>
+              <h3>Invite deliberately</h3>
+            </div>
+            <button class="campaign-button" id="addIndustryGuestButton" type="button">Add person</button>
+          </div>
+          <p class="campaign-panel-intro">Aim for 12–15 high-fit people in the pipeline, 8 proper invitations and 4–6 confirmed—not a giant cold list.</p>
+          <div class="industry-funnel" id="industryFunnel"></div>
+          <div class="industry-list" id="industryList"></div>
+          <p class="campaign-empty" id="industryEmpty">No industry people added yet. Start with people for whom this show answers a real question about Ella.</p>
+        </article>
+
+        <article class="campaign-panel campaign-weeks-panel">
+          <div class="campaign-panel-head">
+            <div>
+              <p class="campaign-kicker">Campaign rhythm</p>
+              <h3>The next phase</h3>
+            </div>
+          </div>
+          <div id="campaignPhase"></div>
+          <div class="campaign-week-list" id="campaignWeekList"></div>
+        </article>
+      </section>
+    </main>
+
+    <dialog class="campaign-dialog" id="campaignSettingsDialog">
+      <form id="campaignSettingsForm" method="dialog" autocomplete="off">
+        <div class="campaign-dialog-head">
+          <div><p class="campaign-kicker">Campaign settings</p><h2>Update the show</h2></div>
+          <button data-close-campaign-dialog type="button" aria-label="Close">×</button>
+        </div>
+        <div class="field-row">
+          <label>Show date<input id="campaignShowDate" type="date" required></label>
+          <label>Single date<input id="campaignSingleDate" type="date" required></label>
+        </div>
+        <div class="field-row">
+          <label>Capacity<input id="campaignCapacity" type="number" min="1" required></label>
+          <label>Paid tickets sold<input id="campaignTicketsSold" type="number" min="0" required></label>
+        </div>
+        <label>Ticket URL<input id="campaignTicketUrl" type="url" placeholder="https://..."></label>
+        <div class="campaign-dialog-actions"><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="campaign-dialog" id="campaignActionDialog">
+      <form id="campaignActionForm" method="dialog" autocomplete="off">
+        <input id="campaignActionId" type="hidden">
+        <div class="campaign-dialog-head">
+          <div><p class="campaign-kicker">Campaign action</p><h2 id="campaignActionDialogTitle">Add action</h2></div>
+          <button data-close-campaign-dialog type="button" aria-label="Close">×</button>
+        </div>
+        <label>Action<input id="campaignActionTitle" required></label>
+        <div class="field-row">
+          <label>Workstream<select id="campaignActionStream"><option value="tickets">Tickets</option><option value="release">Release</option><option value="industry">Industry</option><option value="show">Show</option><option value="content">Content</option></select></label>
+          <label>Due date<input id="campaignActionDueDate" type="date" required></label>
+        </div>
+        <label>Why it matters<textarea id="campaignActionNote" rows="3"></textarea></label>
+        <label class="campaign-checkbox"><input id="campaignActionAddToTodo" type="checkbox"><span>Add to the main To Do list</span></label>
+        <div class="campaign-dialog-actions"><button class="campaign-button campaign-button-danger" id="deleteCampaignActionButton" type="button">Delete</button><span></span><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save action</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="campaign-dialog" id="industryGuestDialog">
+      <form id="industryGuestForm" method="dialog" autocomplete="off">
+        <input id="industryGuestId" type="hidden">
+        <div class="campaign-dialog-head">
+          <div><p class="campaign-kicker">Industry guest</p><h2 id="industryGuestDialogTitle">Add person</h2></div>
+          <button data-close-campaign-dialog type="button" aria-label="Close">×</button>
+        </div>
+        <div class="field-row"><label>Name<input id="industryGuestName" required></label><label>Company<input id="industryGuestCompany"></label></div>
+        <div class="field-row"><label>Role<input id="industryGuestRole" placeholder="A&R, agent, manager, press..."></label><label>Status<select id="industryGuestStatus"><option value="target">Target</option><option value="warm">Warm intro</option><option value="invited">Invited</option><option value="confirmed">Confirmed</option><option value="declined">Declined</option></select></label></div>
+        <label>Next move<input id="industryGuestNextMove" placeholder="Ask Sam for an intro; send private link..." required></label>
+        <label>Notes<textarea id="industryGuestNotes" rows="3"></textarea></label>
+        <div class="campaign-dialog-actions"><button class="campaign-button campaign-button-danger" id="deleteIndustryGuestButton" type="button">Delete</button><span></span><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save person</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="campaign-dialog" id="audienceContactDialog">
+      <form id="audienceContactForm" method="dialog" autocomplete="off">
+        <input id="audienceContactId" type="hidden">
+        <div class="campaign-dialog-head">
+          <div><p class="campaign-kicker">Audience CRM</p><h2 id="audienceContactDialogTitle">Add people</h2></div>
+          <button data-close-campaign-dialog type="button" aria-label="Close">×</button>
+        </div>
+        <label>Name or names<textarea id="audienceContactName" rows="3" required placeholder="One name per line — paste a whole friends or family list"></textarea><small id="audienceNameHelp">Adding several names gives them the same group and starting status. Edit each person afterwards to add individual details.</small></label>
+        <div class="field-row">
+          <label>Group<select id="audienceContactGroup"><option value="friend">Friend</option><option value="family">Family</option><option value="fan">Fan</option><option value="collaborator">Collaborator</option><option value="partner">Partner / guest list</option><option value="other">Other</option></select></label>
+          <label>Status<select id="audienceContactStatus"><option value="to-invite">To invite</option><option value="invited">Invited</option><option value="follow-up">Follow up</option><option value="bought">Bought</option><option value="comp">Guest list / comp</option><option value="declined">Declined</option></select></label>
+        </div>
+        <div class="field-row">
+          <label>Contact detail<input id="audienceContactDetail" placeholder="Phone, email or @handle"></label>
+          <label>Owner<input id="audienceContactOwner" placeholder="Who will contact them?"></label>
+        </div>
+        <div class="field-row">
+          <label>Follow up on<input id="audienceContactFollowUp" type="date"></label>
+          <label>Tickets bought<input id="audienceContactTickets" type="number" min="0" step="1" value="0"></label>
+        </div>
+        <label>Next move<input id="audienceContactNextMove" placeholder="Send personal WhatsApp; check in after payday..."></label>
+        <label>Notes<textarea id="audienceContactNotes" rows="3"></textarea></label>
+        <div class="campaign-dialog-actions"><button class="campaign-button campaign-button-danger" id="deleteAudienceContactButton" type="button">Delete</button><span></span><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save</button></div>
+      </form>
+    </dialog>
+
+    <script src="cloud-config.js?v=3"></script>
+    <script src="app-cloud.js?v=14"></script>
+    <script src="dashboard-command.js?v=6"></script>
+    <script src="mobile-panels.js?v=5"></script>
+    <script src="gig-campaign.js?v=2"></script>
+  </body>
+</html>
