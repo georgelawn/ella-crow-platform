@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ella Crow | 4 December Campaign</title>
-    <link rel="stylesheet" href="styles.css?v=53">
+    <link rel="stylesheet" href="styles.css?v=54">
   </head>
   <body class="campaign-page">
     <header class="topbar">
@@ -156,6 +156,20 @@
         <p class="campaign-empty" id="audienceEmpty">No audience contacts yet. Add friends, family, fans, collaborators or partner guests—one at a time or as a batch.</p>
       </section>
 
+      <section class="campaign-panel champions-panel">
+        <div class="campaign-panel-head champions-head">
+          <div>
+            <p class="campaign-kicker">Champion network</p>
+            <h3>People who can fill more than one seat</h3>
+          </div>
+          <button class="campaign-button campaign-button-primary" id="addChampionButton" type="button">Add champion</button>
+        </div>
+        <p class="campaign-panel-intro">Ask a small group of genuine advocates to bring their people. Track the ask, give each person a sensible target, follow up, and add their buyers straight into the Audience CRM.</p>
+        <div class="champion-stats" id="championStats"></div>
+        <div class="champion-list" id="championList"></div>
+        <p class="campaign-empty" id="championEmpty">No champions added yet. Start with people who already believe in Ella and would feel comfortable making personal invitations.</p>
+      </section>
+
       <section class="campaign-grid campaign-grid-secondary">
         <article class="campaign-panel campaign-industry-panel">
           <div class="campaign-panel-head">
@@ -256,9 +270,32 @@
           <label>Follow up on<input id="audienceContactFollowUp" type="date"></label>
           <label>Tickets bought<input id="audienceContactTickets" type="number" min="0" step="1" value="0"></label>
         </div>
+        <label>Introduced by champion<select id="audienceContactChampion"><option value="">No champion / direct</option></select></label>
         <label>Next move<input id="audienceContactNextMove" placeholder="Send personal WhatsApp; check in after payday..."></label>
         <label>Notes<textarea id="audienceContactNotes" rows="3"></textarea></label>
         <div class="campaign-dialog-actions"><button class="campaign-button campaign-button-danger" id="deleteAudienceContactButton" type="button">Delete</button><span></span><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save</button></div>
+      </form>
+    </dialog>
+
+    <dialog class="campaign-dialog" id="championDialog">
+      <form id="championForm" method="dialog" autocomplete="off">
+        <input id="championId" type="hidden">
+        <div class="campaign-dialog-head">
+          <div><p class="campaign-kicker">Champion network</p><h2 id="championDialogTitle">Add champion</h2></div>
+          <button data-close-campaign-dialog type="button" aria-label="Close">×</button>
+        </div>
+        <div class="field-row">
+          <label>Name<input id="championName" required></label>
+          <label>Contact detail<input id="championContact" placeholder="Phone, email or @handle"></label>
+        </div>
+        <div class="field-row">
+          <label>Status<select id="championStatus"><option value="to-ask">To ask</option><option value="asked">Asked</option><option value="active">Actively inviting</option><option value="done">Finished</option><option value="declined">Not able to help</option></select></label>
+          <label>Ticket target<input id="championTarget" type="number" min="0" step="1" value="5"></label>
+        </div>
+        <label>Follow up on<input id="championFollowUp" type="date"></label>
+        <label>Next move<input id="championNextMove" placeholder="Ask them personally; send ticket link and a short message they can forward..."></label>
+        <label>Notes<textarea id="championNotes" rows="3" placeholder="Who they can reach, context, promises or useful reminders"></textarea></label>
+        <div class="campaign-dialog-actions"><button class="campaign-button campaign-button-danger" id="deleteChampionButton" type="button">Delete</button><span></span><button class="campaign-button" data-close-campaign-dialog type="button">Cancel</button><button class="campaign-button campaign-button-primary" type="submit">Save champion</button></div>
       </form>
     </dialog>
 
@@ -266,6 +303,6 @@
     <script src="app-cloud.js?v=14"></script>
     <script src="dashboard-command.js?v=6"></script>
     <script src="mobile-panels.js?v=5"></script>
-    <script src="gig-campaign.js?v=2"></script>
+    <script src="gig-campaign.js?v=3"></script>
   </body>
 </html>

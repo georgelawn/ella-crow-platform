@@ -39,7 +39,8 @@ const defaultCampaign = {
     { id: "follow-up", stream: "industry", title: "Send tailored follow-ups and best live proof within 48 hours", dueDate: "2026-12-06", note: "Turn the room into specific next meetings while the feeling is still fresh.", done: false, todoId: "" }
   ],
   industry: [],
-  audience: []
+  audience: [],
+  champions: []
 };
 
 const streamMeta = {
@@ -68,7 +69,8 @@ function loadCampaign() {
       targets: Array.isArray(saved.targets) ? saved.targets : defaults.targets,
       actions: Array.isArray(saved.actions) ? saved.actions : defaults.actions,
       industry: Array.isArray(saved.industry) ? saved.industry : [],
-      audience: Array.isArray(saved.audience) ? saved.audience : []
+      audience: Array.isArray(saved.audience) ? saved.audience : [],
+      champions: Array.isArray(saved.champions) ? saved.champions : []
     };
   } catch { return cloneDefaultCampaign(); }
 }
@@ -268,16 +270,17 @@ function renderAudience() {
     .sort((a, b) => {
       const aFollow = a.followUpDate ? dateStamp(a.followUpDate) : Number.MAX_SAFE_INTEGER;
       const bFollow = b.followUpDate ? dateStamp(b.followUpDate) : Number.MAX_SAFE_INTEGER;
-      return (audienceStatusMeta[a.status]?.rank || 9) - (audienceStatusMeta[b.status]?.rank || 9) || aFollow - bFollow || String(a.name).localeCompare(String(b.name));
+      return (audienceStatusMeta[a.status]?.rank ?? 9) - (audienceStatusMeta[b.status]?.rank ?? 9) || aFollow - bFollow || String(a.name).localeCompare(String(b.name));
     });
 
   document.querySelector("#audienceList").innerHTML = visible.map((person) => {
     const followState = audienceFollowUpState(person);
     const ticketCopy = person.status === "bought" ? `${Number(person.tickets) || 0} ticket${Number(person.tickets) === 1 ? "" : "s"}` : "";
     const followCopy = person.followUpDate && audienceNeedsAction(person) ? `Follow up ${formatDate(person.followUpDate)}` : "";
+    const champion = campaign.champions.find((item) => item.id === person.championId);
     return `<button class="audience-person ${followState}" data-id="${escapeHtml(person.id)}" type="button">
       <span class="audience-person-status ${escapeHtml(person.status)}">${escapeHtml(audienceStatusMeta[person.status]?.label || person.status)}</span>
-      <span class="audience-person-main"><strong>${escapeHtml(person.name)}</strong><small>${escapeHtml(audienceGroupLabels[person.group] || "Other")}${person.contact ? ` · ${escapeHtml(person.contact)}` : ""}</small></span>
+      <span class="audience-person-main"><strong>${escapeHtml(person.name)}</strong><small>${escapeHtml(audienceGroupLabels[person.group] || "Other")}${person.contact ? ` · ${escapeHtml(person.contact)}` : ""}${champion ? ` · via ${escapeHtml(champion.name)}` : ""}</small></span>
       <span class="audience-person-action"><strong>${escapeHtml(ticketCopy || person.nextMove || "Add next move")}</strong><small>${escapeHtml(followCopy || (person.owner ? `Owner: ${person.owner}` : "No follow-up set"))}</small></span>
       <span class="audience-person-edit">Edit</span>
     </button>`;
@@ -286,6 +289,59 @@ function renderAudience() {
   const empty = document.querySelector("#audienceEmpty");
   empty.textContent = audience.length ? "No people match this view." : "No audience contacts yet. Add friends, family, fans, collaborators or partner guests—one at a time or as a batch.";
   empty.classList.toggle("visible", visible.length === 0);
+}
+
+const championStatusMeta = {
+  "to-ask": { label: "To ask", rank: 0 },
+  asked: { label: "Asked", rank: 1 },
+  active: { label: "Active", rank: 2 },
+  done: { label: "Finished", rank: 3 },
+  declined: { label: "Unable", rank: 4 }
+};
+
+function championFollowState(champion) {
+  if (!champion.followUpDate || ["done", "declined"].includes(champion.status)) return "";
+  if (dateStamp(champion.followUpDate) < todayStamp()) return "overdue";
+  if (dateStamp(champion.followUpDate) === todayStamp()) return "today";
+  return "scheduled";
+}
+
+function championBuyers(championId) {
+  return campaign.audience.filter((person) => person.championId === championId && person.status === "bought");
+}
+
+function renderChampions() {
+  const champions = campaign.champions || [];
+  const toAsk = champions.filter((champion) => champion.status === "to-ask").length;
+  const active = champions.filter((champion) => ["asked", "active"].includes(champion.status)).length;
+  const buyers = campaign.audience.filter((person) => person.status === "bought" && person.championId).length;
+  const tickets = campaign.audience.reduce((sum, person) => sum + (person.status === "bought" && person.championId ? Math.max(0, Number(person.tickets) || 0) : 0), 0);
+  document.querySelector("#championStats").innerHTML = `
+    <article><strong>${toAsk}</strong><span>Still to ask</span></article>
+    <article><strong>${active}</strong><span>Mobilising</span></article>
+    <article><strong>${buyers}</strong><span>Buyers generated</span></article>
+    <article><strong>${tickets}</strong><span>Tickets generated</span></article>`;
+
+  const visible = [...champions].sort((a, b) => {
+    const aFollow = a.followUpDate ? dateStamp(a.followUpDate) : Number.MAX_SAFE_INTEGER;
+    const bFollow = b.followUpDate ? dateStamp(b.followUpDate) : Number.MAX_SAFE_INTEGER;
+    return (championStatusMeta[a.status]?.rank ?? 9) - (championStatusMeta[b.status]?.rank ?? 9) || aFollow - bFollow || String(a.name).localeCompare(String(b.name));
+  });
+
+  document.querySelector("#championList").innerHTML = visible.map((champion) => {
+    const buyersForChampion = championBuyers(champion.id);
+    const ticketCount = buyersForChampion.reduce((sum, person) => sum + Math.max(0, Number(person.tickets) || 0), 0);
+    const target = Math.max(0, Number(champion.target) || 0);
+    const percent = target ? Math.min(100, Math.round((ticketCount / target) * 100)) : 0;
+    const followState = championFollowState(champion);
+    return `<article class="champion-card ${followState}" data-id="${escapeHtml(champion.id)}">
+      <div class="champion-card-person"><span class="champion-status ${escapeHtml(champion.status)}">${escapeHtml(championStatusMeta[champion.status]?.label || champion.status)}</span><strong>${escapeHtml(champion.name)}</strong><small>${escapeHtml(champion.contact || "No contact detail")}</small></div>
+      <div class="champion-card-progress"><div><strong>${ticketCount} / ${target || "—"}</strong><span>tickets</span></div><i><b style="width:${percent}%"></b></i><small>${buyersForChampion.length} buyer${buyersForChampion.length === 1 ? "" : "s"} linked</small></div>
+      <div class="champion-card-next"><strong>${escapeHtml(champion.nextMove || "Add the next move")}</strong><small>${champion.followUpDate && !["done", "declined"].includes(champion.status) ? `Follow up ${formatDate(champion.followUpDate)}` : "No follow-up set"}</small></div>
+      <div class="champion-card-actions"><button data-action="add-buyer" type="button">+ Add buyer</button><button data-action="edit-champion" type="button">Edit</button></div>
+    </article>`;
+  }).join("");
+  document.querySelector("#championEmpty").classList.toggle("visible", champions.length === 0);
 }
 
 function renderPhase() {
@@ -303,7 +359,7 @@ function renderPhase() {
   document.querySelector("#campaignWeekList").innerHTML = current.moves.map((move, index) => `<div><span>0${index + 1}</span><p>${escapeHtml(move)}</p></div>`).join("");
 }
 
-function renderAll() { renderScoreboard(); renderTargets(); renderActions(); renderAudience(); renderIndustry(); renderPhase(); }
+function renderAll() { renderScoreboard(); renderTargets(); renderActions(); renderAudience(); renderChampions(); renderIndustry(); renderPhase(); }
 
 function openSettings() {
   document.querySelector("#campaignShowDate").value = campaign.showDate;
@@ -341,29 +397,47 @@ function openGuest(id = "") {
   document.querySelector("#industryGuestDialog").showModal();
 }
 
-function openAudienceContact(id = "") {
+function openAudienceContact(id = "", championId = "") {
   const person = campaign.audience.find((item) => item.id === id);
-  document.querySelector("#audienceContactDialogTitle").textContent = person ? "Edit person" : "Add people";
+  document.querySelector("#audienceContactDialogTitle").textContent = person ? "Edit person" : championId ? "Add champion buyer" : "Add people";
   document.querySelector("#audienceContactId").value = person?.id || "";
   document.querySelector("#audienceContactName").value = person?.name || "";
-  document.querySelector("#audienceContactName").rows = person ? 1 : 3;
-  document.querySelector("#audienceNameHelp").hidden = Boolean(person);
-  document.querySelector("#audienceContactGroup").value = person?.group || "friend";
-  document.querySelector("#audienceContactStatus").value = person?.status || "to-invite";
+  document.querySelector("#audienceContactName").rows = person || championId ? 1 : 3;
+  document.querySelector("#audienceNameHelp").hidden = Boolean(person || championId);
+  document.querySelector("#audienceContactGroup").value = person?.group || (championId ? "fan" : "friend");
+  document.querySelector("#audienceContactStatus").value = person?.status || (championId ? "bought" : "to-invite");
   document.querySelector("#audienceContactDetail").value = person?.contact || "";
   document.querySelector("#audienceContactOwner").value = person?.owner || "";
   document.querySelector("#audienceContactFollowUp").value = person?.followUpDate || "";
-  document.querySelector("#audienceContactTickets").value = Number(person?.tickets) || 0;
+  document.querySelector("#audienceContactTickets").value = person ? Number(person.tickets) || 0 : championId ? 1 : 0;
+  document.querySelector("#audienceContactChampion").innerHTML = `<option value="">No champion / direct</option>${campaign.champions.map((champion) => `<option value="${escapeHtml(champion.id)}">${escapeHtml(champion.name)}</option>`).join("")}`;
+  document.querySelector("#audienceContactChampion").value = person?.championId || championId || "";
   document.querySelector("#audienceContactNextMove").value = person?.nextMove || "";
   document.querySelector("#audienceContactNotes").value = person?.notes || "";
   document.querySelector("#deleteAudienceContactButton").hidden = !person;
   document.querySelector("#audienceContactDialog").showModal();
 }
 
+function openChampion(id = "") {
+  const champion = campaign.champions.find((item) => item.id === id);
+  document.querySelector("#championDialogTitle").textContent = champion ? "Edit champion" : "Add champion";
+  document.querySelector("#championId").value = champion?.id || "";
+  document.querySelector("#championName").value = champion?.name || "";
+  document.querySelector("#championContact").value = champion?.contact || "";
+  document.querySelector("#championStatus").value = champion?.status || "to-ask";
+  document.querySelector("#championTarget").value = Number(champion?.target) || 5;
+  document.querySelector("#championFollowUp").value = champion?.followUpDate || "";
+  document.querySelector("#championNextMove").value = champion?.nextMove || "";
+  document.querySelector("#championNotes").value = champion?.notes || "";
+  document.querySelector("#deleteChampionButton").hidden = !champion;
+  document.querySelector("#championDialog").showModal();
+}
+
 document.querySelector("#editCampaignButton").addEventListener("click", openSettings);
 document.querySelector("#addCampaignActionButton").addEventListener("click", () => openAction());
 document.querySelector("#addIndustryGuestButton").addEventListener("click", () => openGuest());
 document.querySelector("#addAudienceContactButton").addEventListener("click", () => openAudienceContact());
+document.querySelector("#addChampionButton").addEventListener("click", () => openChampion());
 document.querySelectorAll("[data-close-campaign-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 
 document.querySelector("#campaignSettingsForm").addEventListener("submit", (event) => {
@@ -419,6 +493,7 @@ document.querySelector("#audienceContactForm").addEventListener("submit", (event
     owner: document.querySelector("#audienceContactOwner").value.trim(),
     followUpDate: document.querySelector("#audienceContactFollowUp").value,
     tickets: Math.max(0, Number(document.querySelector("#audienceContactTickets").value) || 0),
+    championId: document.querySelector("#audienceContactChampion").value,
     nextMove: document.querySelector("#audienceContactNextMove").value.trim(),
     notes: document.querySelector("#audienceContactNotes").value.trim(),
     updatedAt: new Date().toISOString()
@@ -438,6 +513,32 @@ document.querySelector("#deleteAudienceContactButton").addEventListener("click",
   campaign.audience = campaign.audience.filter((person) => person.id !== id); saveCampaign(); document.querySelector("#audienceContactDialog").close(); renderAll();
 });
 
+document.querySelector("#championForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const id = document.querySelector("#championId").value;
+  let champion = campaign.champions.find((item) => item.id === id);
+  if (!champion) { champion = { id: makeId("champion"), createdAt: new Date().toISOString() }; campaign.champions.push(champion); }
+  Object.assign(champion, {
+    name: document.querySelector("#championName").value.trim(),
+    contact: document.querySelector("#championContact").value.trim(),
+    status: document.querySelector("#championStatus").value,
+    target: Math.max(0, Number(document.querySelector("#championTarget").value) || 0),
+    followUpDate: document.querySelector("#championFollowUp").value,
+    nextMove: document.querySelector("#championNextMove").value.trim(),
+    notes: document.querySelector("#championNotes").value.trim(),
+    updatedAt: new Date().toISOString()
+  });
+  saveCampaign(); event.currentTarget.closest("dialog").close(); renderAll();
+});
+
+document.querySelector("#deleteChampionButton").addEventListener("click", () => {
+  const id = document.querySelector("#championId").value;
+  if (!id || !window.confirm("Remove this champion? Existing audience buyers will stay in the CRM but lose this attribution.")) return;
+  campaign.champions = campaign.champions.filter((champion) => champion.id !== id);
+  campaign.audience.forEach((person) => { if (person.championId === id) person.championId = ""; });
+  saveCampaign(); document.querySelector("#championDialog").close(); renderAll();
+});
+
 document.querySelector("#campaignActionBoard").addEventListener("click", (event) => {
   const card = event.target.closest(".campaign-action");
   if (!card) return;
@@ -449,6 +550,11 @@ document.querySelector("#campaignActionBoard").addEventListener("click", (event)
 
 document.querySelector("#industryList").addEventListener("click", (event) => { const person = event.target.closest(".industry-person"); if (person) openGuest(person.dataset.id); });
 document.querySelector("#audienceList").addEventListener("click", (event) => { const person = event.target.closest(".audience-person"); if (person) openAudienceContact(person.dataset.id); });
+document.querySelector("#championList").addEventListener("click", (event) => {
+  const card = event.target.closest(".champion-card"); if (!card) return;
+  if (event.target.closest('[data-action="add-buyer"]')) openAudienceContact("", card.dataset.id);
+  if (event.target.closest('[data-action="edit-champion"]')) openChampion(card.dataset.id);
+});
 document.querySelector("#audienceFilters").addEventListener("click", (event) => {
   const button = event.target.closest("button[data-filter]"); if (!button) return;
   audienceFilter = button.dataset.filter; document.querySelectorAll("#audienceFilters button").forEach((item) => item.classList.toggle("active", item === button)); renderAudience();

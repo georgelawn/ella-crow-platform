@@ -50,8 +50,11 @@ contacts, calendar events, social performance, and bio-link analytics.
   dedicated command centre for the 4 December 2026 headline show. It tracks
   the 200-ticket target, sales pace and milestones, the pre-gig single plan,
   campaign actions, industry invitations, a friends/family/fans audience CRM,
-  and the current campaign phase. The CRM records invitation state, follow-up
-  date, owner and attributed ticket purchases. Actions can be mirrored into the
+  a champion referral network, and the current campaign phase. The CRM records
+  invitation state, follow-up date, owner and attributed ticket purchases.
+  Champion records track the ask, ticket target and follow-up; attributed buyers
+  link back to their champion so generated buyers and tickets are calculated.
+  Actions can be mirrored into the
   manual To Do list. All editable campaign data is stored inside the
   `ella-crow-december-show-v1` object and synchronized through Supabase; HTML
   edits are not needed for operational updates.

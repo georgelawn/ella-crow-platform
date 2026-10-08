@@ -1838,6 +1838,36 @@
 .audience-person-edit { color: #98453a; font-size: .68rem; font-weight: 800; }
 .campaign-dialog label > small { color: #8b776b; font-size: .67rem; font-weight: 500; line-height: 1.4; }
 
+.champions-panel { margin-top: 18px; }
+.champions-head { margin-bottom: 14px; }
+.champion-stats { display: grid; gap: 9px; grid-template-columns: repeat(4, 1fr); margin: 20px 0; }
+.champion-stats article { background: #f1ebe6; border: 1px solid #e2d6cd; border-radius: 12px; padding: 15px; }
+.champion-stats strong, .champion-stats span { display: block; }
+.champion-stats strong { color: #3d261f; font-family: Georgia, serif; font-size: 1.75rem; font-weight: 500; }
+.champion-stats span { color: #846f64; font-size: .65rem; font-weight: 800; margin-top: 3px; text-transform: uppercase; }
+.champion-list { display: grid; gap: 8px; }
+.champion-card { align-items: center; background: #fff; border: 1px solid #e6dad1; border-radius: 13px; display: grid; gap: 16px; grid-template-columns: minmax(180px, .8fr) minmax(170px, .65fr) minmax(220px, 1.1fr) auto; padding: 14px; }
+.champion-card.overdue { background: #fff8ef; border-left: 4px solid #c45b3f; }
+.champion-card.today { background: #fffaf0; border-left: 4px solid #d89a45; }
+.champion-card-person strong, .champion-card-person small, .champion-card-next strong, .champion-card-next small { display: block; }
+.champion-card-person strong { color: #422c25; font-size: .9rem; margin-top: 7px; }
+.champion-card-person small, .champion-card-next small { color: #89746a; font-size: .68rem; margin-top: 4px; }
+.champion-status { border-radius: 999px; color: #fff; display: inline-block; font-size: .58rem; font-weight: 900; padding: 5px 8px; text-transform: uppercase; }
+.champion-status.to-ask { background: #8a7b74; }
+.champion-status.asked { background: #95634b; }
+.champion-status.active { background: #547b53; }
+.champion-status.done { background: #536f89; }
+.champion-status.declined { background: #777; }
+.champion-card-progress > div { align-items: baseline; display: flex; gap: 5px; }
+.champion-card-progress strong { color: #462f27; font-family: Georgia, serif; font-size: 1.15rem; }
+.champion-card-progress span, .champion-card-progress small { color: #89746a; font-size: .65rem; }
+.champion-card-progress i { background: #eee5dd; border-radius: 999px; display: block; height: 6px; margin: 8px 0 5px; overflow: hidden; }
+.champion-card-progress i b { background: linear-gradient(90deg, #933d32, #d49b61); border-radius: inherit; display: block; height: 100%; }
+.champion-card-next strong { color: #64473d; font-size: .77rem; line-height: 1.35; }
+.champion-card-actions { display: flex; gap: 7px; }
+.champion-card-actions button { background: #f8f2ec; border: 1px solid #dfd2c8; border-radius: 999px; color: #7e4539; cursor: pointer; font-size: .68rem; font-weight: 800; padding: 8px 10px; white-space: nowrap; }
+.champion-card-actions button:first-child { background: #913c31; border-color: #913c31; color: #fff; }
+
 .campaign-panel-intro { color: #78655b; line-height: 1.5; margin: -10px 0 20px; }
 .industry-funnel { display: grid; gap: 8px; grid-template-columns: repeat(4, 1fr); }
 .industry-funnel div { background: #f6f0ea; border-radius: 10px; padding: 12px; }
@@ -1896,6 +1926,7 @@
   .campaign-target-list { grid-template-columns: repeat(5, minmax(145px, 1fr)); }
   .industry-funnel { grid-template-columns: 1fr 1fr; }
   .audience-crm-stats { grid-template-columns: 1fr 1fr; }
+  .champion-stats { grid-template-columns: 1fr 1fr; }
   .audience-crm-toolbar { align-items: stretch; flex-direction: column; }
   .audience-search { align-items: stretch; flex-direction: column; }
   .audience-search input { min-width: 0; width: 100%; }
@@ -1904,6 +1935,9 @@
   .audience-person-main { grid-column: 2; grid-row: 1; }
   .audience-person-action { grid-column: 1 / -1; grid-row: 2; }
   .audience-person-edit { grid-column: 3; grid-row: 1; }
+  .champion-card { align-items: start; grid-template-columns: 1fr auto; }
+  .champion-card-progress, .champion-card-next { grid-column: 1 / -1; }
+  .champion-card-actions { grid-column: 2; grid-row: 1; }
   .campaign-dialog .field-row { grid-template-columns: 1fr; }
   .campaign-dialog-actions { grid-template-columns: auto 1fr auto; }
   .campaign-dialog-actions > span { display: none; }
