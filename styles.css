@@ -1826,6 +1826,7 @@
 .audience-person.today { background: #fffaf0; border-left: 4px solid #d89a45; }
 .audience-person-status { border-radius: 999px; color: #fff; font-size: .58rem; font-weight: 900; justify-self: start; padding: 6px 8px; text-transform: uppercase; }
 .audience-person-status.to-invite { background: #8d817a; }
+.audience-person-status.saved-date { background: #66849b; }
 .audience-person-status.invited { background: #886098; }
 .audience-person-status.follow-up { background: #b56835; }
 .audience-person-status.bought { background: #527850; }

@@ -225,10 +225,11 @@ function renderIndustry() {
 const audienceStatusMeta = {
   "to-invite": { label: "To invite", rank: 1 },
   "follow-up": { label: "Follow up", rank: 0 },
-  invited: { label: "Invited", rank: 2 },
-  bought: { label: "Bought", rank: 4 },
-  comp: { label: "Guest list", rank: 5 },
-  declined: { label: "Declined", rank: 6 }
+  "saved-date": { label: "Saved the Date", rank: 2 },
+  invited: { label: "Invited", rank: 3 },
+  bought: { label: "Bought", rank: 5 },
+  comp: { label: "Guest list", rank: 6 },
+  declined: { label: "Declined", rank: 7 }
 };
 
 const audienceGroupLabels = {
@@ -241,7 +242,7 @@ const audienceGroupLabels = {
 };
 
 function audienceNeedsAction(person) {
-  return ["to-invite", "invited", "follow-up"].includes(person.status);
+  return ["to-invite", "saved-date", "invited", "follow-up"].includes(person.status);
 }
 
 function audienceFollowUpState(person) {
