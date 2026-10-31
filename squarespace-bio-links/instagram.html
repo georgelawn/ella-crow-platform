@@ -173,9 +173,9 @@
     min-width: 0;
     white-space: nowrap;
   }
-  #ella-bio-links-instagram .ella-link-copy { display: block; min-width: 0; white-space: nowrap; }
+  #ella-bio-links-instagram .ella-link-copy { display: block; min-width: 0; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
   #ella-bio-links-instagram .ella-event-toggle .ella-link-copy { line-height: 1.25; white-space: normal; }
-  #ella-bio-links-instagram .ella-link-copy small { color: rgba(45,15,30,.65); display: block; font-size: clamp(.56rem, 1.8vw, .66rem); font-weight: 600; letter-spacing: .07em; margin-top: 3px; white-space: nowrap; }
+  #ella-bio-links-instagram .ella-link-copy small { color: rgba(45,15,30,.65); display: block; font-size: clamp(.56rem, 1.8vw, .66rem); font-weight: 600; letter-spacing: .07em; margin-top: 3px; white-space:normal; overflow-wrap:anywhere; line-height:1.35; }
   #ella-bio-links-instagram .ella-link-end { display: block; height: 20px; width: 40px; }
   #ella-bio-links-instagram .ella-link-chevron { font-size: 1rem; line-height: 1; transition: transform 160ms ease; }
   #ella-bio-links-instagram details[open] .ella-link-chevron { transform: rotate(180deg); }
@@ -225,9 +225,9 @@
 
   const hangerIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5.5a3 3 0 1 1 4.4 2.65C12.5 8.65 12 9.2 12 10v1.25"/><path d="m12 11.25-8.45 5.2A1.4 1.4 0 0 0 4.3 19h15.4a1.4 1.4 0 0 0 .75-2.55Z"/></svg>`;
   const destinations = [
+    { label: "Headline Show @ The Victoria, Dalston - 4th December", detail: "", icon: "LIVE" },
     { label: "New Merch Out Now!", detail: "Shop the new collection", url: "https://ellacrow.bandcamp.com/", icon: hangerIcon, track: "New Merch", primary: true },
     { label: "Join the community 🐦‍⬛", detail: "WhatsApp community", url: "https://chat.whatsapp.com/C6u02AqmrPZ31pv24JQSc1?s=cl&p=i&ilr=1", logo: "https://cdn.simpleicons.org/whatsapp/2d0f1e", track: "WhatsApp Community" },
-    { label: "Headline Show @ The Victoria, Dalston - 4th December", detail: "(tickets coming soon)", icon: "LIVE" },
     { label: "New single: You Can't Have It out now", detail: "Spotify and Apple Music", music: true, icon: "&#9835;", track: "Music menu" }
   ];
 
@@ -269,7 +269,7 @@
     const icon = destination.logo
       ? `<img src="${destination.logo}" alt="">`
       : `<span class="${destination.icon === "LIVE" ? "ella-live-badge" : "ella-text-badge"}">${destination.icon}</span>`;
-    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}<small>${destination.detail}</small></span><span class="ella-link-end" aria-hidden="true">${destination.primary ? "&#8594;" : ""}</span>`;
+    link.innerHTML = `<span class="ella-link-icon">${icon}</span><span class="ella-link-copy">${destination.label}${destination.detail ? `<small>${destination.detail}</small>` : ""}</span><span class="ella-link-end" aria-hidden="true">${destination.primary ? "&#8594;" : ""}</span>`;
     if (destination.url) {
       link.addEventListener("click", () => { void Promise.resolve(record("click", destination.track)).catch(() => {}); });
     }
