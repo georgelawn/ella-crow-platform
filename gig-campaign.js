@@ -152,6 +152,7 @@ function ticketForecast() {
 function renderScoreboard() {
   const sold = Math.max(0, Number(campaign.ticketsSold) || 0);
   const guestList = campaign.audience.filter((person) => person.status === "comp").length;
+  const savedDate = campaign.audience.filter((person) => person.status === "saved-date").length;
   const attendance = sold + guestList;
   const capacity = Math.max(1, Number(campaign.capacity) || 200);
   const percent = Math.min(100, Math.round((sold / capacity) * 100));
@@ -175,6 +176,7 @@ function renderScoreboard() {
   document.querySelector("#ticketPaceLabel").textContent = delta >= 0 ? `${delta} ticket${delta === 1 ? "" : "s"} ahead of today's plan` : `${Math.abs(delta)} behind today's plan`;
   document.querySelector("#attendanceValue").textContent = `${attendance} ${attendance === 1 ? "person" : "people"} coming`;
   document.querySelector("#guestListCount").textContent = `${guestList} on guest list`;
+  document.querySelector("#savedDateCount").textContent = `${savedDate} saved the date`;
   document.querySelector("#forecastLabel").textContent = forecast === null ? "Forecast appears after 3 campaign days" : `Current pace forecasts ${forecast} sold`;
   document.querySelector("#industryConfirmedValue").textContent = confirmed;
   document.querySelector("#industryPipelineLabel").textContent = `${activeIndustry} active conversation${activeIndustry === 1 ? "" : "s"}`;
